@@ -17,6 +17,17 @@ const UserSchema = z.object({
   deletedAt: z.date().nullable(),
 })
 
+const LoginResSchema = z.object({
+  user: UserSchema,
+  accessToken: z.string(),
+  refreshToken: z.string(),
+})
+
+const RefreshTokenResSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
+})
+
 const RegisterBodySchema = z
   .object({
     email: z.email(),
@@ -39,6 +50,27 @@ const RegisterBodySchema = z
     }
   })
 
+const LoginBodySchema = z
+  .object({
+    email: z.email(),
+    password: z.string().min(6).max(20),
+  })
+  .strict()
+
+const RefreshTokenBodySchema = z
+  .object({
+    refreshToken: z.string().min(1, 'Refresh token is required'),
+  })
+  .strict()
+
 export class RegisterBodyDTO extends createZodDto(RegisterBodySchema) {}
 
 export class RegisterResDTO extends createZodDto(UserSchema) {}
+
+export class LoginBodyDTO extends createZodDto(LoginBodySchema) {}
+
+export class LoginResDTO extends createZodDto(LoginResSchema) {}
+
+export class RefreshTokenBodyDTO extends createZodDto(RefreshTokenBodySchema) {}
+
+export class RefreshTokenResDTO extends createZodDto(RefreshTokenResSchema) {}

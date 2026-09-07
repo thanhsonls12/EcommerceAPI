@@ -1,8 +1,17 @@
-import { Body, Controller, Post } from '@nestjs/common'
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { Body, Controller, Post, Req } from '@nestjs/common'
 import { AuthService } from './auth.service'
-import { RegisterBodyDTO, RegisterResDTO } from './auth.dto'
+import {
+  LoginBodyDTO,
+  LoginResDTO,
+  RefreshTokenBodyDTO,
+  RefreshTokenResDTO,
+  RegisterBodyDTO,
+  RegisterResDTO,
+} from './auth.dto'
 import { ZodSerializerDto } from 'nestjs-zod'
 import { Public } from '@/shared/decorators/public.decorator'
+import type { Request } from 'express'
 
 @Controller('auth')
 export class AuthController {
@@ -14,17 +23,21 @@ export class AuthController {
     return this.authService.register(body)
   }
 
-  // TODO: hàm đang rỗng, khi viết thật sẽ đổi flow (logout cần auth)
   @Public()
   @Post('login')
-  login(@Body() body: any) {
-    return this.authService.login(body)
+  @ZodSerializerDto(LoginResDTO)
+  login(@Body() body: LoginBodyDTO, @Req() req: Request) {
+    return this.authService.login(body, {
+      userAgent: req.headers['user-agent'] || '',
+      ip: req.ip ?? '',
+    })
   }
 
   @Public()
   @Post('refresh-token')
-  refreshToken() {
-    return this.authService.refreshToken()
+  @ZodSerializerDto(RefreshTokenResDTO)
+  refreshToken(@Body() body: RefreshTokenBodyDTO) {
+    return this.authService.refreshToken(body)
   }
 
   @Public()
