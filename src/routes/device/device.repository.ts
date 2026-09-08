@@ -26,4 +26,17 @@ export class DeviceRepository {
       },
     })
   }
+
+  deactivateAllByUserId(userId: number, tx?: Prisma.TransactionClient) {
+    const prismaClient = tx ?? this.prisma
+
+    return prismaClient.device.updateMany({
+      where: {
+        userId,
+      },
+      data: {
+        isActive: false,
+      },
+    })
+  }
 }

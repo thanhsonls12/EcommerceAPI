@@ -34,4 +34,13 @@ export class UserRepository {
       data: { status },
     })
   }
+
+  updatePassword(id: number, password: string, tx?: Prisma.TransactionClient) {
+    const prismaClient = tx ?? this.prisma
+
+    return prismaClient.user.update({
+      where: { id },
+      data: { password },
+    })
+  }
 }

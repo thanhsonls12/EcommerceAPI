@@ -92,6 +92,36 @@ const ResendVerificationCodeResSchema = z.object({
   message: z.string(),
 })
 
+const ForgotPasswordBodySchema = z.object({
+  email: z.email(),
+})
+
+const ForgotPasswordResSchema = z.object({
+  message: z.string(),
+})
+
+const ResetPasswordBodySchema = z
+  .object({
+    email: z.email(),
+    code: z.string().length(6, 'Reset code must be 6 digits'),
+    password: z.string().min(6).max(20),
+    confirmPassword: z.string().min(6).max(20),
+  })
+  .strict()
+  .superRefine(({ password, confirmPassword }, ctx) => {
+    if (password !== confirmPassword) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Password and confirm password must match',
+        path: ['confirmPassword'],
+      })
+    }
+  })
+
+const ResetPasswordResSchema = z.object({
+  message: z.string(),
+})
+
 export class RegisterBodyDTO extends createZodDto(RegisterBodySchema) {}
 
 export class RegisterResDTO extends createZodDto(UserSchema) {}
@@ -115,3 +145,11 @@ export class VerifyEmailResDTO extends createZodDto(VerifyEmailResSchema) {}
 export class ResendVerificationCodeBodyDTO extends createZodDto(ResendVerificationCodeBodySchema) {}
 
 export class ResendVerificationCodeResDTO extends createZodDto(ResendVerificationCodeResSchema) {}
+
+export class ForgotPasswordBodyDTO extends createZodDto(ForgotPasswordBodySchema) {}
+
+export class ForgotPasswordResDTO extends createZodDto(ForgotPasswordResSchema) {}
+
+export class ResetPasswordBodyDTO extends createZodDto(ResetPasswordBodySchema) {}
+
+export class ResetPasswordResDTO extends createZodDto(ResetPasswordResSchema) {}

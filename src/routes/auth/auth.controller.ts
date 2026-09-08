@@ -1,6 +1,8 @@
 import { Body, Controller, Post, Req } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import {
+  ForgotPasswordBodyDTO,
+  ForgotPasswordResDTO,
   LoginBodyDTO,
   LoginResDTO,
   LogoutBodyDTO,
@@ -11,6 +13,8 @@ import {
   RegisterResDTO,
   ResendVerificationCodeBodyDTO,
   ResendVerificationCodeResDTO,
+  ResetPasswordBodyDTO,
+  ResetPasswordResDTO,
   VerifyEmailBodyDTO,
   VerifyEmailResDTO,
 } from './auth.dto'
@@ -64,5 +68,19 @@ export class AuthController {
   @ZodSerializerDto(ResendVerificationCodeResDTO)
   resendVerificationCode(@Body() body: ResendVerificationCodeBodyDTO) {
     return this.authService.resendVerificationCode(body)
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @ZodSerializerDto(ForgotPasswordResDTO)
+  forgotPassword(@Body() body: ForgotPasswordBodyDTO) {
+    return this.authService.forgotPassword(body)
+  }
+
+  @Public()
+  @Post('reset-password')
+  @ZodSerializerDto(ResetPasswordResDTO)
+  resetPassword(@Body() body: ResetPasswordBodyDTO) {
+    return this.authService.resetPassword(body)
   }
 }

@@ -25,4 +25,14 @@ export class RefreshTokenRepository {
       where: { token },
     })
   }
+
+  deleteAllByUserId(userId: number, tx?: Prisma.TransactionClient) {
+    const prismaClient = tx ?? this.prisma
+
+    return prismaClient.refreshToken.deleteMany({
+      where: {
+        userId,
+      },
+    })
+  }
 }
