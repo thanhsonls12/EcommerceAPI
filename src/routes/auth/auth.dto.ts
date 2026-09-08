@@ -84,6 +84,14 @@ const VerifyEmailBodySchema = z
   })
   .strict()
 
+const ResendVerificationCodeBodySchema = z.object({
+  email: z.email(),
+})
+
+const ResendVerificationCodeResSchema = z.object({
+  message: z.string(),
+})
+
 export class RegisterBodyDTO extends createZodDto(RegisterBodySchema) {}
 
 export class RegisterResDTO extends createZodDto(UserSchema) {}
@@ -103,3 +111,7 @@ export class LogoutResDTO extends createZodDto(LogoutResSchema) {}
 export class VerifyEmailBodyDTO extends createZodDto(VerifyEmailBodySchema) {}
 
 export class VerifyEmailResDTO extends createZodDto(VerifyEmailResSchema) {}
+
+export class ResendVerificationCodeBodyDTO extends createZodDto(ResendVerificationCodeBodySchema) {}
+
+export class ResendVerificationCodeResDTO extends createZodDto(ResendVerificationCodeResSchema) {}

@@ -1,8 +1,15 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common'
 import { RolesService } from './roles.service'
 import { HashingService } from '@/shared/services/hashing.service'
 
-import { LoginBodyDTO, LogoutBodyDTO, RefreshTokenBodyDTO, RegisterBodyDTO, VerifyEmailBodyDTO } from './auth.dto'
+import {
+  LoginBodyDTO,
+  LogoutBodyDTO,
+  RefreshTokenBodyDTO,
+  RegisterBodyDTO,
+  ResendVerificationCodeBodyDTO,
+  VerifyEmailBodyDTO,
+} from './auth.dto'
 import { UserRepository } from '../user/user.repository'
 import { DeviceRepository } from '../device/device.repository'
 import { TokenService } from '@/shared/services/token.service'
@@ -13,6 +20,7 @@ import { ensureUserIsActive } from '@/shared/helpers/user-status.helper'
 import { VerificationCodeRepository } from '../verification-code/verification-code.repository'
 import { UserStatus, VerificationCodeType } from '../../../generated/prisma/enums'
 import { randomInt } from 'crypto'
+import { EmailService } from '@/shared/services/email.service'
 
 type LoginDeviceInfo = {
   userAgent: string
@@ -30,10 +38,27 @@ export class AuthService {
     private readonly refreshTokenRepository: RefreshTokenRepository,
     private readonly prismaService: PrismaService,
     private readonly verificationCodeRepository: VerificationCodeRepository,
+    private readonly emailService: EmailService,
   ) {}
   async register(body: RegisterBodyDTO) {
     const clientRoleId = await this.rolesService.getClientRoleId()
     const hashedPassword = await this.hashingService.hash(body.password)
+
+    const existingUser = await this.userRepository.findByEmail(body.email)
+
+    if (existingUser) {
+      if (existingUser.status === UserStatus.INACTIVE) {
+        throw new UnauthorizedException('Account already exists but is not verified')
+      }
+
+      throw new ConflictException('Email is already registered')
+    }
+
+    const existingPhoneNumber = await this.userRepository.findByPhoneNumber(body.phoneNumber)
+    if (existingPhoneNumber) {
+      throw new UnauthorizedException('Phone number is already registered')
+    }
+
     const user = await this.userRepository.create({
       email: body.email,
       password: hashedPassword,
@@ -44,11 +69,11 @@ export class AuthService {
 
     const verificationCode = randomInt(100000, 1000000).toString()
 
-    console.log(`Verification code for ${user.email}: ${verificationCode}`)
-
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
 
     await this.verificationCodeRepository.upsert(user.email, VerificationCodeType.REGISTER, verificationCode, expiresAt)
+
+    await this.emailService.sendVerificationCode(user.email, verificationCode)
     return user
   }
 
@@ -172,6 +197,14 @@ export class AuthService {
       throw new UnauthorizedException('User not found')
     }
 
+    if (user.status === UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Email is already verified')
+    }
+
+    if (user.status === UserStatus.BLOCKED) {
+      throw new UnauthorizedException('Account is blocked')
+    }
+
     const verificationCode = await this.verificationCodeRepository.findByEmailAndType(
       body.email,
       VerificationCodeType.REGISTER,
@@ -195,5 +228,40 @@ export class AuthService {
     })
 
     return { message: 'Email verified successfully' }
+  }
+
+  async resendVerificationCode(body: ResendVerificationCodeBodyDTO) {
+    const user = await this.userRepository.findByEmail(body.email)
+
+    if (!user) {
+      throw new UnauthorizedException('User not found')
+    }
+
+    if (user.status === UserStatus.ACTIVE) {
+      throw new UnauthorizedException('User is already active')
+    }
+
+    if (user.status === UserStatus.BLOCKED) {
+      throw new UnauthorizedException('User is blocked')
+    }
+
+    const existingCode = await this.verificationCodeRepository.findByEmailAndType(
+      user.email,
+      VerificationCodeType.REGISTER,
+    )
+
+    if (existingCode && Date.now() - existingCode.updatedAt.getTime() < 60 * 1000) {
+      throw new UnauthorizedException('You can only request a new code once per minute')
+    }
+
+    const verificationCode = randomInt(100000, 1000000).toString()
+
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
+
+    await this.verificationCodeRepository.upsert(user.email, VerificationCodeType.REGISTER, verificationCode, expiresAt)
+
+    await this.emailService.sendVerificationCode(user.email, verificationCode)
+
+    return { message: 'Verification code resent successfully' }
   }
 }

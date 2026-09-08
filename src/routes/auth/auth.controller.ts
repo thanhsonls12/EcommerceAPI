@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Body, Controller, Post, Req } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import {
@@ -10,6 +9,8 @@ import {
   RefreshTokenResDTO,
   RegisterBodyDTO,
   RegisterResDTO,
+  ResendVerificationCodeBodyDTO,
+  ResendVerificationCodeResDTO,
   VerifyEmailBodyDTO,
   VerifyEmailResDTO,
 } from './auth.dto'
@@ -56,5 +57,12 @@ export class AuthController {
   @ZodSerializerDto(VerifyEmailResDTO)
   verifyEmail(@Body() body: VerifyEmailBodyDTO) {
     return this.authService.verifyEmail(body)
+  }
+
+  @Public()
+  @Post('resend-verification-code')
+  @ZodSerializerDto(ResendVerificationCodeResDTO)
+  resendVerificationCode(@Body() body: ResendVerificationCodeBodyDTO) {
+    return this.authService.resendVerificationCode(body)
   }
 }

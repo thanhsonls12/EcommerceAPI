@@ -21,6 +21,12 @@ export class UserRepository {
     })
   }
 
+  findByPhoneNumber(phoneNumber: string) {
+    return this.prisma.user.findUnique({
+      where: { phoneNumber },
+    })
+  }
+
   updateStatus(id: number, status: UserStatus, tx?: Prisma.TransactionClient) {
     const prismaClient = tx ?? this.prisma
     return prismaClient.user.update({

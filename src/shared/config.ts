@@ -19,6 +19,11 @@ const configSchema = z.object({
   ADMIN_EMAIL: z.string().email(),
   ADMIN_PHONENUMBER: z.string().min(1),
   API_SECRET_KEY: z.string().min(32),
+  SMTP_HOST: z.string().min(1),
+  SMTP_PORT: z.coerce.number(),
+  SMTP_USER: z.string().min(1),
+  SMTP_PASSWORD: z.string().min(1),
+  SMTP_FROM: z.string().email(),
 })
 
 const configServer = configSchema.safeParse(process.env)
