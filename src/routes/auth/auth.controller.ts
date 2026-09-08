@@ -4,10 +4,14 @@ import { AuthService } from './auth.service'
 import {
   LoginBodyDTO,
   LoginResDTO,
+  LogoutBodyDTO,
+  LogoutResDTO,
   RefreshTokenBodyDTO,
   RefreshTokenResDTO,
   RegisterBodyDTO,
   RegisterResDTO,
+  VerifyEmailBodyDTO,
+  VerifyEmailResDTO,
 } from './auth.dto'
 import { ZodSerializerDto } from 'nestjs-zod'
 import { Public } from '@/shared/decorators/public.decorator'
@@ -42,7 +46,15 @@ export class AuthController {
 
   @Public()
   @Post('logout')
-  logout() {
-    return this.authService.logout()
+  @ZodSerializerDto(LogoutResDTO)
+  logout(@Body() body: LogoutBodyDTO) {
+    return this.authService.logout(body)
+  }
+
+  @Public()
+  @Post('verify-email')
+  @ZodSerializerDto(VerifyEmailResDTO)
+  verifyEmail(@Body() body: VerifyEmailBodyDTO) {
+    return this.authService.verifyEmail(body)
   }
 }

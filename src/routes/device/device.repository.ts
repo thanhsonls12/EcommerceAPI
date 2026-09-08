@@ -16,4 +16,14 @@ export class DeviceRepository {
       },
     })
   }
+
+  updateActiveStatus(id: number, isActive: boolean, tx?: Prisma.TransactionClient) {
+    const prismaClient = tx ?? this.prisma
+    return prismaClient.device.update({
+      where: { id },
+      data: {
+        isActive,
+      },
+    })
+  }
 }

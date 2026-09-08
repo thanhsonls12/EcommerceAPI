@@ -28,6 +28,14 @@ const RefreshTokenResSchema = z.object({
   refreshToken: z.string(),
 })
 
+const LogoutResSchema = z.object({
+  message: z.string(),
+})
+
+const VerifyEmailResSchema = z.object({
+  message: z.string(),
+})
+
 const RegisterBodySchema = z
   .object({
     email: z.email(),
@@ -63,6 +71,19 @@ const RefreshTokenBodySchema = z
   })
   .strict()
 
+const LogoutBodySchema = z
+  .object({
+    refreshToken: z.string().min(1, 'Refresh token is required'),
+  })
+  .strict()
+
+const VerifyEmailBodySchema = z
+  .object({
+    email: z.email(),
+    code: z.string().length(6, 'Verification code must be 6 digits'),
+  })
+  .strict()
+
 export class RegisterBodyDTO extends createZodDto(RegisterBodySchema) {}
 
 export class RegisterResDTO extends createZodDto(UserSchema) {}
@@ -74,3 +95,11 @@ export class LoginResDTO extends createZodDto(LoginResSchema) {}
 export class RefreshTokenBodyDTO extends createZodDto(RefreshTokenBodySchema) {}
 
 export class RefreshTokenResDTO extends createZodDto(RefreshTokenResSchema) {}
+
+export class LogoutBodyDTO extends createZodDto(LogoutBodySchema) {}
+
+export class LogoutResDTO extends createZodDto(LogoutResSchema) {}
+
+export class VerifyEmailBodyDTO extends createZodDto(VerifyEmailBodySchema) {}
+
+export class VerifyEmailResDTO extends createZodDto(VerifyEmailResSchema) {}

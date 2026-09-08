@@ -3,9 +3,15 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { TokenService } from '../services/token.service'
 import { REQUEST_USER_KEY } from '../constants/auth.constant'
 import { Request } from 'express'
+
+import { PrismaService } from '../services/prisma.service'
+import { ensureUserIsActive } from '../helpers/user-status.helper'
 @Injectable()
 export class AccessTokenGuard implements CanActivate {
-  constructor(private readonly tokenService: TokenService) {}
+  constructor(
+    private readonly tokenService: TokenService,
+    private readonly prismaService: PrismaService,
+  ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>()
     const accessToken = request.headers.authorization?.split(' ')[1]
@@ -17,9 +23,21 @@ export class AccessTokenGuard implements CanActivate {
 
     try {
       const decodedAccessToken = await this.tokenService.verifyAccessToken(accessToken)
+      const user = await this.prismaService.user.findUnique({
+        where: {
+          id: decodedAccessToken.userId,
+        },
+      })
+      if (!user) {
+        throw new UnauthorizedException('User not found')
+      }
+      ensureUserIsActive(user.status)
       request[REQUEST_USER_KEY] = { userId: decodedAccessToken.userId }
       return true
-    } catch {
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error
+      }
       throw new UnauthorizedException()
     }
   }

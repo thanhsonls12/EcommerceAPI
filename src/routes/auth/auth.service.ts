@@ -2,11 +2,17 @@ import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { RolesService } from './roles.service'
 import { HashingService } from '@/shared/services/hashing.service'
 
-import { LoginBodyDTO, RefreshTokenBodyDTO, RegisterBodyDTO } from './auth.dto'
+import { LoginBodyDTO, LogoutBodyDTO, RefreshTokenBodyDTO, RegisterBodyDTO, VerifyEmailBodyDTO } from './auth.dto'
 import { UserRepository } from '../user/user.repository'
 import { DeviceRepository } from '../device/device.repository'
 import { TokenService } from '@/shared/services/token.service'
 import { RefreshTokenRepository } from '../refresh-token/refresh-token.repository'
+import { PrismaService } from '@/shared/services/prisma.service'
+
+import { ensureUserIsActive } from '@/shared/helpers/user-status.helper'
+import { VerificationCodeRepository } from '../verification-code/verification-code.repository'
+import { UserStatus, VerificationCodeType } from '../../../generated/prisma/enums'
+import { randomInt } from 'crypto'
 
 type LoginDeviceInfo = {
   userAgent: string
@@ -22,6 +28,8 @@ export class AuthService {
     private readonly deviceRepository: DeviceRepository,
     private readonly tokenService: TokenService,
     private readonly refreshTokenRepository: RefreshTokenRepository,
+    private readonly prismaService: PrismaService,
+    private readonly verificationCodeRepository: VerificationCodeRepository,
   ) {}
   async register(body: RegisterBodyDTO) {
     const clientRoleId = await this.rolesService.getClientRoleId()
@@ -33,6 +41,14 @@ export class AuthService {
       phoneNumber: body.phoneNumber,
       roleId: clientRoleId,
     })
+
+    const verificationCode = randomInt(100000, 1000000).toString()
+
+    console.log(`Verification code for ${user.email}: ${verificationCode}`)
+
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
+
+    await this.verificationCodeRepository.upsert(user.email, VerificationCodeType.REGISTER, verificationCode, expiresAt)
     return user
   }
 
@@ -48,6 +64,8 @@ export class AuthService {
     if (!isPasswordCorrect) {
       throw new UnauthorizedException('Email or password is incorrect')
     }
+
+    ensureUserIsActive(user.status)
 
     const device = await this.deviceRepository.create({
       userId: user.id,
@@ -91,6 +109,14 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token is invalid')
     }
 
+    const user = await this.userRepository.findById(payload.userId)
+
+    if (!user) {
+      throw new UnauthorizedException('User not found')
+    }
+
+    ensureUserIsActive(user.status)
+
     const device = await this.deviceRepository.findById(refreshToken.deviceId)
 
     if (!device || !device.isActive) {
@@ -106,17 +132,68 @@ export class AuthService {
 
     const expiresAt = new Date(newRefreshTokenPayload.exp * 1000)
 
-    await this.refreshTokenRepository.deleteByToken(body.refreshToken)
+    await this.prismaService.$transaction(async (tx) => {
+      await this.refreshTokenRepository.deleteByToken(body.refreshToken, tx)
 
-    await this.refreshTokenRepository.create({
-      token: newRefreshToken,
-      userId: payload.userId,
-      deviceId: device.id,
-      expiresAt,
+      await this.refreshTokenRepository.create(
+        {
+          token: newRefreshToken,
+          userId: payload.userId,
+          deviceId: device.id,
+          expiresAt,
+        },
+        tx,
+      )
     })
 
     return { accessToken, refreshToken: newRefreshToken }
   }
 
-  logout() {}
+  async logout(body: LogoutBodyDTO) {
+    const refreshToken = await this.refreshTokenRepository.findByToken(body.refreshToken)
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token is invalid')
+    }
+
+    await this.prismaService.$transaction(async (tx) => {
+      await this.refreshTokenRepository.deleteByToken(body.refreshToken, tx)
+
+      await this.deviceRepository.updateActiveStatus(refreshToken.deviceId, false, tx)
+    })
+
+    return { message: 'Logout successful' }
+  }
+
+  async verifyEmail(body: VerifyEmailBodyDTO) {
+    const user = await this.userRepository.findByEmail(body.email)
+
+    if (!user) {
+      throw new UnauthorizedException('User not found')
+    }
+
+    const verificationCode = await this.verificationCodeRepository.findByEmailAndType(
+      body.email,
+      VerificationCodeType.REGISTER,
+    )
+
+    if (!verificationCode) {
+      throw new UnauthorizedException('Verification code is invalid')
+    }
+
+    if (verificationCode.expiresAt < new Date()) {
+      throw new UnauthorizedException('Verification code has expired')
+    }
+
+    if (verificationCode.code !== body.code) {
+      throw new UnauthorizedException('Verification code is invalid')
+    }
+
+    await this.prismaService.$transaction(async (tx) => {
+      await this.userRepository.updateStatus(user.id, UserStatus.ACTIVE, tx)
+      await this.verificationCodeRepository.deleteByEmailAndType(body.email, VerificationCodeType.REGISTER, tx)
+    })
+
+    return { message: 'Email verified successfully' }
+  }
 }
