@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import nodemailer from 'nodemailer'
 import envConfig from '../config'
+import { MESSAGE } from '../constants/message.constant'
 
 @Injectable()
 export class EmailService {
@@ -18,8 +19,8 @@ export class EmailService {
     await this.transporter.sendMail({
       from: envConfig.SMTP_FROM,
       to: email,
-      subject: 'Email Verification Code',
-      text: `Your verification code is: ${code}`,
+      subject: MESSAGE.EMAIL.VERIFICATION_CODE_SUBJECT,
+      text: MESSAGE.EMAIL.VERIFICATION_CODE_TEXT(code),
     })
   }
 }

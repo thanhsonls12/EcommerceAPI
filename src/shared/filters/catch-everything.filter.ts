@@ -2,6 +2,7 @@ import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logge
 import { HttpAdapterHost } from '@nestjs/core'
 import { ZodSerializationException } from 'nestjs-zod'
 import { isNotFoundPrismaError, isUniqueConstraintError } from '../helpers'
+import { MESSAGE } from '../constants/message.constant'
 
 @Catch()
 export class CatchEverythingFilter implements ExceptionFilter {
@@ -18,7 +19,7 @@ export class CatchEverythingFilter implements ExceptionFilter {
 
     let httpStatus = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR
 
-    let message = exception instanceof HttpException ? exception.getResponse() : 'Internal server error'
+    let message = exception instanceof HttpException ? exception.getResponse() : MESSAGE.SYSTEM.INTERNAL_SERVER_ERROR
 
     if (exception instanceof ZodSerializationException) {
       const zodError = exception.getZodError()
@@ -27,12 +28,12 @@ export class CatchEverythingFilter implements ExceptionFilter {
 
     if (isUniqueConstraintError(exception)) {
       httpStatus = HttpStatus.CONFLICT
-      message = 'Record already exists'
+      message = MESSAGE.SYSTEM.RECORD_ALREADY_EXISTS
     }
 
     if (isNotFoundPrismaError(exception)) {
       httpStatus = HttpStatus.NOT_FOUND
-      message = 'Record not found'
+      message = MESSAGE.SYSTEM.RECORD_NOT_FOUND
     }
 
     const responseBody = {

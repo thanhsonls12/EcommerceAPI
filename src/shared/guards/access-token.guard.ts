@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
 
 import { TokenService } from '../services/token.service'
+import { MESSAGE } from '../constants/message.constant'
 import { REQUEST_USER_KEY } from '../constants/auth.constant'
 import { Request } from 'express'
 
@@ -18,7 +19,7 @@ export class AccessTokenGuard implements CanActivate {
 
     if (!accessToken)
       throw new UnauthorizedException({
-        message: 'Chua dang nhap',
+        message: MESSAGE.AUTH.NOT_LOGGED_IN,
       })
 
     try {
@@ -29,7 +30,7 @@ export class AccessTokenGuard implements CanActivate {
         },
       })
       if (!user) {
-        throw new UnauthorizedException('User not found')
+        throw new UnauthorizedException(MESSAGE.AUTH.USER_NOT_FOUND)
       }
       ensureUserIsActive(user.status)
       request[REQUEST_USER_KEY] = { userId: decodedAccessToken.userId }

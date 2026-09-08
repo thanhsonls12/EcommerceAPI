@@ -1,6 +1,7 @@
 import { createZodDto } from 'nestjs-zod'
 import z from 'zod'
 import { UserStatus } from '../../../generated/prisma/enums'
+import { MESSAGE } from '@/shared/constants/message.constant'
 
 const UserSchema = z.object({
   id: z.number(),
@@ -44,7 +45,7 @@ const RegisterBodySchema = z
     confirmPassword: z.string().min(6).max(20),
     phoneNumber: z
       .string()
-      .length(10, 'Phone number must be 10 digits')
+      .length(10, MESSAGE.VALIDATION.PHONE_NUMBER_LENGTH)
       .regex(/^0[35789][0-9]{8}$/),
   })
   .strict()
@@ -52,7 +53,7 @@ const RegisterBodySchema = z
     if (confirmPassword !== password) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Password and confirm password must match',
+        message: MESSAGE.VALIDATION.PASSWORD_CONFIRMATION_MISMATCH,
         path: ['confirmPassword'],
       })
     }
@@ -67,20 +68,20 @@ const LoginBodySchema = z
 
 const RefreshTokenBodySchema = z
   .object({
-    refreshToken: z.string().min(1, 'Refresh token is required'),
+    refreshToken: z.string().min(1, MESSAGE.VALIDATION.REFRESH_TOKEN_REQUIRED),
   })
   .strict()
 
 const LogoutBodySchema = z
   .object({
-    refreshToken: z.string().min(1, 'Refresh token is required'),
+    refreshToken: z.string().min(1, MESSAGE.VALIDATION.REFRESH_TOKEN_REQUIRED),
   })
   .strict()
 
 const VerifyEmailBodySchema = z
   .object({
     email: z.email(),
-    code: z.string().length(6, 'Verification code must be 6 digits'),
+    code: z.string().length(6, MESSAGE.VALIDATION.VERIFICATION_CODE_LENGTH),
   })
   .strict()
 
@@ -103,7 +104,7 @@ const ForgotPasswordResSchema = z.object({
 const ResetPasswordBodySchema = z
   .object({
     email: z.email(),
-    code: z.string().length(6, 'Reset code must be 6 digits'),
+    code: z.string().length(6, MESSAGE.VALIDATION.RESET_CODE_LENGTH),
     password: z.string().min(6).max(20),
     confirmPassword: z.string().min(6).max(20),
   })
@@ -112,7 +113,7 @@ const ResetPasswordBodySchema = z
     if (password !== confirmPassword) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Password and confirm password must match',
+        message: MESSAGE.VALIDATION.PASSWORD_CONFIRMATION_MISMATCH,
         path: ['confirmPassword'],
       })
     }

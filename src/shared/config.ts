@@ -2,9 +2,10 @@ import fs from 'fs'
 import path from 'path'
 import z from 'zod'
 import { config } from 'dotenv'
+import { MESSAGE } from './constants/message.constant'
 config()
 if (!fs.existsSync(path.resolve('.env'))) {
-  console.log('Khong tim thay file .env')
+  console.log(MESSAGE.SYSTEM.ENV_FILE_NOT_FOUND)
   process.exit(1)
 }
 
@@ -29,7 +30,7 @@ const configSchema = z.object({
 const configServer = configSchema.safeParse(process.env)
 
 if (!configServer.success) {
-  console.log('Cac gia tri khong hop le')
+  console.log(MESSAGE.SYSTEM.INVALID_ENV)
   console.error(configServer.error)
   process.exit(1)
 }

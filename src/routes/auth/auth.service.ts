@@ -23,6 +23,7 @@ import { VerificationCodeRepository } from '../verification-code/verification-co
 import { UserStatus, VerificationCodeType } from '../../../generated/prisma/enums'
 import { randomInt } from 'crypto'
 import { EmailService } from '@/shared/services/email.service'
+import { MESSAGE } from '@/shared/constants/message.constant'
 
 type LoginDeviceInfo = {
   userAgent: string
@@ -50,15 +51,15 @@ export class AuthService {
 
     if (existingUser) {
       if (existingUser.status === UserStatus.INACTIVE) {
-        throw new ConflictException('Account already exists but is not verified')
+        throw new ConflictException(MESSAGE.AUTH.ACCOUNT_ALREADY_EXISTS_UNVERIFIED)
       }
 
-      throw new ConflictException('Email is already registered')
+      throw new ConflictException(MESSAGE.AUTH.EMAIL_ALREADY_REGISTERED)
     }
 
     const existingPhoneNumber = await this.userRepository.findByPhoneNumber(body.phoneNumber)
     if (existingPhoneNumber) {
-      throw new ConflictException('Phone number is already registered')
+      throw new ConflictException(MESSAGE.AUTH.PHONE_ALREADY_REGISTERED)
     }
 
     const user = await this.userRepository.create({
@@ -83,13 +84,13 @@ export class AuthService {
     const user = await this.userRepository.findByEmail(body.email)
 
     if (!user) {
-      throw new UnauthorizedException('Email or password is incorrect')
+      throw new UnauthorizedException(MESSAGE.AUTH.EMAIL_OR_PASSWORD_INCORRECT)
     }
 
     const isPasswordCorrect = await this.hashingService.compare(body.password, user.password)
 
     if (!isPasswordCorrect) {
-      throw new UnauthorizedException('Email or password is incorrect')
+      throw new UnauthorizedException(MESSAGE.AUTH.EMAIL_OR_PASSWORD_INCORRECT)
     }
 
     ensureUserIsActive(user.status)
@@ -129,17 +130,17 @@ export class AuthService {
     const refreshToken = await this.refreshTokenRepository.findByToken(body.refreshToken)
 
     if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token is invalid')
+      throw new UnauthorizedException(MESSAGE.AUTH.REFRESH_TOKEN_INVALID)
     }
 
     if (refreshToken.userId !== payload.userId) {
-      throw new UnauthorizedException('Refresh token is invalid')
+      throw new UnauthorizedException(MESSAGE.AUTH.REFRESH_TOKEN_INVALID)
     }
 
     const user = await this.userRepository.findById(payload.userId)
 
     if (!user) {
-      throw new UnauthorizedException('User not found')
+      throw new UnauthorizedException(MESSAGE.AUTH.USER_NOT_FOUND)
     }
 
     ensureUserIsActive(user.status)
@@ -147,7 +148,7 @@ export class AuthService {
     const device = await this.deviceRepository.findById(refreshToken.deviceId)
 
     if (!device || !device.isActive) {
-      throw new UnauthorizedException('Device is inactive')
+      throw new UnauthorizedException(MESSAGE.AUTH.DEVICE_INACTIVE)
     }
 
     const [accessToken, newRefreshToken] = await Promise.all([
@@ -180,7 +181,7 @@ export class AuthService {
     const refreshToken = await this.refreshTokenRepository.findByToken(body.refreshToken)
 
     if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token is invalid')
+      throw new UnauthorizedException(MESSAGE.AUTH.REFRESH_TOKEN_INVALID)
     }
 
     await this.prismaService.$transaction(async (tx) => {
@@ -189,22 +190,22 @@ export class AuthService {
       await this.deviceRepository.updateActiveStatus(refreshToken.deviceId, false, tx)
     })
 
-    return { message: 'Logout successful' }
+    return { message: MESSAGE.AUTH.LOGOUT_SUCCESSFUL }
   }
 
   async verifyEmail(body: VerifyEmailBodyDTO) {
     const user = await this.userRepository.findByEmail(body.email)
 
     if (!user) {
-      throw new UnauthorizedException('User not found')
+      throw new UnauthorizedException(MESSAGE.AUTH.USER_NOT_FOUND)
     }
 
     if (user.status === UserStatus.ACTIVE) {
-      throw new UnauthorizedException('Email is already verified')
+      throw new UnauthorizedException(MESSAGE.AUTH.EMAIL_ALREADY_VERIFIED)
     }
 
     if (user.status === UserStatus.BLOCKED) {
-      throw new UnauthorizedException('Account is blocked')
+      throw new UnauthorizedException(MESSAGE.AUTH.ACCOUNT_BLOCKED)
     }
 
     const verificationCode = await this.verificationCodeRepository.findByEmailAndType(
@@ -213,15 +214,15 @@ export class AuthService {
     )
 
     if (!verificationCode) {
-      throw new UnauthorizedException('Verification code is invalid')
+      throw new UnauthorizedException(MESSAGE.AUTH.VERIFICATION_CODE_INVALID)
     }
 
     if (verificationCode.expiresAt < new Date()) {
-      throw new UnauthorizedException('Verification code has expired')
+      throw new UnauthorizedException(MESSAGE.AUTH.VERIFICATION_CODE_EXPIRED)
     }
 
     if (verificationCode.code !== body.code) {
-      throw new UnauthorizedException('Verification code is invalid')
+      throw new UnauthorizedException(MESSAGE.AUTH.VERIFICATION_CODE_INVALID)
     }
 
     await this.prismaService.$transaction(async (tx) => {
@@ -229,22 +230,22 @@ export class AuthService {
       await this.verificationCodeRepository.deleteByEmailAndType(body.email, VerificationCodeType.REGISTER, tx)
     })
 
-    return { message: 'Email verified successfully' }
+    return { message: MESSAGE.AUTH.EMAIL_VERIFIED_SUCCESSFULLY }
   }
 
   async resendVerificationCode(body: ResendVerificationCodeBodyDTO) {
     const user = await this.userRepository.findByEmail(body.email)
 
     if (!user) {
-      throw new UnauthorizedException('User not found')
+      throw new UnauthorizedException(MESSAGE.AUTH.USER_NOT_FOUND)
     }
 
     if (user.status === UserStatus.ACTIVE) {
-      throw new UnauthorizedException('User is already active')
+      throw new UnauthorizedException(MESSAGE.AUTH.USER_ALREADY_ACTIVE)
     }
 
     if (user.status === UserStatus.BLOCKED) {
-      throw new UnauthorizedException('User is blocked')
+      throw new UnauthorizedException(MESSAGE.AUTH.ACCOUNT_BLOCKED)
     }
 
     const existingCode = await this.verificationCodeRepository.findByEmailAndType(
@@ -253,7 +254,7 @@ export class AuthService {
     )
 
     if (existingCode && Date.now() - existingCode.updatedAt.getTime() < 60 * 1000) {
-      throw new UnauthorizedException('You can only request a new code once per minute')
+      throw new UnauthorizedException(MESSAGE.AUTH.RESEND_CODE_RATE_LIMIT)
     }
 
     const verificationCode = randomInt(100000, 1000000).toString()
@@ -264,7 +265,7 @@ export class AuthService {
 
     await this.emailService.sendVerificationCode(user.email, verificationCode)
 
-    return { message: 'Verification code resent successfully' }
+    return { message: MESSAGE.AUTH.VERIFICATION_CODE_RESENT_SUCCESSFULLY }
   }
 
   async forgotPassword(body: ForgotPasswordBodyDTO) {
@@ -272,7 +273,7 @@ export class AuthService {
 
     if (!user) {
       return {
-        message: 'If the email exists, a reset code has been sent',
+        message: MESSAGE.AUTH.RESET_CODE_SENT,
       }
     }
 
@@ -285,7 +286,7 @@ export class AuthService {
 
     if (existingCode && Date.now() - existingCode.updatedAt.getTime() < 60 * 1000) {
       return {
-        message: 'If the email exists, a reset code has been sent',
+        message: MESSAGE.AUTH.RESET_CODE_SENT,
       }
     }
 
@@ -298,7 +299,7 @@ export class AuthService {
     await this.emailService.sendVerificationCode(user.email, code)
 
     return {
-      message: 'If the email exists, a reset code has been sent',
+      message: MESSAGE.AUTH.RESET_CODE_SENT,
     }
   }
 
@@ -306,7 +307,7 @@ export class AuthService {
     const user = await this.userRepository.findByEmail(body.email)
 
     if (!user) {
-      throw new UnauthorizedException('Reset code is invalid or expired')
+      throw new UnauthorizedException(MESSAGE.AUTH.RESET_CODE_INVALID_OR_EXPIRED)
     }
 
     ensureUserIsActive(user.status)
@@ -317,15 +318,15 @@ export class AuthService {
     )
 
     if (!verificationCode) {
-      throw new UnauthorizedException('Reset code is invalid or expired')
+      throw new UnauthorizedException(MESSAGE.AUTH.RESET_CODE_INVALID_OR_EXPIRED)
     }
 
     if (verificationCode.expiresAt < new Date()) {
-      throw new UnauthorizedException('Reset code is invalid or expired')
+      throw new UnauthorizedException(MESSAGE.AUTH.RESET_CODE_INVALID_OR_EXPIRED)
     }
 
     if (verificationCode.code !== body.code) {
-      throw new UnauthorizedException('Reset code is invalid or expired')
+      throw new UnauthorizedException(MESSAGE.AUTH.RESET_CODE_INVALID_OR_EXPIRED)
     }
 
     const hashedPassword = await this.hashingService.hash(body.password)
@@ -341,7 +342,7 @@ export class AuthService {
     })
 
     return {
-      message: 'Password reset successfully',
+      message: MESSAGE.AUTH.PASSWORD_RESET_SUCCESSFULLY,
     }
   }
 }
