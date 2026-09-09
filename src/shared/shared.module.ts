@@ -9,10 +9,11 @@ import { APIKeyGuard } from './guards/api-key.guard'
 import { AuthenticationGuard } from './guards/authentication.guard'
 import { APP_GUARD } from '@nestjs/core'
 import { EmailService } from './services/email.service'
+import { PermissionsGuard } from './guards/permissions.guard'
 
 const sharedServices = [PrismaService, HashingService, TokenService, EmailService]
 
-const authGuards = [AccessTokenGuard, APIKeyGuard, AuthenticationGuard]
+const authGuards = [AccessTokenGuard, APIKeyGuard, AuthenticationGuard, PermissionsGuard]
 @Global()
 @Module({
   providers: [
@@ -21,6 +22,10 @@ const authGuards = [AccessTokenGuard, APIKeyGuard, AuthenticationGuard]
     {
       provide: APP_GUARD,
       useClass: AuthenticationGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
     },
   ],
   exports: [...sharedServices, ...authGuards],
