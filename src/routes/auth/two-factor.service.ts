@@ -83,4 +83,18 @@ export class TwoFactorService {
       recoveryCodes,
     }
   }
+
+  async verifyRecoveryCode(userId: number, recoveryCode: string) {
+    const codes = await this.recoveryCodeRepository.findUnusedByUserId(userId)
+
+    for (const code of codes) {
+      const matches = await this.hashingService.compare(recoveryCode, code.codeHash)
+
+      if (matches) {
+        return code
+      }
+    }
+
+    return null
+  }
 }

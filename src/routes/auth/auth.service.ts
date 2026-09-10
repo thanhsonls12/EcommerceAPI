@@ -12,6 +12,7 @@ import {
   ResetPasswordBodyDTO,
   VerifyEmailBodyDTO,
   VerifyTwoFactorLoginBodyDTO,
+  VerifyTwoFactorRecoveryBodyDTO,
 } from './auth.dto'
 import { UserRepository } from '../user/user.repository'
 import { DeviceRepository } from '../device/device.repository'
@@ -26,6 +27,7 @@ import { randomInt } from 'crypto'
 import { EmailService } from '@/shared/services/email.service'
 import { MESSAGE } from '@/shared/constants/message.constant'
 import { TwoFactorService } from './two-factor.service'
+import { RecoveryCodeRepository } from '../recovery-code/recovery-code.repository'
 
 type LoginDeviceInfo = {
   userAgent: string
@@ -78,6 +80,7 @@ export class AuthService {
     private readonly verificationCodeRepository: VerificationCodeRepository,
     private readonly emailService: EmailService,
     private readonly twoFactorService: TwoFactorService,
+    private readonly recoveryCodeRepository: RecoveryCodeRepository,
   ) {}
   async register(body: RegisterBodyDTO) {
     const clientRoleId = await this.rolesService.getClientRoleId()
@@ -389,6 +392,36 @@ export class AuthService {
     if (!isValid) {
       throw new UnauthorizedException(MESSAGE.AUTH.INVALID_TWO_FACTOR_AUTHENTICATION_CODE)
     }
+    return this.createLoginSession(user, deviceInfo)
+  }
+
+  async verifyTwoFactorRecoveryLogin(body: VerifyTwoFactorRecoveryBodyDTO, deviceInfo: LoginDeviceInfo) {
+    const payload = await this.tokenService.verifyTwoFactorToken(body.twoFactorToken)
+
+    const user = await this.userRepository.findById(payload.userId)
+
+    if (!user) {
+      throw new UnauthorizedException(MESSAGE.AUTH.USER_NOT_FOUND)
+    }
+
+    ensureUserIsActive(user.status)
+
+    if (!user.totpEnabled) {
+      throw new UnauthorizedException(MESSAGE.AUTH.TWO_FACTOR_AUTHENTICATION_NOT_ENABLED)
+    }
+
+    const recoveryCode = await this.twoFactorService.verifyRecoveryCode(user.id, body.recoveryCode)
+
+    if (!recoveryCode) {
+      throw new UnauthorizedException('Invalid recovery code')
+    }
+
+    const result = await this.recoveryCodeRepository.consume(recoveryCode.id)
+
+    if (result.count !== 1) {
+      throw new UnauthorizedException('Invalid recovery code')
+    }
+
     return this.createLoginSession(user, deviceInfo)
   }
 }

@@ -19,6 +19,7 @@ import {
   VerifyEmailBodyDTO,
   VerifyEmailResDTO,
   VerifyTwoFactorLoginBodyDTO,
+  VerifyTwoFactorRecoveryBodyDTO,
 } from './auth.dto'
 import { ZodSerializerDto } from 'nestjs-zod'
 import { Public } from '@/shared/decorators/public.decorator'
@@ -105,6 +106,15 @@ export class AuthController {
   @Post('2fa/verify-login')
   verifyTwoFactorLogin(@Body() body: VerifyTwoFactorLoginBodyDTO, @Req() req: Request) {
     return this.authService.verifyTwoFactorLogin(body, {
+      userAgent: req.headers['user-agent'] || '',
+      ip: req.ip ?? '',
+    })
+  }
+
+  @Public()
+  @Post('2fa/verify-recovery-code')
+  verifyTwoFactorRecoveryCode(@Body() body: VerifyTwoFactorRecoveryBodyDTO, @Req() req: Request) {
+    return this.authService.verifyTwoFactorRecoveryLogin(body, {
       userAgent: req.headers['user-agent'] || '',
       ip: req.ip ?? '',
     })

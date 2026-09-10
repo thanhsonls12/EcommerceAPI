@@ -158,6 +158,14 @@ const VerifyTwoFactorLoginBodySchema = z
   })
   .strict()
 
+const VerifyTwoFactorRecoveryBodySchema = z
+  .object({
+    twoFactorToken: z.string().min(1),
+    recoveryCode: z.string().regex(/^[A-F0-9]{6}-[A-F0-9]{6}$/),
+  })
+  .strict()
+
+export class VerifyTwoFactorRecoveryBodyDTO extends createZodDto(VerifyTwoFactorRecoveryBodySchema) {}
 export class VerifyTwoFactorLoginBodyDTO extends createZodDto(VerifyTwoFactorLoginBodySchema) {}
 export class EnableTwoFactorBodyDTO extends createZodDto(EnableTwoFactorBodySchema) {}
 

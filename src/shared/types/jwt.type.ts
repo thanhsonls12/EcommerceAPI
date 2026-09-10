@@ -6,3 +6,7 @@ export type TokenPayload = {
   exp: number
   iat: number
 }
+
+export type RequestUser = {
+  userId: number
+}
