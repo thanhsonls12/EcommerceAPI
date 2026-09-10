@@ -133,4 +133,16 @@ export class UserRepository {
       },
     })
   }
+
+  disableTotp(id: number, tx?: Prisma.TransactionClient) {
+    const prismaClient = tx ?? this.prisma
+
+    return prismaClient.user.update({
+      where: { id },
+      data: {
+        totpEnabled: false,
+        totpSecret: null,
+      },
+    })
+  }
 }

@@ -165,6 +165,21 @@ const VerifyTwoFactorRecoveryBodySchema = z
   })
   .strict()
 
+const DisableTwoFactorBodySchema = z
+  .object({
+    password: z.string().min(6).max(20),
+    code: z.string().regex(/^\d{6}$/),
+  })
+  .strict()
+
+const DisableTwoFactorResSchema = z.object({
+  message: z.string(),
+})
+
+export class DisableTwoFactorBodyDTO extends createZodDto(DisableTwoFactorBodySchema) {}
+
+export class DisableTwoFactorResDTO extends createZodDto(DisableTwoFactorResSchema) {}
+
 export class VerifyTwoFactorRecoveryBodyDTO extends createZodDto(VerifyTwoFactorRecoveryBodySchema) {}
 export class VerifyTwoFactorLoginBodyDTO extends createZodDto(VerifyTwoFactorLoginBodySchema) {}
 export class EnableTwoFactorBodyDTO extends createZodDto(EnableTwoFactorBodySchema) {}

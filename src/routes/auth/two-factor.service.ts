@@ -5,7 +5,8 @@ import { HashingService } from '@/shared/services/hashing.service'
 import { PrismaService } from '@/shared/services/prisma.service'
 import { RecoveryCodeRepository } from '../recovery-code/recovery-code.repository'
 import { randomBytes } from 'crypto'
-import { EnableTwoFactorBodyDTO } from './auth.dto'
+import { DisableTwoFactorBodyDTO, EnableTwoFactorBodyDTO } from './auth.dto'
+import { MESSAGE } from '@/shared/constants/message.constant'
 @Injectable()
 export class TwoFactorService {
   private generateRecoveryCode() {
@@ -96,5 +97,39 @@ export class TwoFactorService {
     }
 
     return null
+  }
+
+  async disable(userId: number, body: DisableTwoFactorBodyDTO) {
+    const user = await this.userRepository.findById(userId)
+
+    if (!user) {
+      throw new UnauthorizedException(MESSAGE.AUTH.USER_NOT_FOUND)
+    }
+
+    if (!user.totpEnabled || !user.totpSecret) {
+      throw new ConflictException(MESSAGE.AUTH.TWO_FACTOR_AUTHENTICATION_ALREADY_DISABLED)
+    }
+
+    const isPasswordCorrect = await this.hashingService.compare(body.password, user.password)
+
+    if (!isPasswordCorrect) {
+      throw new UnauthorizedException(MESSAGE.AUTH.PASSWORD_INCORRECT)
+    }
+
+    const isCodeValid = await this.verifyCode(user.totpSecret, body.code)
+
+    if (!isCodeValid) {
+      throw new UnauthorizedException(MESSAGE.AUTH.INVALID_TWO_FACTOR_AUTHENTICATION_CODE)
+    }
+
+    await this.prismaService.$transaction(async (tx) => {
+      await this.userRepository.disableTotp(userId, tx)
+
+      await this.recoveryCodeRepository.deleteAllByUserId(userId, tx)
+    })
+
+    return {
+      message: MESSAGE.AUTH.TWO_FACTOR_AUTHENTICATION_DISABLED,
+    }
   }
 }

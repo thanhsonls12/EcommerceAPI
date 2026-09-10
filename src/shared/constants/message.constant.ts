@@ -30,6 +30,9 @@ export const MESSAGE = {
     RESET_CODE_SENT: 'If the email exists, a reset code has been sent',
     TWO_FACTOR_AUTHENTICATION_NOT_ENABLED: 'Two-factor authentication is not enabled for this account',
     INVALID_TWO_FACTOR_AUTHENTICATION_CODE: 'Invalid two-factor authentication code',
+    TWO_FACTOR_AUTHENTICATION_ALREADY_DISABLED: 'Two-factor authentication is already disabled',
+    TWO_FACTOR_AUTHENTICATION_DISABLED: 'Two-factor authentication has been disabled',
+    PASSWORD_INCORRECT: 'Password is incorrect',
   },
   VALIDATION: {
     PASSWORD_CONFIRMATION_MISMATCH: 'Password and confirm password must match',

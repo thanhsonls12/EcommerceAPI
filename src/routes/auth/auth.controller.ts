@@ -1,6 +1,8 @@
 import { Body, Controller, Post, Req } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import {
+  DisableTwoFactorBodyDTO,
+  DisableTwoFactorResDTO,
   EnableTwoFactorBodyDTO,
   ForgotPasswordBodyDTO,
   ForgotPasswordResDTO,
@@ -118,5 +120,10 @@ export class AuthController {
       userAgent: req.headers['user-agent'] || '',
       ip: req.ip ?? '',
     })
+  }
+  @Post('2fa/disable')
+  @ZodSerializerDto(DisableTwoFactorResDTO)
+  disableTwoFactor(@ActiveUser('userId') userId: number, @Body() body: DisableTwoFactorBodyDTO) {
+    return this.twoFactorService.disable(userId, body)
   }
 }
