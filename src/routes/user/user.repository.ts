@@ -43,4 +43,75 @@ export class UserRepository {
       data: { password },
     })
   }
+
+  findMany() {
+    return this.prisma.user.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phoneNumber: true,
+        avatar: true,
+        status: true,
+        roleId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+  }
+
+  findProfileById(id: number) {
+    return this.prisma.user.findUnique({
+      where: {
+        id,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phoneNumber: true,
+        avatar: true,
+        status: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+    })
+  }
+
+  updateProfile(id: number, data: Prisma.UserUpdateInput) {
+    return this.prisma.user.update({
+      where: {
+        id,
+        deletedAt: null,
+      },
+      data,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phoneNumber: true,
+        avatar: true,
+        status: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+    })
+  }
 }
