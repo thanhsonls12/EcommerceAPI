@@ -13,4 +13,22 @@ const UpdateProfileBodySchema = z
   })
   .strict()
 
+const ChangePasswordBodySchema = z
+  .object({
+    currentPassword: z.string().min(6).max(20),
+    newPassword: z.string().min(6).max(20),
+    confirmNewPassword: z.string().min(6).max(20),
+  })
+  .strict()
+  .superRefine(({ newPassword, confirmNewPassword }, ctx) => {
+    if (newPassword !== confirmNewPassword) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Password confirmation does not match',
+        path: ['confirmNewPassword'],
+      })
+    }
+  })
+
+export class ChangePasswordBodyDTO extends createZodDto(ChangePasswordBodySchema) {}
 export class UpdateProfileBodyDto extends createZodDto(UpdateProfileBodySchema) {}

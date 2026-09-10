@@ -3,7 +3,7 @@ import { UserService } from './user.service'
 import { Permissions } from '@/shared/decorators/permissions.decorator'
 import { PermissionName } from '@/shared/constants/permission.constant'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
-import { UpdateProfileBodyDto } from './user.dto'
+import { ChangePasswordBodyDTO, UpdateProfileBodyDto } from './user.dto'
 
 @Controller('users')
 export class UserController {
@@ -23,5 +23,10 @@ export class UserController {
   @Patch('me')
   updateMe(@ActiveUser('userId') userId: number, @Body() body: UpdateProfileBodyDto) {
     return this.userService.updateProfile(userId, body)
+  }
+
+  @Patch('me/password')
+  changePassword(@ActiveUser('userId') userId: number, @Body() body: ChangePasswordBodyDTO) {
+    return this.userService.changePassword(userId, body)
   }
 }
