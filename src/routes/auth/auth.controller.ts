@@ -28,6 +28,7 @@ import { Public } from '@/shared/decorators/public.decorator'
 import type { Request } from 'express'
 import { TwoFactorService } from './two-factor.service'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
+import { Throttle } from '@nestjs/throttler'
 
 @Controller('auth')
 export class AuthController {
@@ -44,6 +45,12 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 60_000,
+    },
+  })
   @ZodSerializerDto(LoginResDTO)
   login(@Body() body: LoginBodyDTO, @Req() req: Request) {
     return this.authService.login(body, {
@@ -106,6 +113,13 @@ export class AuthController {
 
   @Public()
   @Post('2fa/verify-login')
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 300_000,
+    },
+  })
+  @ZodSerializerDto(LoginResDTO)
   verifyTwoFactorLogin(@Body() body: VerifyTwoFactorLoginBodyDTO, @Req() req: Request) {
     return this.authService.verifyTwoFactorLogin(body, {
       userAgent: req.headers['user-agent'] || '',
@@ -115,6 +129,13 @@ export class AuthController {
 
   @Public()
   @Post('2fa/verify-recovery-code')
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 300_000,
+    },
+  })
+  @ZodSerializerDto(LoginResDTO)
   verifyTwoFactorRecoveryCode(@Body() body: VerifyTwoFactorRecoveryBodyDTO, @Req() req: Request) {
     return this.authService.verifyTwoFactorRecoveryLogin(body, {
       userAgent: req.headers['user-agent'] || '',
