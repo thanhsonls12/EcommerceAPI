@@ -36,8 +36,8 @@ export class TokenService {
         type: '2fa' satisfies TokenType,
       },
       {
-        secret: envConfig.ACCESS_TOKEN_SECRET,
-        expiresIn: '5m',
+        secret: envConfig.TWO_FACTOR_TOKEN_SECRET,
+        expiresIn: envConfig.TWO_FACTOR_TOKEN_EXPIRES_IN as JwtSignOptions['expiresIn'],
         algorithm: 'HS256',
       },
     )
@@ -60,6 +60,6 @@ export class TokenService {
   }
 
   verifyTwoFactorToken(token: string) {
-    return this.verify(token, envConfig.ACCESS_TOKEN_SECRET, '2fa')
+    return this.verify(token, envConfig.TWO_FACTOR_TOKEN_SECRET, '2fa')
   }
 }

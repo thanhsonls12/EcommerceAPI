@@ -11,9 +11,9 @@ if (!fs.existsSync(path.resolve('.env'))) {
 
 const configSchema = z.object({
   DATABASE_URL: z.string().min(1),
-  ACCESS_TOKEN_SECRET: z.string().min(1),
+  ACCESS_TOKEN_SECRET: z.string().min(32),
   ACCESS_TOKEN_EXPIRES_IN: z.string().min(1),
-  REFRESH_TOKEN_SECRET: z.string().min(1),
+  REFRESH_TOKEN_SECRET: z.string().min(32),
   REFRESH_TOKEN_EXPIRES_IN: z.string().min(1),
   ADMIN_NAME: z.string().min(1),
   ADMIN_PASSWORD: z.string().min(1),
@@ -25,6 +25,8 @@ const configSchema = z.object({
   SMTP_USER: z.string().min(1),
   SMTP_PASSWORD: z.string().min(1),
   SMTP_FROM: z.string().email(),
+  TWO_FACTOR_TOKEN_SECRET: z.string().min(32),
+  TWO_FACTOR_TOKEN_EXPIRES_IN: z.string().min(1),
 })
 
 const configServer = configSchema.safeParse(process.env)
