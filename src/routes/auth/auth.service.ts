@@ -23,11 +23,12 @@ import { PrismaService } from '@/shared/services/prisma.service'
 import { ensureUserIsActive } from '@/shared/helpers/user-status.helper'
 import { VerificationCodeRepository } from '../verification-code/verification-code.repository'
 import { UserStatus, VerificationCodeType } from '../../../generated/prisma/enums'
-import { randomInt } from 'crypto'
+import { randomInt, randomUUID } from 'crypto'
 import { EmailService } from '@/shared/services/email.service'
 import { MESSAGE } from '@/shared/constants/message.constant'
 import { TwoFactorService } from './two-factor.service'
 import { RecoveryCodeRepository } from '../recovery-code/recovery-code.repository'
+import { RedisService } from '@/shared/services/redis.service'
 
 type LoginDeviceInfo = {
   userAgent: string
@@ -36,6 +37,9 @@ type LoginDeviceInfo = {
 
 @Injectable()
 export class AuthService {
+  private getTwoFactorChallengeKey(challengeId: string) {
+    return `2fa:challengeId:${challengeId}`
+  }
   private async createLoginSession(user: Awaited<ReturnType<UserRepository['findById']>>, deviceInfo: LoginDeviceInfo) {
     if (!user) {
       throw new UnauthorizedException(MESSAGE.AUTH.USER_NOT_FOUND)
@@ -81,6 +85,7 @@ export class AuthService {
     private readonly emailService: EmailService,
     private readonly twoFactorService: TwoFactorService,
     private readonly recoveryCodeRepository: RecoveryCodeRepository,
+    private readonly redisService: RedisService,
   ) {}
   async register(body: RegisterBodyDTO) {
     const clientRoleId = await this.rolesService.getClientRoleId()
@@ -135,7 +140,13 @@ export class AuthService {
     ensureUserIsActive(user.status)
 
     if (user.totpEnabled) {
-      const twoFactorToken = await this.tokenService.signTwoFactorToken({ userId: user.id })
+      const challengeId = randomUUID()
+      const redis = this.redisService.getClient()
+      await redis.set(this.getTwoFactorChallengeKey(challengeId), user.id.toString(), {
+        EX: 300,
+        NX: true,
+      })
+      const twoFactorToken = await this.tokenService.signTwoFactorToken({ userId: user.id, challengeId })
 
       return {
         requiresTwoFactor: true,
@@ -375,6 +386,8 @@ export class AuthService {
   async verifyTwoFactorLogin(body: VerifyTwoFactorLoginBodyDTO, deviceInfo: LoginDeviceInfo) {
     const payload = await this.tokenService.verifyTwoFactorToken(body.twoFactorToken)
 
+    await this.validateTwoFactorChallenge(payload.userId, payload.challengeId)
+
     const user = await this.userRepository.findById(payload.userId)
 
     if (!user) {
@@ -392,11 +405,15 @@ export class AuthService {
     if (!isValid) {
       throw new UnauthorizedException(MESSAGE.AUTH.INVALID_TWO_FACTOR_AUTHENTICATION_CODE)
     }
+
+    await this.consumeTwoFactorChallenge(payload.userId, payload.challengeId)
     return this.createLoginSession(user, deviceInfo)
   }
 
   async verifyTwoFactorRecoveryLogin(body: VerifyTwoFactorRecoveryBodyDTO, deviceInfo: LoginDeviceInfo) {
     const payload = await this.tokenService.verifyTwoFactorToken(body.twoFactorToken)
+
+    await this.validateTwoFactorChallenge(payload.userId, payload.challengeId)
 
     const user = await this.userRepository.findById(payload.userId)
 
@@ -413,15 +430,37 @@ export class AuthService {
     const recoveryCode = await this.twoFactorService.verifyRecoveryCode(user.id, body.recoveryCode)
 
     if (!recoveryCode) {
-      throw new UnauthorizedException('Invalid recovery code')
+      throw new UnauthorizedException(MESSAGE.AUTH.RECOVERY_CODE_INVALID)
     }
 
     const result = await this.recoveryCodeRepository.consume(recoveryCode.id)
 
     if (result.count !== 1) {
-      throw new UnauthorizedException('Invalid recovery code')
+      throw new UnauthorizedException(MESSAGE.AUTH.RECOVERY_CODE_INVALID)
     }
 
+    await this.consumeTwoFactorChallenge(payload.userId, payload.challengeId)
+
     return this.createLoginSession(user, deviceInfo)
+  }
+
+  private async validateTwoFactorChallenge(userId: number, challengeId: string) {
+    const redis = this.redisService.getClient()
+
+    const value = await redis.get(this.getTwoFactorChallengeKey(challengeId))
+
+    if (!value || Number(value) !== userId) {
+      throw new UnauthorizedException(MESSAGE.AUTH.TWO_FACTOR_CHALLENGE_INVALID_OR_EXPIRED)
+    }
+  }
+
+  private async consumeTwoFactorChallenge(userId: number, challengeId: string) {
+    const redis = this.redisService.getClient()
+
+    const value = await redis.getDel(this.getTwoFactorChallengeKey(challengeId))
+
+    if (!value || Number(value) !== userId) {
+      throw new UnauthorizedException(MESSAGE.AUTH.TWO_FACTOR_CHALLENGE_INVALID_OR_EXPIRED)
+    }
   }
 }

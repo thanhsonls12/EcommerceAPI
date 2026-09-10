@@ -10,3 +10,7 @@ export type TokenPayload = {
 export type RequestUser = {
   userId: number
 }
+
+export type TwoFactorTokenPayload = TokenPayload & {
+  challengeId: string
+}

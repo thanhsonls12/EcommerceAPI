@@ -10,8 +10,9 @@ import { AuthenticationGuard } from './guards/authentication.guard'
 import { APP_GUARD } from '@nestjs/core'
 import { EmailService } from './services/email.service'
 import { PermissionsGuard } from './guards/permissions.guard'
+import { RedisService } from './services/redis.service'
 
-const sharedServices = [PrismaService, HashingService, TokenService, EmailService]
+const sharedServices = [PrismaService, HashingService, TokenService, EmailService, RedisService]
 
 const authGuards = [AccessTokenGuard, APIKeyGuard, AuthenticationGuard, PermissionsGuard]
 @Global()

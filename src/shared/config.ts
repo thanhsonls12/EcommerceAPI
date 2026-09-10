@@ -27,6 +27,7 @@ const configSchema = z.object({
   SMTP_FROM: z.string().email(),
   TWO_FACTOR_TOKEN_SECRET: z.string().min(32),
   TWO_FACTOR_TOKEN_EXPIRES_IN: z.string().min(1),
+  REDIS_URL: z.string().min(1),
 })
 
 const configServer = configSchema.safeParse(process.env)

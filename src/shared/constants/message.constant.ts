@@ -33,6 +33,8 @@ export const MESSAGE = {
     TWO_FACTOR_AUTHENTICATION_ALREADY_DISABLED: 'Two-factor authentication is already disabled',
     TWO_FACTOR_AUTHENTICATION_DISABLED: 'Two-factor authentication has been disabled',
     PASSWORD_INCORRECT: 'Password is incorrect',
+    TWO_FACTOR_CHALLENGE_INVALID_OR_EXPIRED: 'Two-factor authentication challenge is invalid or expired',
+    RECOVERY_CODE_INVALID: 'Invalid recovery code',
   },
   VALIDATION: {
     PASSWORD_CONFIRMATION_MISMATCH: 'Password and confirm password must match',

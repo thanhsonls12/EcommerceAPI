@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { JwtService, JwtSignOptions } from '@nestjs/jwt'
 import envConfig from '../config'
-import { TokenType, TokenPayload } from '../types/jwt.type'
+import { TokenType, TokenPayload, TwoFactorTokenPayload } from '../types/jwt.type'
 
 @Injectable()
 export class TokenService {
@@ -29,7 +29,7 @@ export class TokenService {
     )
   }
 
-  signTwoFactorToken(payload: { userId: number }) {
+  signTwoFactorToken(payload: { userId: number; challengeId: string }) {
     return this.jwtService.signAsync(
       {
         ...payload,
@@ -59,7 +59,7 @@ export class TokenService {
     return this.verify(token, envConfig.REFRESH_TOKEN_SECRET, 'refresh')
   }
 
-  verifyTwoFactorToken(token: string) {
-    return this.verify(token, envConfig.TWO_FACTOR_TOKEN_SECRET, '2fa')
+  verifyTwoFactorToken(token: string): Promise<TwoFactorTokenPayload> {
+    return this.verify(token, envConfig.TWO_FACTOR_TOKEN_SECRET, '2fa') as Promise<TwoFactorTokenPayload>
   }
 }
