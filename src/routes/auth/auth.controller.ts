@@ -1,6 +1,7 @@
 import { Body, Controller, Post, Req } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import {
+  EnableTwoFactorBodyDTO,
   ForgotPasswordBodyDTO,
   ForgotPasswordResDTO,
   LoginBodyDTO,
@@ -21,10 +22,15 @@ import {
 import { ZodSerializerDto } from 'nestjs-zod'
 import { Public } from '@/shared/decorators/public.decorator'
 import type { Request } from 'express'
+import { TwoFactorService } from './two-factor.service'
+import { ActiveUser } from '@/shared/decorators/active-user.decorator'
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly twoFactorService: TwoFactorService,
+  ) {}
   @Public()
   @Post('register')
   @ZodSerializerDto(RegisterResDTO)
@@ -82,5 +88,15 @@ export class AuthController {
   @ZodSerializerDto(ResetPasswordResDTO)
   resetPassword(@Body() body: ResetPasswordBodyDTO) {
     return this.authService.resetPassword(body)
+  }
+
+  @Post('2fa/setup')
+  setupTwoFactor(@ActiveUser('userId') userId: number) {
+    return this.twoFactorService.setup(userId)
+  }
+
+  @Post('2fa/enable')
+  enableTwoFactor(@ActiveUser('userId') userId: number, @Body() body: EnableTwoFactorBodyDTO) {
+    return this.twoFactorService.enable(userId, body)
   }
 }

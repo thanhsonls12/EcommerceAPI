@@ -6,7 +6,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
- 
 }
 
 model Language {
@@ -32,15 +31,16 @@ model Language {
 }
 
 model User {
-  id          Int     @id @default(autoincrement())
-  email       String  @unique
-  name        String  @db.VarChar(500)
-  password    String  @db.VarChar(500)
-  phoneNumber String  @unique @db.VarChar(50)
-  avatar      String? @db.VarChar(1000)
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  name          String         @db.VarChar(500)
+  password      String         @db.VarChar(500)
+  phoneNumber   String         @unique @db.VarChar(50)
+  avatar        String?        @db.VarChar(1000)
+  totpSecret    String?        @db.VarChar(1000)
+  totpEnabled   Boolean        @default(false)
+  recoveryCodes RecoveryCode[]
 
-  
-  totpSecret                  String?               @db.VarChar(1000)
   status                      UserStatus            @default(INACTIVE)
   roleId                      Int
   role                        Role                  @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -573,4 +573,16 @@ enum HTTPMethod {
 enum MediaType {
   IMAGE
   VIDEO
+}
+
+model RecoveryCode {
+  id       Int    @id @default(autoincrement())
+  codeHash String @db.VarChar(500)
+  userId   Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }

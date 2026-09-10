@@ -114,4 +114,23 @@ export class UserRepository {
       },
     })
   }
+
+  updateTotpSecret(id: number, totpSecret: string, tx?: Prisma.TransactionClient) {
+    const prismaClient = tx ?? this.prisma
+    return prismaClient.user.update({
+      where: { id },
+      data: { totpSecret, totpEnabled: false },
+    })
+  }
+
+  enableTotp(id: number, tx?: Prisma.TransactionClient) {
+    const prismaClient = tx ?? this.prisma
+
+    return prismaClient.user.update({
+      where: { id },
+      data: {
+        totpEnabled: true,
+      },
+    })
+  }
 }

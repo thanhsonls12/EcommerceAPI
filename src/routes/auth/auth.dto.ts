@@ -123,6 +123,14 @@ const ResetPasswordResSchema = z.object({
   message: z.string(),
 })
 
+const EnableTwoFactorBodySchema = z
+  .object({
+    code: z.string().regex(/^\d{6}$/),
+  })
+  .strict()
+
+export class EnableTwoFactorBodyDTO extends createZodDto(EnableTwoFactorBodySchema) {}
+
 export class RegisterBodyDTO extends createZodDto(RegisterBodySchema) {}
 
 export class RegisterResDTO extends createZodDto(UserSchema) {}
