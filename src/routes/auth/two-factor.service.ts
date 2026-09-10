@@ -71,8 +71,8 @@ export class TwoFactorService {
         hashedRecoveryCodes.map((codeHash) => ({
           userId,
           codeHash,
-          tx,
         })),
+        tx,
       )
 
       await this.userRepository.enableTotp(userId, tx)

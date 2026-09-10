@@ -29,6 +29,20 @@ export class TokenService {
     )
   }
 
+  signTwoFactorToken(payload: { userId: number }) {
+    return this.jwtService.signAsync(
+      {
+        ...payload,
+        type: '2fa' satisfies TokenType,
+      },
+      {
+        secret: envConfig.ACCESS_TOKEN_SECRET,
+        expiresIn: '5m',
+        algorithm: 'HS256',
+      },
+    )
+  }
+
   private async verify(token: string, secret: string, expectedType: TokenType): Promise<TokenPayload> {
     const decoded = await this.jwtService.verifyAsync<TokenPayload>(token, { secret })
     if (decoded.type !== expectedType) {
@@ -43,5 +57,9 @@ export class TokenService {
 
   verifyRefreshToken(token: string): Promise<TokenPayload> {
     return this.verify(token, envConfig.REFRESH_TOKEN_SECRET, 'refresh')
+  }
+
+  verifyTwoFactorToken(token: string) {
+    return this.verify(token, envConfig.ACCESS_TOKEN_SECRET, '2fa')
   }
 }

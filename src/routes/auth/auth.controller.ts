@@ -18,6 +18,7 @@ import {
   ResetPasswordResDTO,
   VerifyEmailBodyDTO,
   VerifyEmailResDTO,
+  VerifyTwoFactorLoginBodyDTO,
 } from './auth.dto'
 import { ZodSerializerDto } from 'nestjs-zod'
 import { Public } from '@/shared/decorators/public.decorator'
@@ -98,5 +99,14 @@ export class AuthController {
   @Post('2fa/enable')
   enableTwoFactor(@ActiveUser('userId') userId: number, @Body() body: EnableTwoFactorBodyDTO) {
     return this.twoFactorService.enable(userId, body)
+  }
+
+  @Public()
+  @Post('2fa/verify-login')
+  verifyTwoFactorLogin(@Body() body: VerifyTwoFactorLoginBodyDTO, @Req() req: Request) {
+    return this.authService.verifyTwoFactorLogin(body, {
+      userAgent: req.headers['user-agent'] || '',
+      ip: req.ip ?? '',
+    })
   }
 }

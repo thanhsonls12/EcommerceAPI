@@ -28,6 +28,8 @@ export const MESSAGE = {
     RESET_CODE_INVALID_OR_EXPIRED: 'Reset code is invalid or expired',
     PASSWORD_RESET_SUCCESSFULLY: 'Password reset successfully',
     RESET_CODE_SENT: 'If the email exists, a reset code has been sent',
+    TWO_FACTOR_AUTHENTICATION_NOT_ENABLED: 'Two-factor authentication is not enabled for this account',
+    INVALID_TWO_FACTOR_AUTHENTICATION_CODE: 'Invalid two-factor authentication code',
   },
   VALIDATION: {
     PASSWORD_CONFIRMATION_MISMATCH: 'Password and confirm password must match',

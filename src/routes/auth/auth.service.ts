@@ -11,6 +11,7 @@ import {
   ResendVerificationCodeBodyDTO,
   ResetPasswordBodyDTO,
   VerifyEmailBodyDTO,
+  VerifyTwoFactorLoginBodyDTO,
 } from './auth.dto'
 import { UserRepository } from '../user/user.repository'
 import { DeviceRepository } from '../device/device.repository'
@@ -24,6 +25,7 @@ import { UserStatus, VerificationCodeType } from '../../../generated/prisma/enum
 import { randomInt } from 'crypto'
 import { EmailService } from '@/shared/services/email.service'
 import { MESSAGE } from '@/shared/constants/message.constant'
+import { TwoFactorService } from './two-factor.service'
 
 type LoginDeviceInfo = {
   userAgent: string
@@ -32,6 +34,39 @@ type LoginDeviceInfo = {
 
 @Injectable()
 export class AuthService {
+  private async createLoginSession(user: Awaited<ReturnType<UserRepository['findById']>>, deviceInfo: LoginDeviceInfo) {
+    if (!user) {
+      throw new UnauthorizedException(MESSAGE.AUTH.USER_NOT_FOUND)
+    }
+    const device = await this.deviceRepository.create({
+      userId: user.id,
+      userAgent: deviceInfo.userAgent,
+      ip: deviceInfo.ip,
+    })
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.tokenService.signAccessToken({ userId: user.id }),
+      this.tokenService.signRefreshToken({ userId: user.id }),
+    ])
+
+    const refreshTokenPayload = await this.tokenService.verifyRefreshToken(refreshToken)
+
+    const expiresAt = new Date(refreshTokenPayload.exp * 1000)
+
+    await this.refreshTokenRepository.create({
+      token: refreshToken,
+      userId: user.id,
+      deviceId: device.id,
+      expiresAt,
+    })
+
+    return {
+      requiresTwoFactor: false,
+      user,
+      accessToken,
+      refreshToken,
+    }
+  }
   constructor(
     private readonly rolesService: RolesService,
     private readonly hashingService: HashingService,
@@ -42,6 +77,7 @@ export class AuthService {
     private readonly prismaService: PrismaService,
     private readonly verificationCodeRepository: VerificationCodeRepository,
     private readonly emailService: EmailService,
+    private readonly twoFactorService: TwoFactorService,
   ) {}
   async register(body: RegisterBodyDTO) {
     const clientRoleId = await this.rolesService.getClientRoleId()
@@ -95,32 +131,19 @@ export class AuthService {
 
     ensureUserIsActive(user.status)
 
-    const device = await this.deviceRepository.create({
-      userId: user.id,
-      userAgent: deviceInfo.userAgent,
-      ip: deviceInfo.ip,
-    })
+    if (user.totpEnabled) {
+      const twoFactorToken = await this.tokenService.signTwoFactorToken({ userId: user.id })
 
-    const [accessToken, refreshToken] = await Promise.all([
-      this.tokenService.signAccessToken({ userId: user.id }),
-      this.tokenService.signRefreshToken({ userId: user.id }),
-    ])
+      return {
+        requiresTwoFactor: true,
+        twoFactorToken,
+      }
+    }
 
-    const refreshTokenPayload = await this.tokenService.verifyRefreshToken(refreshToken)
-
-    const expiresAt = new Date(refreshTokenPayload.exp * 1000)
-
-    await this.refreshTokenRepository.create({
-      token: refreshToken,
-      userId: user.id,
-      deviceId: device.id,
-      expiresAt,
-    })
+    const session = await this.createLoginSession(user, deviceInfo)
 
     return {
-      user,
-      accessToken,
-      refreshToken,
+      ...session,
     }
   }
 
@@ -344,5 +367,28 @@ export class AuthService {
     return {
       message: MESSAGE.AUTH.PASSWORD_RESET_SUCCESSFULLY,
     }
+  }
+
+  async verifyTwoFactorLogin(body: VerifyTwoFactorLoginBodyDTO, deviceInfo: LoginDeviceInfo) {
+    const payload = await this.tokenService.verifyTwoFactorToken(body.twoFactorToken)
+
+    const user = await this.userRepository.findById(payload.userId)
+
+    if (!user) {
+      throw new UnauthorizedException(MESSAGE.AUTH.USER_NOT_FOUND)
+    }
+
+    ensureUserIsActive(user.status)
+
+    if (!user.totpEnabled || !user.totpSecret) {
+      throw new UnauthorizedException(MESSAGE.AUTH.TWO_FACTOR_AUTHENTICATION_NOT_ENABLED)
+    }
+
+    const isValid = await this.twoFactorService.verifyCode(user.totpSecret, body.code)
+
+    if (!isValid) {
+      throw new UnauthorizedException(MESSAGE.AUTH.INVALID_TWO_FACTOR_AUTHENTICATION_CODE)
+    }
+    return this.createLoginSession(user, deviceInfo)
   }
 }

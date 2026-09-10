@@ -18,11 +18,33 @@ const UserSchema = z.object({
   deletedAt: z.date().nullable(),
 })
 
-const LoginResSchema = z.object({
-  user: UserSchema,
-  accessToken: z.string(),
-  refreshToken: z.string(),
-})
+const LoginResSchema = z
+  .object({
+    requiresTwoFactor: z.boolean(),
+    user: UserSchema.optional(),
+    accessToken: z.string().optional(),
+    refreshToken: z.string().optional(),
+    twoFactorToken: z.string().optional(),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    if (data.requiresTwoFactor) {
+      if (!data.twoFactorToken) {
+        ctx.addIssue({ code: 'custom', message: 'twoFactorToken is required', path: ['twoFactorToken'] })
+      }
+      return
+    }
+
+    if (!data.user) {
+      ctx.addIssue({ code: 'custom', message: 'user is required', path: ['user'] })
+    }
+    if (!data.accessToken) {
+      ctx.addIssue({ code: 'custom', message: 'accessToken is required', path: ['accessToken'] })
+    }
+    if (!data.refreshToken) {
+      ctx.addIssue({ code: 'custom', message: 'refreshToken is required', path: ['refreshToken'] })
+    }
+  })
 
 const RefreshTokenResSchema = z.object({
   accessToken: z.string(),
@@ -129,6 +151,14 @@ const EnableTwoFactorBodySchema = z
   })
   .strict()
 
+const VerifyTwoFactorLoginBodySchema = z
+  .object({
+    twoFactorToken: z.string().min(1),
+    code: z.string().regex(/^\d{6}$/),
+  })
+  .strict()
+
+export class VerifyTwoFactorLoginBodyDTO extends createZodDto(VerifyTwoFactorLoginBodySchema) {}
 export class EnableTwoFactorBodyDTO extends createZodDto(EnableTwoFactorBodySchema) {}
 
 export class RegisterBodyDTO extends createZodDto(RegisterBodySchema) {}

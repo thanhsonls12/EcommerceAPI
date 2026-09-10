@@ -1,4 +1,4 @@
-export type TokenType = 'access' | 'refresh'
+export type TokenType = 'access' | 'refresh' | '2fa'
 
 export type TokenPayload = {
   userId: number
