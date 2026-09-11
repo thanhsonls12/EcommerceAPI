@@ -12,6 +12,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { ThrottlerRedisStorageService } from './shared/services/throttler-redis-storage.service'
 import { CategoryModule } from './routes/category/category.module'
 import { BrandModule } from './routes/brand/brand.module'
+import { ProductModule } from './routes/product/product.module'
 @Module({
   imports: [
     SharedModule,
@@ -33,6 +34,7 @@ import { BrandModule } from './routes/brand/brand.module'
     }),
     CategoryModule,
     BrandModule,
+    ProductModule,
   ],
   controllers: [AppController],
   providers: [

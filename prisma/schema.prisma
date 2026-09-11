@@ -224,14 +224,14 @@ model Product {
   id                  Int                  @id @default(autoincrement())
   publishedAt         DateTime?
   name                String               @db.VarChar(500)
-  basePrice           Float
-  virtualPrice        Float
+  basePrice           Decimal              @db.Decimal(15, 2)
+  virtualPrice        Decimal              @db.Decimal(15, 2)
   brandId             Int
   brand               Brand                @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   images              String[]
   categories          Category[]
   /// [Variants]
-  variants            Json
+  variants            Json?
   skus                SKU[]
   reviews             Review[]
   productTranslations ProductTranslation[]
@@ -326,7 +326,7 @@ model CategoryTranslation {
 model SKU {
   id                  Int                  @id @default(autoincrement())
   value               String               @db.VarChar(500)
-  price               Float
+  price               Decimal              @db.Decimal(15, 2)
   stock               Int
   image               String
   productId           Int

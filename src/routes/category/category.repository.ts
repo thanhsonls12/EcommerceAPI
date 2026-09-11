@@ -49,6 +49,20 @@ export class CategoryRepository {
     })
   }
 
+  findManyByIds(ids: number[]) {
+    return this.prisma.category.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+      },
+    })
+  }
+
   findParentId(id: number) {
     return this.prisma.category.findFirst({
       where: { id, deletedAt: null },

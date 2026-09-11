@@ -216,7 +216,7 @@ async function main() {
 
   const hashedAdminPassword = await bcrypt.hash(adminPassword, 10)
 
-  await prisma.user.upsert({
+  const adminUser = await prisma.user.upsert({
     where: { email: adminEmail },
     update: {
       name: adminName,
@@ -236,7 +236,71 @@ async function main() {
     },
   })
 
-  console.log(`Seeded ${allPermissions.length} permissions, 3 roles, and 1 admin user.`)
+  const seedBrand = async (name: string, logo: string) => {
+    const existingBrand = await prisma.brand.findFirst({
+      where: { name },
+    })
+
+    if (existingBrand) {
+      return prisma.brand.update({
+        where: { id: existingBrand.id },
+        data: {
+          logo,
+          deletedAt: null,
+          deletedById: null,
+          updatedById: adminUser.id,
+        },
+      })
+    }
+
+    return prisma.brand.create({
+      data: {
+        name,
+        logo,
+        createdById: adminUser.id,
+      },
+    })
+  }
+
+  const apple = await seedBrand('Apple', 'https://placehold.co/400x400?text=Apple')
+  const samsung = await seedBrand('Samsung', 'https://placehold.co/400x400?text=Samsung')
+
+  const seedCategory = async (name: string, parentCategoryId?: number) => {
+    const existingCategory = await prisma.category.findFirst({
+      where: {
+        name,
+        parentCategoryId: parentCategoryId ?? null,
+      },
+    })
+
+    if (existingCategory) {
+      return prisma.category.update({
+        where: { id: existingCategory.id },
+        data: {
+          deletedAt: null,
+          deletedById: null,
+          updatedById: adminUser.id,
+        },
+      })
+    }
+
+    return prisma.category.create({
+      data: {
+        name,
+        parentCategoryId,
+        createdById: adminUser.id,
+      },
+    })
+  }
+
+  const electronics = await seedCategory('Electronics')
+  const phones = await seedCategory('Phones', electronics.id)
+  const laptops = await seedCategory('Laptops', electronics.id)
+
+  console.log(
+    `Seeded ${allPermissions.length} permissions, 3 roles, 1 admin user, ` +
+      `brands [${apple.id}, ${samsung.id}], categories [${electronics.id}, ${phones.id}, ${laptops.id}].`,
+  )
 }
 
 main()
