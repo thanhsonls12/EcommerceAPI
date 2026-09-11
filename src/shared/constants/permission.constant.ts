@@ -9,6 +9,11 @@ export const PermissionName = {
   CategoryUpdate: 'CATEGORY_UPDATE',
   CategoryDelete: 'CATEGORY_DELETE',
 
+  BrandCreate: 'BRAND_CREATE',
+  BrandRead: 'BRAND_READ',
+  BrandUpdate: 'BRAND_UPDATE',
+  BrandDelete: 'BRAND_DELETE',
+
   OrderRead: 'ORDER_READ',
   OrderUpdate: 'ORDER_UPDATE',
 

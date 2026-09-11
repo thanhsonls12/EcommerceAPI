@@ -94,6 +94,34 @@ const permissions = [
     method: 'PATCH' as const,
     module: 'USER',
   },
+  {
+    name: PermissionName.BrandCreate,
+    description: 'Create brand',
+    path: '/brands',
+    method: 'POST' as const,
+    module: 'BRAND',
+  },
+  {
+    name: PermissionName.BrandRead,
+    description: 'Read brands',
+    path: '/brands',
+    method: 'GET' as const,
+    module: 'BRAND',
+  },
+  {
+    name: PermissionName.BrandUpdate,
+    description: 'Update brand',
+    path: '/brands/:id',
+    method: 'PATCH' as const,
+    module: 'BRAND',
+  },
+  {
+    name: PermissionName.BrandDelete,
+    description: 'Delete brand',
+    path: '/brands/:id',
+    method: 'DELETE' as const,
+    module: 'BRAND',
+  },
 ]
 
 async function main() {
@@ -155,6 +183,7 @@ async function main() {
           PermissionName.ProductRead,
           PermissionName.ProductUpdate,
           PermissionName.CategoryRead,
+          PermissionName.BrandRead,
           PermissionName.OrderRead,
           PermissionName.OrderUpdate,
         ),
@@ -166,7 +195,12 @@ async function main() {
     where: { id: clientRole.id },
     data: {
       permissions: {
-        set: ids(PermissionName.ProductRead, PermissionName.CategoryRead, PermissionName.OrderRead),
+        set: ids(
+          PermissionName.ProductRead,
+          PermissionName.CategoryRead,
+          PermissionName.BrandRead,
+          PermissionName.OrderRead,
+        ),
       },
     },
   })
