@@ -10,6 +10,7 @@ import { CatchEverythingFilter } from './shared/filters/catch-everything.filter'
 import { UserModule } from './routes/user/user.module'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { ThrottlerRedisStorageService } from './shared/services/throttler-redis-storage.service'
+import { CategoryModule } from './routes/category/category.module'
 @Module({
   imports: [
     SharedModule,
@@ -29,6 +30,7 @@ import { ThrottlerRedisStorageService } from './shared/services/throttler-redis-
         ],
       }),
     }),
+    CategoryModule,
   ],
   controllers: [AppController],
   providers: [
