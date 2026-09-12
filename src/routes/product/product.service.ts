@@ -4,6 +4,7 @@ import { BrandRepository } from '../brand/brand.repository'
 import { CategoryRepository } from '../category/category.repository'
 import { CreateProductBodyDTO, GetProductsQueryDTO, UpdateProductBodyDTO } from './product.dto'
 import { Prisma } from '../../../generated/prisma/client'
+import { SKURepository } from './sku.repository'
 
 @Injectable()
 export class ProductService {
@@ -27,10 +28,48 @@ export class ProductService {
       }
     }
   }
+
+  private normalizeVariants(
+    variants: {
+      name: string
+      options: string[]
+    }[],
+  ) {
+    return variants
+      .map((variant) => ({
+        name: variant.name.trim().toLowerCase(),
+        options: variant.options.map((option) => option.trim().toLowerCase()).sort(),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }
+
+  private areVariantsEqual(
+    currentVariants: Prisma.JsonValue | null,
+    newVariants: {
+      name: string
+      options: string[]
+    }[],
+  ) {
+    if (!Array.isArray(currentVariants)) {
+      return false
+    }
+
+    const current = this.normalizeVariants(
+      currentVariants as {
+        name: string
+        options: string[]
+      }[],
+    )
+
+    const next = this.normalizeVariants(newVariants)
+
+    return JSON.stringify(current) === JSON.stringify(next)
+  }
   constructor(
     private readonly productRepository: ProductRepository,
     private readonly brandRepository: BrandRepository,
     private readonly categoryRepository: CategoryRepository,
+    private readonly skuRepository: SKURepository,
   ) {}
 
   async findAll(query: GetProductsQueryDTO) {
@@ -226,6 +265,16 @@ export class ProductService {
 
     if (body.variants !== undefined) {
       this.validateVariants(body.variants)
+
+      const variantsChanged = !this.areVariantsEqual(product.variants, body.variants)
+
+      if (variantsChanged) {
+        const activeSkuCount = await this.skuRepository.countActiveByProductId(id)
+
+        if (activeSkuCount > 0) {
+          throw new BadRequestException('Cannot update variants when there are active SKUs')
+        }
+      }
     }
 
     return this.productRepository.update(id, {

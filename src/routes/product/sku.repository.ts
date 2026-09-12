@@ -12,6 +12,15 @@ export class SKURepository {
     })
   }
 
+  countActiveByProductId(productId: number) {
+    return this.prisma.sku.count({
+      where: {
+        productId,
+        deletedAt: null,
+      },
+    })
+  }
+
   findManyByProductId(productId: number) {
     return this.prisma.sku.findMany({
       where: {
