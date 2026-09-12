@@ -13,6 +13,7 @@ import { ThrottlerRedisStorageService } from './shared/services/throttler-redis-
 import { CategoryModule } from './routes/category/category.module'
 import { BrandModule } from './routes/brand/brand.module'
 import { ProductModule } from './routes/product/product.module'
+import { CartModule } from './routes/cart/cart.module'
 @Module({
   imports: [
     SharedModule,
@@ -35,6 +36,7 @@ import { ProductModule } from './routes/product/product.module'
     CategoryModule,
     BrandModule,
     ProductModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [

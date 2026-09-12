@@ -12,5 +12,6 @@ import { SKUController } from './sku.controller'
   imports: [BrandModule, CategoryModule],
   controllers: [ProductController, SKUController],
   providers: [ProductService, ProductRepository, SKUService, SKURepository],
+  exports: [SKURepository],
 })
 export class ProductModule {}

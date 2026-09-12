@@ -63,4 +63,16 @@ export class SKURepository {
       },
     })
   }
+
+  findById(id: number) {
+    return this.prisma.sku.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
+      include: {
+        product: true,
+      },
+    })
+  }
 }
