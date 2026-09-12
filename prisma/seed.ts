@@ -297,9 +297,83 @@ async function main() {
   const phones = await seedCategory('Phones', electronics.id)
   const laptops = await seedCategory('Laptops', electronics.id)
 
+  const productSeeds = [
+    ['iPhone 17 Pro', 28990000, 31990000, apple.id, phones.id],
+    ['iPhone 17', 22990000, 24990000, apple.id, phones.id],
+    ['iPhone 16 Pro Max', 30990000, 34990000, apple.id, phones.id],
+    ['iPhone 16', 19990000, 22990000, apple.id, phones.id],
+    ['iPhone 15', 16990000, 19990000, apple.id, phones.id],
+    ['Samsung Galaxy S26 Ultra', 31990000, 34990000, samsung.id, phones.id],
+    ['Samsung Galaxy S26', 23990000, 26990000, samsung.id, phones.id],
+    ['Samsung Galaxy S25 Ultra', 27990000, 31990000, samsung.id, phones.id],
+    ['Samsung Galaxy S25', 19990000, 22990000, samsung.id, phones.id],
+    ['Samsung Galaxy A56', 9990000, 11990000, samsung.id, phones.id],
+    ['MacBook Air M4 13', 26990000, 29990000, apple.id, laptops.id],
+    ['MacBook Air M4 15', 31990000, 34990000, apple.id, laptops.id],
+    ['MacBook Pro M5 14', 42990000, 46990000, apple.id, laptops.id],
+    ['MacBook Pro M5 16', 62990000, 67990000, apple.id, laptops.id],
+    ['Samsung Galaxy Book5 Pro', 34990000, 38990000, samsung.id, laptops.id],
+    ['Samsung Galaxy Book5 360', 29990000, 33990000, samsung.id, laptops.id],
+    ['Samsung Galaxy Book4', 21990000, 24990000, samsung.id, laptops.id],
+    ['MacBook Air M3 13', 22990000, 25990000, apple.id, laptops.id],
+    ['iPhone 15 Plus', 18990000, 21990000, apple.id, phones.id],
+    ['Samsung Galaxy A36', 7990000, 9990000, samsung.id, phones.id],
+    ['iPhone 14', 13990000, 16990000, apple.id, phones.id],
+    ['Samsung Galaxy A26', 6490000, 7990000, samsung.id, phones.id],
+    ['MacBook Air M2 13', 19990000, 22990000, apple.id, laptops.id],
+    ['Samsung Galaxy Book4 Pro', 27990000, 31990000, samsung.id, laptops.id],
+    ['iPhone 16 Plus', 21990000, 24990000, apple.id, phones.id],
+    ['Samsung Galaxy S24 FE', 14990000, 17990000, samsung.id, phones.id],
+    ['MacBook Pro M4 14', 38990000, 42990000, apple.id, laptops.id],
+    ['Samsung Galaxy Book4 Edge', 25990000, 29990000, samsung.id, laptops.id],
+    ['iPhone 16e', 16990000, 18990000, apple.id, phones.id],
+    ['Samsung Galaxy Z Flip7', 25990000, 28990000, samsung.id, phones.id],
+  ] as const
+
+  let seededProducts = 0
+
+  for (const [name, basePrice, virtualPrice, brandId, categoryId] of productSeeds) {
+    const existingProduct = await prisma.product.findFirst({ where: { name } })
+    const data = {
+      basePrice,
+      virtualPrice,
+      brandId,
+      images: [`https://placehold.co/800x800?text=${encodeURIComponent(name)}`],
+      variants: [
+        { name: 'Color', options: ['Black', 'White'] },
+        { name: 'Storage', options: ['256GB', '512GB'] },
+      ],
+      deletedAt: null,
+      deletedById: null,
+      updatedById: adminUser.id,
+    }
+
+    if (existingProduct) {
+      await prisma.product.update({
+        where: { id: existingProduct.id },
+        data: {
+          ...data,
+          categories: { set: [{ id: categoryId }] },
+        },
+      })
+    } else {
+      await prisma.product.create({
+        data: {
+          name,
+          ...data,
+          categories: { connect: [{ id: categoryId }] },
+          createdById: adminUser.id,
+        },
+      })
+    }
+
+    seededProducts += 1
+  }
+
   console.log(
     `Seeded ${allPermissions.length} permissions, 3 roles, 1 admin user, ` +
-      `brands [${apple.id}, ${samsung.id}], categories [${electronics.id}, ${phones.id}, ${laptops.id}].`,
+      `brands [${apple.id}, ${samsung.id}], categories [${electronics.id}, ${phones.id}, ${laptops.id}], ` +
+      `${seededProducts} products.`,
   )
 }
 

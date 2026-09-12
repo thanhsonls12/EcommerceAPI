@@ -2,7 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { ProductRepository } from './product.repository'
 import { BrandRepository } from '../brand/brand.repository'
 import { CategoryRepository } from '../category/category.repository'
-import { CreateProductBodyDTO, UpdateProductBodyDTO } from './product.dto'
+import { CreateProductBodyDTO, GetProductsQueryDTO, UpdateProductBodyDTO } from './product.dto'
+import { Prisma } from '../../../generated/prisma/client'
 
 @Injectable()
 export class ProductService {
@@ -32,8 +33,55 @@ export class ProductService {
     private readonly categoryRepository: CategoryRepository,
   ) {}
 
-  findAll() {
-    return this.productRepository.findMany()
+  async findAll(query: GetProductsQueryDTO) {
+    if (query.minPrice !== undefined && query.maxPrice !== undefined && query.minPrice > query.maxPrice) {
+      throw new BadRequestException('Min price cannot be greater than max price')
+    }
+    const where: Prisma.ProductWhereInput = {
+      deletedAt: null,
+      ...(query.brandId !== undefined && {
+        brandId: query.brandId,
+      }),
+      ...(query.categoryId !== undefined && {
+        categories: {
+          some: {
+            id: query.categoryId,
+            deletedAt: null,
+          },
+        },
+      }),
+      ...((query.minPrice !== undefined || query.maxPrice !== undefined) && {
+        basePrice: {
+          ...(query.minPrice !== undefined && { gte: query.minPrice }),
+          ...(query.maxPrice !== undefined && { lte: query.maxPrice }),
+        },
+      }),
+    }
+    const skip = (query.page - 1) * query.limit
+    const orderBy: Prisma.ProductOrderByWithRelationInput =
+      query.sortBy === 'price'
+        ? {
+            basePrice: query.sortOrder,
+          }
+        : {
+            createdAt: query.sortOrder,
+          }
+
+    const [products, total] = await Promise.all([
+      this.productRepository.findMany({ where, skip, take: query.limit, orderBy }),
+      this.productRepository.count(where),
+    ])
+
+    return {
+      data: products,
+
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        totalPages: Math.ceil(total / query.limit),
+      },
+    }
   }
 
   async findById(id: number) {

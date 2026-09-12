@@ -33,11 +33,16 @@ export class ProductRepository {
     })
   }
 
-  findMany() {
+  findMany(params: {
+    where: Prisma.ProductWhereInput
+    skip: number
+    take: number
+    orderBy: Prisma.ProductOrderByWithRelationInput
+  }) {
     return this.prisma.product.findMany({
-      where: {
-        deletedAt: null,
-      },
+      where: params.where,
+      skip: params.skip,
+      take: params.take,
       include: {
         brand: true,
         categories: {
@@ -46,10 +51,12 @@ export class ProductRepository {
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: params.orderBy,
     })
+  }
+
+  count(where: Prisma.ProductWhereInput) {
+    return this.prisma.product.count({ where })
   }
 
   update(id: number, data: Prisma.ProductUpdateInput) {

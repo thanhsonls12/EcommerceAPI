@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common'
 import { ProductService } from './product.service'
-import { CreateProductBodyDTO, UpdateProductBodyDTO } from './product.dto'
+import { CreateProductBodyDTO, GetProductsQueryDTO, UpdateProductBodyDTO } from './product.dto'
 import { Permissions } from '@/shared/decorators/permissions.decorator'
 import { PermissionName } from '@/shared/constants/permission.constant'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
@@ -11,8 +11,8 @@ export class ProductController {
 
   @Get()
   @Permissions(PermissionName.ProductRead)
-  findAll() {
-    return this.productService.findAll()
+  findAll(@Query() query: GetProductsQueryDTO) {
+    return this.productService.findAll(query)
   }
 
   @Get(':id')
