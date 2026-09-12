@@ -412,9 +412,9 @@ model CartItem {
 model ProductSKUSnapshot {
   id          Int    @id @default(autoincrement())
   productName String @db.VarChar(500)
-  skuPrice    Float
+  skuPrice    Decimal   @db.Decimal(15, 2)
   image       String
-  skuValue    String @db.VarChar(500)
+  skuValue    Json
   skuId       Int?
   sku         Sku?   @relation(fields: [skuId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   orderId     Int?
@@ -441,8 +441,10 @@ model Order {
   receiver    Json
   shopId      Int?
   shop        User?                @relation("Shop", fields: [shopId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  paymentId   Int
-  payment     Payment              @relation(fields: [paymentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  paymentId   Int?
+  payment     Payment?              @relation(fields: [paymentId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  subtotal    Decimal   @db.Decimal(15, 2)
+  total       Decimal   @db.Decimal(15, 2)
   createdById Int?
   createdBy   User?                @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
   updatedById Int?

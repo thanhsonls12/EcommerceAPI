@@ -14,6 +14,7 @@ import { CategoryModule } from './routes/category/category.module'
 import { BrandModule } from './routes/brand/brand.module'
 import { ProductModule } from './routes/product/product.module'
 import { CartModule } from './routes/cart/cart.module'
+import { OrderModule } from './routes/order/order.module'
 @Module({
   imports: [
     SharedModule,
@@ -37,6 +38,7 @@ import { CartModule } from './routes/cart/cart.module'
     BrandModule,
     ProductModule,
     CartModule,
+    OrderModule,
   ],
   controllers: [AppController],
   providers: [
