@@ -6,6 +6,26 @@ import { CreateProductBodyDTO, UpdateProductBodyDTO } from './product.dto'
 
 @Injectable()
 export class ProductService {
+  private validateVariants(
+    variants: {
+      name: string
+      options: string[]
+    }[],
+  ) {
+    const variantNames = variants.map((variant) => variant.name.trim().toLowerCase())
+
+    if (new Set(variantNames).size !== variantNames.length) {
+      throw new BadRequestException('Duplicate variant names')
+    }
+
+    for (const variant of variants) {
+      const normalizedOptions = variant.options.map((option) => option.trim().toLowerCase())
+
+      if (new Set(normalizedOptions).size !== normalizedOptions.length) {
+        throw new BadRequestException(`Duplicate options in variant "${variant.name}"`)
+      }
+    }
+  }
   constructor(
     private readonly productRepository: ProductRepository,
     private readonly brandRepository: BrandRepository,
@@ -48,11 +68,19 @@ export class ProductService {
     if (body.virtualPrice < body.basePrice) {
       throw new BadRequestException('Virtual price cannot be less than base price')
     }
+
+    if (body.variants !== undefined) {
+      this.validateVariants(body.variants)
+    }
+
     return this.productRepository.create({
       name: body.name,
       basePrice: body.basePrice,
       virtualPrice: body.virtualPrice,
       images: body.images,
+      ...(body.variants !== undefined && {
+        variants: body.variants,
+      }),
       brand: {
         connect: {
           id: body.brandId,
@@ -119,6 +147,10 @@ export class ProductService {
       throw new BadRequestException('Virtual price cannot be less than base price')
     }
 
+    if (body.variants !== undefined) {
+      this.validateVariants(body.variants)
+    }
+
     return this.productRepository.update(id, {
       ...(body.name !== undefined && {
         name: body.name,
@@ -134,6 +166,10 @@ export class ProductService {
 
       ...(body.images !== undefined && {
         images: body.images,
+      }),
+
+      ...(body.variants !== undefined && {
+        variants: body.variants,
       }),
 
       ...(body.brandId !== undefined && {
