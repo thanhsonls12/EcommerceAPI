@@ -5,6 +5,7 @@ import { CategoryRepository } from '../category/category.repository'
 import { CreateProductBodyDTO, GetProductsQueryDTO, UpdateProductBodyDTO } from './product.dto'
 import { Prisma } from '../../../generated/prisma/client'
 import { SKURepository } from './sku.repository'
+import { StorageService } from '@/shared/services/storage.service'
 
 @Injectable()
 export class ProductService {
@@ -70,6 +71,7 @@ export class ProductService {
     private readonly brandRepository: BrandRepository,
     private readonly categoryRepository: CategoryRepository,
     private readonly skuRepository: SKURepository,
+    private readonly storageService: StorageService,
   ) {}
 
   async findAll(query: GetProductsQueryDTO) {
@@ -193,7 +195,7 @@ export class ProductService {
       name: body.name,
       basePrice: body.basePrice,
       virtualPrice: body.virtualPrice,
-      images: body.images,
+      images: [],
       ...(body.variants !== undefined && {
         variants: body.variants,
       }),
@@ -290,10 +292,6 @@ export class ProductService {
         virtualPrice: body.virtualPrice,
       }),
 
-      ...(body.images !== undefined && {
-        images: body.images,
-      }),
-
       ...(body.variants !== undefined && {
         variants: body.variants,
       }),
@@ -313,6 +311,28 @@ export class ProductService {
           })),
         },
       }),
+
+      updatedBy: {
+        connect: {
+          id: userId,
+        },
+      },
+    })
+  }
+
+  async uploadImage(id: number, file: Express.Multer.File, userId: number) {
+    const product = await this.productRepository.findById(id)
+
+    if (!product) {
+      throw new NotFoundException('Product not found')
+    }
+
+    const uploadedFile = await this.storageService.upload(file, 'products')
+
+    return this.productRepository.update(id, {
+      images: {
+        push: uploadedFile.url,
+      },
 
       updatedBy: {
         connect: {

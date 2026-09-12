@@ -20,8 +20,6 @@ const CreateProductBodySchema = z
 
     categoryIds: z.array(z.number().int().positive()).min(1),
 
-    images: z.array(z.string().url().max(1000)).min(1),
-
     variants: z.array(ProductVariantSchema).min(1).optional(),
   })
   .strict()

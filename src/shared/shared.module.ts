@@ -12,6 +12,7 @@ import { EmailService } from './services/email.service'
 import { PermissionsGuard } from './guards/permissions.guard'
 import { RedisService } from './services/redis.service'
 import { ThrottlerRedisStorageService } from './services/throttler-redis-storage.service'
+import { StorageService } from './services/storage.service'
 
 const sharedServices = [
   PrismaService,
@@ -20,6 +21,7 @@ const sharedServices = [
   EmailService,
   RedisService,
   ThrottlerRedisStorageService,
+  StorageService,
 ]
 
 const authGuards = [AccessTokenGuard, APIKeyGuard, AuthenticationGuard, PermissionsGuard]

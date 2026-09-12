@@ -59,3 +59,5 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Local skill metadata
 skills-lock.json
+
+/uploads
