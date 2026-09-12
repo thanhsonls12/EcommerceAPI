@@ -45,6 +45,8 @@ const GetProductsQuerySchema = z
     sortBy: z.enum(['price', 'createdAt']).default('createdAt'),
 
     sortOrder: z.enum(['asc', 'desc']).default('desc'),
+
+    search: z.string().trim().min(1).max(200).optional(),
   })
   .strict()
 

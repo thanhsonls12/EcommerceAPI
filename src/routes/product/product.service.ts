@@ -56,6 +56,35 @@ export class ProductService {
           ...(query.maxPrice !== undefined && { lte: query.maxPrice }),
         },
       }),
+      ...(query.search !== undefined && {
+        OR: [
+          {
+            name: {
+              contains: query.search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            brand: {
+              name: {
+                contains: query.search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            categories: {
+              some: {
+                name: {
+                  contains: query.search,
+                  mode: 'insensitive',
+                },
+                deletedAt: null,
+              },
+            },
+          },
+        ],
+      }),
     }
     const skip = (query.page - 1) * query.limit
     const orderBy: Prisma.ProductOrderByWithRelationInput =
