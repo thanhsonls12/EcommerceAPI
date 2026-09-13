@@ -525,7 +525,7 @@ model PaymentTransaction {
   accumulated        Int      @default(0)
   code               String?  @db.VarChar(250)
   transactionContent String?  @db.Text
-  referenceNumber    String?  @db.VarChar(255)
+  referenceNumber    String  @db.VarChar(255)
   body               String?  @db.Text
 
   createdAt DateTime @default(now())

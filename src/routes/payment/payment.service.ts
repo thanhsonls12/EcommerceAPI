@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common'
-import { OrderStatus, PaymentStatus, Prisma } from '../../../generated/prisma/client'
+import { OrderStatus, PaymentStatus } from '../../../generated/prisma/client'
 import { PaymentRepository } from './payment.repository'
 import { CreatePaymentBodyDTO } from './payment.dto'
 import * as paymentGatewayInterface from './gateways/payment-gateway.interface'
@@ -22,8 +22,14 @@ export class PaymentService {
         throw new ConflictException('Order is not awaiting payment')
       }
 
-      if (order.paymentId !== null) {
-        throw new ConflictException('Payment already exists for this order')
+      if (order.payment) {
+        if (order.payment.status !== PaymentStatus.PENDING) {
+          throw new ConflictException('Payment cannot be retried')
+        }
+        return {
+          payment: order.payment,
+          order,
+        }
       }
 
       const payment = await this.paymentRepository.create(tx, order.total)
@@ -90,23 +96,19 @@ export class PaymentService {
         throw new BadRequestException('Payment amount mismatch')
       }
 
-      try {
-        await this.paymentRepository.createTransaction(tx, {
-          paymentId: payment.id,
-          gateway: this.paymentGateway.name,
-          referenceNumber: webhook.transactionReference,
-          amountIn: webhook.amount,
-          body: JSON.stringify(webhook.rawBody),
-        })
-      } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-          return {
-            success: true,
-            duplicate: true,
-          }
-        }
+      const transactionResult = await this.paymentRepository.createTransaction(tx, {
+        paymentId: payment.id,
+        gateway: this.paymentGateway.name,
+        referenceNumber: webhook.transactionReference,
+        amountIn: webhook.amount,
+        body: JSON.stringify(webhook.rawBody),
+      })
 
-        throw error
+      if (transactionResult.count === 0) {
+        return {
+          success: true,
+          duplicate: true,
+        }
       }
 
       if (!webhook.success) {

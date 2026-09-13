@@ -28,6 +28,11 @@ const configSchema = z.object({
   TWO_FACTOR_TOKEN_SECRET: z.string().min(32),
   TWO_FACTOR_TOKEN_EXPIRES_IN: z.string().min(1),
   REDIS_URL: z.string().min(1),
+  PAYOS_CLIENT_ID: z.string().min(1),
+  PAYOS_API_KEY: z.string().min(1),
+  PAYOS_CHECKSUM_KEY: z.string().min(1),
+  PAYOS_RETURN_URL: z.url(),
+  PAYOS_CANCEL_URL: z.url(),
 })
 
 const configServer = configSchema.safeParse(process.env)

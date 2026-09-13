@@ -17,6 +17,9 @@ export class PaymentRepository {
         userId,
         deletedAt: null,
       },
+      include: {
+        payment: true,
+      },
     })
   }
 
@@ -90,8 +93,9 @@ export class PaymentRepository {
       body: string
     },
   ) {
-    return tx.paymentTransaction.create({
-      data,
+    return tx.paymentTransaction.createMany({
+      data: [data],
+      skipDuplicates: true,
     })
   }
 
