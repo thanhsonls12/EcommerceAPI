@@ -3,6 +3,7 @@ import { SKURepository } from './sku.repository'
 import { ProductRepository } from './product.repository'
 import { Prisma } from '../../../generated/prisma/client'
 import { CreateSKUBodyDTO, UpdateSKUBodyDTO } from './sku.dto'
+import { MESSAGE } from '@/shared/constants/message.constant'
 
 type ProductVariant = {
   name: string
@@ -19,7 +20,7 @@ export class SKUService {
   private getProductVariants(variants: Prisma.JsonValue | null): ProductVariant[] {
     if (variants === null) return []
     if (!Array.isArray(variants)) {
-      throw new BadRequestException('Invalid product variants')
+      throw new BadRequestException(MESSAGE.SKU.INVALID_PRODUCT_VARIANTS)
     }
     return variants as ProductVariant[]
   }
@@ -28,7 +29,7 @@ export class SKUService {
     const valueKeys = Object.keys(value)
 
     if (valueKeys.length !== variants.length) {
-      throw new BadRequestException('SKU value does not match product variants')
+      throw new BadRequestException(MESSAGE.SKU.VALUE_DOES_NOT_MATCH_PRODUCT_VARIANTS)
     }
 
     const normalizedValue: Record<string, string> = {}
@@ -36,14 +37,14 @@ export class SKUService {
     for (const variant of variants) {
       const matchedKey = valueKeys.find((key) => key.toLowerCase() === variant.name.toLowerCase())
       if (!matchedKey) {
-        throw new BadRequestException(`Missing variant "${variant.name}"`)
+        throw new BadRequestException(MESSAGE.SKU.MISSING_VARIANT(variant.name))
       }
       const submittedOption = value[matchedKey]
 
       const matchedOption = variant.options.find((option) => option.toLowerCase() === submittedOption.toLowerCase())
 
       if (!matchedOption) {
-        throw new BadRequestException(`Invalid option "${submittedOption}" for variant "${variant.name}"`)
+        throw new BadRequestException(MESSAGE.SKU.INVALID_OPTION_FOR_VARIANT(submittedOption, variant.name))
       }
       normalizedValue[variant.name] = matchedOption
     }
@@ -76,7 +77,7 @@ export class SKUService {
     })
 
     if (duplicatedSku) {
-      throw new BadRequestException('SKU with this variant combination already exists')
+      throw new BadRequestException(MESSAGE.SKU.VARIANT_COMBINATION_ALREADY_EXISTS)
     }
   }
 
@@ -84,7 +85,7 @@ export class SKUService {
     const product = await this.productRepository.findById(productId)
 
     if (!product) {
-      throw new NotFoundException('Product not found')
+      throw new NotFoundException(MESSAGE.PRODUCT.NOT_FOUND)
     }
 
     return this.skuRepository.findManyByProductId(productId)
@@ -94,13 +95,13 @@ export class SKUService {
     const product = await this.productRepository.findById(productId)
 
     if (!product) {
-      throw new NotFoundException('Product not found')
+      throw new NotFoundException(MESSAGE.PRODUCT.NOT_FOUND)
     }
 
     const sku = await this.skuRepository.findByIdAndProductId(skuId, productId)
 
     if (!sku) {
-      throw new NotFoundException('SKU not found')
+      throw new NotFoundException(MESSAGE.SKU.NOT_FOUND)
     }
 
     return sku
@@ -110,7 +111,7 @@ export class SKUService {
     const product = await this.productRepository.findById(productId)
 
     if (!product) {
-      throw new NotFoundException('Product not found')
+      throw new NotFoundException(MESSAGE.PRODUCT.NOT_FOUND)
     }
 
     const variants = this.getProductVariants(product.variants)
@@ -142,13 +143,13 @@ export class SKUService {
     const product = await this.productRepository.findById(productId)
 
     if (!product) {
-      throw new NotFoundException('Product not found')
+      throw new NotFoundException(MESSAGE.PRODUCT.NOT_FOUND)
     }
 
     const sku = await this.skuRepository.findByIdAndProductId(skuId, productId)
 
     if (!sku) {
-      throw new NotFoundException('SKU not found')
+      throw new NotFoundException(MESSAGE.SKU.NOT_FOUND)
     }
 
     let value: Record<string, string> | undefined
@@ -177,13 +178,13 @@ export class SKUService {
     const sku = await this.skuRepository.findByIdAndProductId(skuId, productId)
 
     if (!sku) {
-      throw new NotFoundException('SKU not found')
+      throw new NotFoundException(MESSAGE.SKU.NOT_FOUND)
     }
 
     await this.skuRepository.softDelete(skuId, userId)
 
     return {
-      message: 'SKU deleted successfully',
+      message: MESSAGE.SKU.DELETED_SUCCESSFULLY,
     }
   }
 }

@@ -7,6 +7,7 @@ import {
   VerifiedWebhook,
 } from './payment-gateway.interface'
 import z from 'zod'
+import { MESSAGE } from '@/shared/constants/message.constant'
 
 const MockWebhookSchema = z
   .object({
@@ -30,7 +31,7 @@ export class MockPaymentGateway implements PaymentGateway {
   async verifyWebhook(payload: unknown): Promise<VerifiedWebhook> {
     const result = MockWebhookSchema.safeParse(payload)
     if (!result.success) {
-      throw new BadRequestException('Invalid webhook payload')
+      throw new BadRequestException(MESSAGE.PAYMENT.INVALID_WEBHOOK_PAYLOAD)
     }
     return {
       paymentReference: result.data.paymentReference,

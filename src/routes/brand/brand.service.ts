@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { BrandRepository } from './brand.repository'
 import { CreateBrandBodyDTO, UpdateBrandBodyDTO } from './brand.dto'
+import { MESSAGE } from '@/shared/constants/message.constant'
 
 @Injectable()
 export class BrandService {
@@ -21,7 +22,7 @@ export class BrandService {
     const brand = await this.brandRepository.findById(id)
 
     if (!brand) {
-      throw new NotFoundException('Brand not found')
+      throw new NotFoundException(MESSAGE.BRAND.NOT_FOUND)
     }
 
     return this.brandRepository.update(id, {
@@ -34,19 +35,19 @@ export class BrandService {
     const brand = await this.brandRepository.findById(id)
 
     if (!brand) {
-      throw new NotFoundException('Brand not found')
+      throw new NotFoundException(MESSAGE.BRAND.NOT_FOUND)
     }
 
     const productsCount = await this.brandRepository.countProducts(id)
 
     if (productsCount > 0) {
-      throw new BadRequestException('Cannot delete brand with active products')
+      throw new BadRequestException(MESSAGE.BRAND.CANNOT_DELETE_WITH_ACTIVE_PRODUCTS)
     }
 
     await this.brandRepository.softDelete(id, userId)
 
     return {
-      message: 'Brand deleted successfully',
+      message: MESSAGE.BRAND.DELETED_SUCCESSFULLY,
     }
   }
 }

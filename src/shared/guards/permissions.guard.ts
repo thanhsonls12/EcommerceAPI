@@ -4,6 +4,7 @@ import { PrismaService } from '../services/prisma.service'
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator'
 import { REQUEST_USER_KEY } from '../constants/auth.constant'
 import type { Request } from 'express'
+import { MESSAGE } from '../constants/message.constant'
 
 type RequestUser = {
   userId: number
@@ -31,7 +32,7 @@ export class PermissionsGuard implements CanActivate {
     const requestUser = request[REQUEST_USER_KEY] as RequestUser | undefined
 
     if (!requestUser) {
-      throw new ForbiddenException('User context not found')
+      throw new ForbiddenException(MESSAGE.AUTHORIZATION.USER_CONTEXT_NOT_FOUND)
     }
 
     const user = await this.prismaService.user.findUnique({
@@ -56,7 +57,7 @@ export class PermissionsGuard implements CanActivate {
     })
 
     if (!user || !user.role.isActive) {
-      throw new ForbiddenException('Access denied')
+      throw new ForbiddenException(MESSAGE.AUTHORIZATION.ACCESS_DENIED)
     }
 
     const userPermissions = new Set(user.role.permissions.map((permission) => permission.name))
@@ -64,7 +65,7 @@ export class PermissionsGuard implements CanActivate {
     const hasPermission = requiredPermissions.every((permission) => userPermissions.has(permission))
 
     if (!hasPermission) {
-      throw new ForbiddenException('Access denied')
+      throw new ForbiddenException(MESSAGE.AUTHORIZATION.ACCESS_DENIED)
     }
 
     return true

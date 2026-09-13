@@ -3,6 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type {} from 'multer'
+import { MESSAGE } from '../constants/message.constant'
 
 const extensionByMimeType: Record<string, string> = {
   'image/jpeg': '.jpg',
@@ -21,7 +22,7 @@ export class StorageService {
     })
 
     const extension = extensionByMimeType[file.mimetype]
-    if (!extension) throw new BadRequestException('Unsupported file type')
+    if (!extension) throw new BadRequestException(MESSAGE.STORAGE.UNSUPPORTED_FILE_TYPE)
     const filename = `${randomUUID()}${extension}`
     const filePath = join(directory, filename)
 

@@ -30,19 +30,19 @@ const LoginResSchema = z
   .superRefine((data, ctx) => {
     if (data.requiresTwoFactor) {
       if (!data.twoFactorToken) {
-        ctx.addIssue({ code: 'custom', message: 'twoFactorToken is required', path: ['twoFactorToken'] })
+        ctx.addIssue({ code: 'custom', message: MESSAGE.VALIDATION.TWO_FACTOR_TOKEN_REQUIRED, path: ['twoFactorToken'] })
       }
       return
     }
 
     if (!data.user) {
-      ctx.addIssue({ code: 'custom', message: 'user is required', path: ['user'] })
+      ctx.addIssue({ code: 'custom', message: MESSAGE.VALIDATION.USER_REQUIRED, path: ['user'] })
     }
     if (!data.accessToken) {
-      ctx.addIssue({ code: 'custom', message: 'accessToken is required', path: ['accessToken'] })
+      ctx.addIssue({ code: 'custom', message: MESSAGE.VALIDATION.ACCESS_TOKEN_REQUIRED, path: ['accessToken'] })
     }
     if (!data.refreshToken) {
-      ctx.addIssue({ code: 'custom', message: 'refreshToken is required', path: ['refreshToken'] })
+      ctx.addIssue({ code: 'custom', message: MESSAGE.VALIDATION.REFRESH_TOKEN_REQUIRED, path: ['refreshToken'] })
     }
   })
 

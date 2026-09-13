@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod'
 import z from 'zod'
+import { MESSAGE } from '@/shared/constants/message.constant'
 
 const UpdateProfileBodySchema = z
   .object({
@@ -24,7 +25,7 @@ const ChangePasswordBodySchema = z
     if (newPassword !== confirmNewPassword) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Password confirmation does not match',
+        message: MESSAGE.VALIDATION.PASSWORD_CONFIRMATION_MISMATCH,
         path: ['confirmNewPassword'],
       })
     }

@@ -6,6 +6,7 @@ import { CreateProductBodyDTO, GetProductsQueryDTO, UpdateProductBodyDTO } from 
 import { Prisma } from '../../../generated/prisma/client'
 import { SKURepository } from './sku.repository'
 import { StorageService } from '@/shared/services/storage.service'
+import { MESSAGE } from '@/shared/constants/message.constant'
 
 @Injectable()
 export class ProductService {
@@ -18,14 +19,14 @@ export class ProductService {
     const variantNames = variants.map((variant) => variant.name.trim().toLowerCase())
 
     if (new Set(variantNames).size !== variantNames.length) {
-      throw new BadRequestException('Duplicate variant names')
+      throw new BadRequestException(MESSAGE.PRODUCT.DUPLICATE_VARIANT_NAMES)
     }
 
     for (const variant of variants) {
       const normalizedOptions = variant.options.map((option) => option.trim().toLowerCase())
 
       if (new Set(normalizedOptions).size !== normalizedOptions.length) {
-        throw new BadRequestException(`Duplicate options in variant "${variant.name}"`)
+        throw new BadRequestException(MESSAGE.PRODUCT.DUPLICATE_OPTIONS_IN_VARIANT(variant.name))
       }
     }
   }
@@ -76,7 +77,7 @@ export class ProductService {
 
   async findAll(query: GetProductsQueryDTO) {
     if (query.minPrice !== undefined && query.maxPrice !== undefined && query.minPrice > query.maxPrice) {
-      throw new BadRequestException('Min price cannot be greater than max price')
+      throw new BadRequestException(MESSAGE.PRODUCT.MIN_PRICE_GREATER_THAN_MAX_PRICE)
     }
     const where: Prisma.ProductWhereInput = {
       deletedAt: null,
@@ -158,7 +159,7 @@ export class ProductService {
     const product = await this.productRepository.findById(id)
 
     if (!product) {
-      throw new NotFoundException('Product not found')
+      throw new NotFoundException(MESSAGE.PRODUCT.NOT_FOUND)
     }
 
     return product
@@ -168,23 +169,23 @@ export class ProductService {
     const brand = await this.brandRepository.findById(body.brandId)
 
     if (!brand) {
-      throw new NotFoundException('Brand not found')
+      throw new NotFoundException(MESSAGE.PRODUCT.BRAND_NOT_FOUND)
     }
 
     const categoryIds = [...new Set(body.categoryIds)]
 
     if (categoryIds.length !== body.categoryIds.length) {
-      throw new BadRequestException('Duplicate category ids')
+      throw new BadRequestException(MESSAGE.PRODUCT.DUPLICATE_CATEGORY_IDS)
     }
 
     const categories = await this.categoryRepository.findManyByIds(categoryIds)
 
     if (categories.length !== categoryIds.length) {
-      throw new NotFoundException('Category not found')
+      throw new NotFoundException(MESSAGE.PRODUCT.CATEGORY_NOT_FOUND)
     }
 
     if (body.virtualPrice < body.basePrice) {
-      throw new BadRequestException('Virtual price cannot be less than base price')
+      throw new BadRequestException(MESSAGE.PRODUCT.VIRTUAL_PRICE_LESS_THAN_BASE_PRICE)
     }
 
     if (body.variants !== undefined) {
@@ -219,13 +220,13 @@ export class ProductService {
     const product = await this.productRepository.findById(id)
 
     if (!product) {
-      throw new NotFoundException('Product not found')
+      throw new NotFoundException(MESSAGE.PRODUCT.NOT_FOUND)
     }
 
     await this.productRepository.softDelete(id, userId)
 
     return {
-      message: 'Product deleted successfully',
+      message: MESSAGE.PRODUCT.DELETED_SUCCESSFULLY,
     }
   }
 
@@ -233,14 +234,14 @@ export class ProductService {
     const product = await this.productRepository.findById(id)
 
     if (!product) {
-      throw new NotFoundException('Product not found')
+      throw new NotFoundException(MESSAGE.PRODUCT.NOT_FOUND)
     }
 
     if (body.brandId !== undefined) {
       const brand = await this.brandRepository.findById(body.brandId)
 
       if (!brand) {
-        throw new NotFoundException('Brand not found')
+        throw new NotFoundException(MESSAGE.PRODUCT.BRAND_NOT_FOUND)
       }
     }
 
@@ -249,12 +250,12 @@ export class ProductService {
     if (body.categoryIds !== undefined) {
       categoryIds = [...new Set(body.categoryIds)]
       if (categoryIds.length !== body.categoryIds.length) {
-        throw new BadRequestException('Duplicate category ids')
+        throw new BadRequestException(MESSAGE.PRODUCT.DUPLICATE_CATEGORY_IDS)
       }
       const categories = await this.categoryRepository.findManyByIds(categoryIds)
 
       if (categories.length !== categoryIds.length) {
-        throw new NotFoundException('Category not found')
+        throw new NotFoundException(MESSAGE.PRODUCT.CATEGORY_NOT_FOUND)
       }
     }
 
@@ -262,7 +263,7 @@ export class ProductService {
     const virtualPrice = body.virtualPrice ?? Number(product.virtualPrice)
 
     if (virtualPrice < basePrice) {
-      throw new BadRequestException('Virtual price cannot be less than base price')
+      throw new BadRequestException(MESSAGE.PRODUCT.VIRTUAL_PRICE_LESS_THAN_BASE_PRICE)
     }
 
     if (body.variants !== undefined) {
@@ -274,7 +275,7 @@ export class ProductService {
         const activeSkuCount = await this.skuRepository.countActiveByProductId(id)
 
         if (activeSkuCount > 0) {
-          throw new BadRequestException('Cannot update variants when there are active SKUs')
+          throw new BadRequestException(MESSAGE.PRODUCT.CANNOT_UPDATE_VARIANTS_WITH_ACTIVE_SKUS)
         }
       }
     }
@@ -324,7 +325,7 @@ export class ProductService {
     const product = await this.productRepository.findById(id)
 
     if (!product) {
-      throw new NotFoundException('Product not found')
+      throw new NotFoundException(MESSAGE.PRODUCT.NOT_FOUND)
     }
 
     const uploadedFile = await this.storageService.upload(file, 'products')

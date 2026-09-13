@@ -3,6 +3,7 @@ import { OrderStatus, PaymentStatus } from '../../../generated/prisma/client'
 import { PaymentRepository } from './payment.repository'
 import { CreatePaymentBodyDTO } from './payment.dto'
 import * as paymentGatewayInterface from './gateways/payment-gateway.interface'
+import { MESSAGE } from '@/shared/constants/message.constant'
 
 @Injectable()
 export class PaymentService {
@@ -16,15 +17,15 @@ export class PaymentService {
     const { payment, order } = await this.paymentRepository.transaction(async (tx) => {
       const order = await this.paymentRepository.findOrderForPayment(tx, body.orderId, userId)
       if (!order) {
-        throw new NotFoundException('Order not found')
+        throw new NotFoundException(MESSAGE.PAYMENT.ORDER_NOT_FOUND)
       }
       if (order.status !== OrderStatus.PENDING_PAYMENT) {
-        throw new ConflictException('Order is not awaiting payment')
+        throw new ConflictException(MESSAGE.PAYMENT.ORDER_NOT_AWAITING_PAYMENT)
       }
 
       if (order.payment) {
         if (order.payment.status !== PaymentStatus.PENDING) {
-          throw new ConflictException('Payment cannot be retried')
+          throw new ConflictException(MESSAGE.PAYMENT.PAYMENT_CANNOT_BE_RETRIED)
         }
         return {
           payment: order.payment,
@@ -37,7 +38,7 @@ export class PaymentService {
       const result = await this.paymentRepository.attachPayment(tx, order.id, userId, payment.id)
 
       if (result.count !== 1) {
-        throw new ConflictException('Payment could not be created for this order')
+        throw new ConflictException(MESSAGE.PAYMENT.PAYMENT_COULD_NOT_BE_CREATED)
       }
 
       return {
@@ -76,7 +77,7 @@ export class PaymentService {
       )
 
       if (!payment || !payment.order) {
-        throw new NotFoundException('Payment not found')
+        throw new NotFoundException(MESSAGE.PAYMENT.PAYMENT_NOT_FOUND)
       }
 
       const existingTransaction = await this.paymentRepository.findTransaction(
@@ -93,7 +94,7 @@ export class PaymentService {
       }
 
       if (!payment.amount.equals(webhook.amount)) {
-        throw new BadRequestException('Payment amount mismatch')
+        throw new BadRequestException(MESSAGE.PAYMENT.PAYMENT_AMOUNT_MISMATCH)
       }
 
       const transactionResult = await this.paymentRepository.createTransaction(tx, {
@@ -128,13 +129,13 @@ export class PaymentService {
           }
         }
 
-        throw new ConflictException('Payment status cannot be updated')
+        throw new ConflictException(MESSAGE.PAYMENT.PAYMENT_STATUS_CANNOT_BE_UPDATED)
       }
 
       const orderResult = await this.paymentRepository.markOrderPaid(tx, payment.order.id, payment.id)
 
       if (orderResult.count !== 1) {
-        throw new ConflictException('Order status cannot be updated')
+        throw new ConflictException(MESSAGE.PAYMENT.ORDER_STATUS_CANNOT_BE_UPDATED)
       }
 
       return {

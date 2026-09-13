@@ -3,6 +3,7 @@ import { CartRepository } from './cart.repository'
 import { SKURepository } from '../product/sku.repository'
 import { AddCartItemBodyDTO, UpdateCartItemBodyDTO } from './cart.dto'
 import { Prisma } from '../../../generated/prisma/client'
+import { MESSAGE } from '@/shared/constants/message.constant'
 
 @Injectable()
 export class CartService {
@@ -34,11 +35,11 @@ export class CartService {
     const sku = await this.skuRepository.findById(body.skuId)
 
     if (!sku || sku.product.deletedAt !== null) {
-      throw new NotFoundException('SKU not found')
+      throw new NotFoundException(MESSAGE.CART.SKU_NOT_FOUND)
     }
 
     if (sku.stock <= 0) {
-      throw new BadRequestException('SKU is out of stock')
+      throw new BadRequestException(MESSAGE.CART.SKU_OUT_OF_STOCK)
     }
 
     const existingItem = await this.cartRepository.findItem(userId, body.skuId)
@@ -46,7 +47,7 @@ export class CartService {
     const newQuantity = (existingItem?.quantity ?? 0) + body.quantity
 
     if (newQuantity > sku.stock) {
-      throw new BadRequestException('Quantity exceeds available stock')
+      throw new BadRequestException(MESSAGE.CART.QUANTITY_EXCEEDS_STOCK)
     }
 
     return this.cartRepository.upsertItem(userId, body.skuId, body.quantity)
@@ -56,17 +57,17 @@ export class CartService {
     const item = await this.cartRepository.findItem(userId, skuId)
 
     if (!item) {
-      throw new NotFoundException('Cart item not found')
+      throw new NotFoundException(MESSAGE.CART.ITEM_NOT_FOUND)
     }
 
     const sku = await this.skuRepository.findById(skuId)
 
     if (!sku || sku.product.deletedAt !== null) {
-      throw new NotFoundException('SKU not found')
+      throw new NotFoundException(MESSAGE.CART.SKU_NOT_FOUND)
     }
 
     if (body.quantity > sku.stock) {
-      throw new BadRequestException('Quantity exceeds available stock')
+      throw new BadRequestException(MESSAGE.CART.QUANTITY_EXCEEDS_STOCK)
     }
 
     return this.cartRepository.updateQuantity(userId, skuId, body.quantity)
@@ -76,13 +77,13 @@ export class CartService {
     const item = await this.cartRepository.findItem(userId, skuId)
 
     if (!item) {
-      throw new NotFoundException('Cart item not found')
+      throw new NotFoundException(MESSAGE.CART.ITEM_NOT_FOUND)
     }
 
     await this.cartRepository.deleteItem(userId, skuId)
 
     return {
-      message: 'Cart item deleted successfully',
+      message: MESSAGE.CART.ITEM_DELETED_SUCCESSFULLY,
     }
   }
 
@@ -90,7 +91,7 @@ export class CartService {
     await this.cartRepository.deleteAllByUserId(userId)
 
     return {
-      message: 'Cart cleared successfully',
+      message: MESSAGE.CART.CLEARED_SUCCESSFULLY,
     }
   }
 }

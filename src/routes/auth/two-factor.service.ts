@@ -24,10 +24,10 @@ export class TwoFactorService {
   async setup(userId: number) {
     const user = await this.userRepository.findById(userId)
     if (!user) {
-      throw new UnauthorizedException('User not found')
+      throw new UnauthorizedException(MESSAGE.AUTH.USER_NOT_FOUND)
     }
     if (user.totpEnabled) {
-      throw new ConflictException('Two-factor authentication is already enabled')
+      throw new ConflictException(MESSAGE.AUTH.TWO_FACTOR_AUTHENTICATION_ALREADY_ENABLED)
     }
     const secret = generateSecret()
     const otpauthUri = generateURI({
@@ -50,18 +50,18 @@ export class TwoFactorService {
   async enable(userId: number, body: EnableTwoFactorBodyDTO) {
     const user = await this.userRepository.findById(userId)
     if (!user) {
-      throw new UnauthorizedException('User not found')
+      throw new UnauthorizedException(MESSAGE.AUTH.USER_NOT_FOUND)
     }
     if (user.totpEnabled) {
-      throw new ConflictException('Two-factor authentication is already enabled')
+      throw new ConflictException(MESSAGE.AUTH.TWO_FACTOR_AUTHENTICATION_ALREADY_ENABLED)
     }
     if (!user.totpSecret) {
-      throw new UnauthorizedException('Two-factor authentication setup is required')
+      throw new UnauthorizedException(MESSAGE.AUTH.TWO_FACTOR_AUTHENTICATION_SETUP_REQUIRED)
     }
     const isValid = await this.verifyCode(user.totpSecret, body.code)
 
     if (!isValid) {
-      throw new UnauthorizedException('Invalid code')
+      throw new UnauthorizedException(MESSAGE.AUTH.INVALID_TWO_FACTOR_AUTHENTICATION_CODE)
     }
     const recoveryCodes = Array.from({ length: 8 }, () => this.generateRecoveryCode())
     const hashedRecoveryCodes = await Promise.all(recoveryCodes.map((code) => this.hashingService.hash(code)))
@@ -80,7 +80,7 @@ export class TwoFactorService {
     })
 
     return {
-      message: 'Two-factor authentication has been enabled',
+      message: MESSAGE.AUTH.TWO_FACTOR_AUTHENTICATION_ENABLED,
       recoveryCodes,
     }
   }

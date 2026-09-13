@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { CategoryRepository } from './category.repository'
 import { CreateCategoryBodyDTO, UpdateCategoryBodyDTO } from './category.dto'
+import { MESSAGE } from '@/shared/constants/message.constant'
 
 @Injectable()
 export class CategoryService {
@@ -8,7 +9,7 @@ export class CategoryService {
     let currentId: number | null = parentCategoryId
     while (currentId !== null) {
       if (currentId === categoryId) {
-        throw new BadRequestException('Parent category cannot be itself')
+        throw new BadRequestException(MESSAGE.CATEGORY.PARENT_CANNOT_BE_ITSELF)
       }
       const parent = await this.categoryRepository.findParentId(currentId)
       if (!parent) break
@@ -26,7 +27,7 @@ export class CategoryService {
       const parent = await this.categoryRepository.findById(body.parentCategoryId)
 
       if (!parent) {
-        throw new BadRequestException('Parent category not found')
+        throw new BadRequestException(MESSAGE.CATEGORY.PARENT_NOT_FOUND)
       }
     }
 
@@ -37,14 +38,14 @@ export class CategoryService {
     const category = await this.categoryRepository.findById(id)
 
     if (!category) {
-      throw new NotFoundException('Category not found')
+      throw new NotFoundException(MESSAGE.CATEGORY.NOT_FOUND)
     }
 
     if (body.parentCategoryId) {
       const parent = await this.categoryRepository.findById(body.parentCategoryId)
 
       if (!parent) {
-        throw new BadRequestException('Parent category not found')
+        throw new BadRequestException(MESSAGE.CATEGORY.PARENT_NOT_FOUND)
       }
 
       await this.ensureNoCycle(id, body.parentCategoryId)
@@ -57,19 +58,19 @@ export class CategoryService {
     const category = await this.categoryRepository.findById(id)
 
     if (!category) {
-      throw new NotFoundException('Category not found')
+      throw new NotFoundException(MESSAGE.CATEGORY.NOT_FOUND)
     }
 
     const childrenCount = await this.categoryRepository.countChildren(id)
 
     if (childrenCount > 0) {
-      throw new BadRequestException('Cannot delete category with active child categories')
+      throw new BadRequestException(MESSAGE.CATEGORY.CANNOT_DELETE_WITH_ACTIVE_CHILDREN)
     }
 
     await this.categoryRepository.softDelete(id, userId)
 
     return {
-      message: 'Category deleted successfully',
+      message: MESSAGE.CATEGORY.DELETED_SUCCESSFULLY,
     }
   }
 }

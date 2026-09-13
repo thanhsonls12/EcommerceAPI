@@ -7,6 +7,7 @@ import {
 } from './payment-gateway.interface'
 import { PayOS } from '@payos/node'
 import envConfig from '@/shared/config'
+import { MESSAGE } from '@/shared/constants/message.constant'
 import z from 'zod'
 
 const PayOSWebhookSchema = z.object({
@@ -71,7 +72,7 @@ export class PayOSPaymentGateway implements PaymentGateway {
   async verifyWebhook(payload: unknown): Promise<VerifiedWebhook> {
     const parsed = PayOSWebhookSchema.safeParse(payload)
     if (!parsed.success) {
-      throw new BadRequestException('Invalid PayOS webhook payload')
+      throw new BadRequestException(MESSAGE.PAYMENT.INVALID_PAYOS_WEBHOOK_PAYLOAD)
     }
     try {
       const data = await this.payos.webhooks.verify(parsed.data)
@@ -83,7 +84,7 @@ export class PayOSPaymentGateway implements PaymentGateway {
         rawBody: payload,
       }
     } catch {
-      throw new BadRequestException('Invalid PayOS webhook payload')
+      throw new BadRequestException(MESSAGE.PAYMENT.INVALID_PAYOS_WEBHOOK_PAYLOAD)
     }
   }
 }

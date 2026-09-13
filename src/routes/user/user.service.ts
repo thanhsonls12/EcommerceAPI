@@ -5,6 +5,7 @@ import { HashingService } from '@/shared/services/hashing.service'
 import { PrismaService } from '@/shared/services/prisma.service'
 import { RefreshTokenRepository } from '../refresh-token/refresh-token.repository'
 import { DeviceRepository } from '../device/device.repository'
+import { MESSAGE } from '@/shared/constants/message.constant'
 
 @Injectable()
 export class UserService {
@@ -24,7 +25,7 @@ export class UserService {
     const user = await this.userRepository.findProfileById(id)
 
     if (!user) {
-      throw new NotFoundException('User not found')
+      throw new NotFoundException(MESSAGE.AUTH.USER_NOT_FOUND)
     }
 
     return user
@@ -35,7 +36,7 @@ export class UserService {
       const existingUser = await this.userRepository.findByPhoneNumber(body.phoneNumber)
 
       if (existingUser && existingUser.id !== userId) {
-        throw new ConflictException('Phone number already in use')
+        throw new ConflictException(MESSAGE.USER.PHONE_NUMBER_ALREADY_IN_USE)
       }
     }
 
@@ -46,13 +47,13 @@ export class UserService {
     const user = await this.userRepository.findById(userId)
 
     if (!user) {
-      throw new NotFoundException('User not found')
+      throw new NotFoundException(MESSAGE.AUTH.USER_NOT_FOUND)
     }
 
     const isPasswordCorrect = await this.hashingService.compare(body.currentPassword, user.password)
 
     if (!isPasswordCorrect) {
-      throw new UnauthorizedException('Current password is incorrect')
+      throw new UnauthorizedException(MESSAGE.USER.CURRENT_PASSWORD_INCORRECT)
     }
 
     const hashedPassword = await this.hashingService.hash(body.newPassword)
@@ -65,6 +66,6 @@ export class UserService {
       await this.deviceRepository.deactivateAllByUserId(userId, tx)
     })
 
-    return { message: 'Password changed successfully' }
+    return { message: MESSAGE.USER.PASSWORD_CHANGED_SUCCESSFULLY }
   }
 }
