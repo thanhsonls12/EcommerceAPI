@@ -132,48 +132,14 @@ export class ProductRepository {
     SELECT
       p.id,
       ts_rank(
-        to_tsvector(
-          'simple',
-          concat_ws(
-            ' ',
-            p.name,
-            b.name,
-            string_agg(c.name, ' ')
-          )
-        ),
+        p."searchVector",
         plainto_tsquery('simple', ${params.search})
       ) AS rank
     FROM "Product" p
-    JOIN "Brand" b
-      ON b.id = p."brandId"
-
-    LEFT JOIN "_CategoryToProduct" cp
-      ON cp."B" = p.id
-
-    LEFT JOIN "Category" c
-      ON c.id = cp."A"
-      AND c."deletedAt" IS NULL
-
     WHERE p."deletedAt" IS NULL
-
     ${filters}
-
-    GROUP BY p.id, b.name
-
-    HAVING
-      to_tsvector(
-        'simple',
-        concat_ws(
-          ' ',
-          p.name,
-          b.name,
-          string_agg(c.name, ' ')
-        )
-      )
-      @@ plainto_tsquery('simple', ${params.search})
-
+    AND p."searchVector" @@ plainto_tsquery('simple', ${params.search})
     ORDER BY rank DESC, p.id DESC
-
     OFFSET ${params.skip}
     LIMIT ${params.take}
   `
@@ -184,38 +150,10 @@ export class ProductRepository {
 
     const [result] = await this.prisma.$queryRaw<ProductSearchCountRow[]>`
     SELECT COUNT(*)::bigint AS count
-    FROM (
-      SELECT p.id
-      FROM "Product" p
-
-      JOIN "Brand" b
-        ON b.id = p."brandId"
-
-      LEFT JOIN "_CategoryToProduct" cp
-        ON cp."B" = p.id
-
-      LEFT JOIN "Category" c
-        ON c.id = cp."A"
-        AND c."deletedAt" IS NULL
-
-      WHERE p."deletedAt" IS NULL
-
-      ${filters}
-
-      GROUP BY p.id, b.name
-
-      HAVING
-        to_tsvector(
-          'simple',
-          concat_ws(
-            ' ',
-            p.name,
-            b.name,
-            string_agg(c.name, ' ')
-          )
-        )
-        @@ plainto_tsquery('simple', ${params.search})
-    ) results
+    FROM "Product" p
+    WHERE p."deletedAt" IS NULL
+    ${filters}
+    AND p."searchVector" @@ plainto_tsquery('simple', ${params.search})
   `
 
     return Number(result?.count ?? 0n)
