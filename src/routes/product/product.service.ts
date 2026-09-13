@@ -79,6 +79,59 @@ export class ProductService {
     if (query.minPrice !== undefined && query.maxPrice !== undefined && query.minPrice > query.maxPrice) {
       throw new BadRequestException(MESSAGE.PRODUCT.MIN_PRICE_GREATER_THAN_MAX_PRICE)
     }
+
+    const skip = (query.page - 1) * query.limit
+
+    if (query.search) {
+      const searchParams = {
+        search: query.search,
+        brandId: query.brandId,
+        categoryId: query.categoryId,
+        minPrice: query.minPrice,
+        maxPrice: query.maxPrice,
+      }
+
+      const [searchResults, total] = await Promise.all([
+        this.productRepository.searchIds({
+          ...searchParams,
+          skip,
+          take: query.limit,
+        }),
+        this.productRepository.countSearch(searchParams),
+      ])
+
+      const ids = searchResults.map((result) => result.id)
+
+      if (ids.length === 0) {
+        return {
+          data: [],
+          pagination: {
+            page: query.page,
+            limit: query.limit,
+            total,
+            totalPages: Math.ceil(total / query.limit),
+          },
+        }
+      }
+
+      const products = await this.productRepository.findManyByIds(ids)
+
+      const productMap = new Map(products.map((product) => [product.id, product]))
+
+      const sortedProducts = ids.map((id) => productMap.get(id)).filter((product) => product !== undefined)
+
+      return {
+        data: sortedProducts,
+
+        pagination: {
+          page: query.page,
+          limit: query.limit,
+          total,
+          totalPages: Math.ceil(total / query.limit),
+        },
+      }
+    }
+
     const where: Prisma.ProductWhereInput = {
       deletedAt: null,
       ...(query.brandId !== undefined && {
@@ -98,37 +151,8 @@ export class ProductService {
           ...(query.maxPrice !== undefined && { lte: query.maxPrice }),
         },
       }),
-      ...(query.search !== undefined && {
-        OR: [
-          {
-            name: {
-              contains: query.search,
-              mode: 'insensitive',
-            },
-          },
-          {
-            brand: {
-              name: {
-                contains: query.search,
-                mode: 'insensitive',
-              },
-            },
-          },
-          {
-            categories: {
-              some: {
-                name: {
-                  contains: query.search,
-                  mode: 'insensitive',
-                },
-                deletedAt: null,
-              },
-            },
-          },
-        ],
-      }),
     }
-    const skip = (query.page - 1) * query.limit
+
     const orderBy: Prisma.ProductOrderByWithRelationInput =
       query.sortBy === 'price'
         ? {

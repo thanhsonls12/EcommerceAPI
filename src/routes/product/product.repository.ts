@@ -2,9 +2,57 @@ import { PrismaService } from '@/shared/services/prisma.service'
 import { Injectable } from '@nestjs/common'
 import { Prisma } from '../../../generated/prisma/client'
 
+type ProductSearchRow = {
+  id: number
+  rank: number
+}
+
+type ProductSearchCountRow = {
+  count: bigint
+}
+
+type ProductSearchFilters = {
+  brandId?: number
+  categoryId?: number
+  minPrice?: number
+  maxPrice?: number
+}
+
+type ProductSearchParams = ProductSearchFilters & {
+  search: string
+  skip: number
+  take: number
+}
+
 @Injectable()
 export class ProductRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  private buildSearchFilters(params: ProductSearchFilters) {
+    return Prisma.sql`
+      ${params.brandId !== undefined ? Prisma.sql`AND p."brandId" = ${params.brandId}` : Prisma.empty}
+
+      ${
+        params.categoryId !== undefined
+          ? Prisma.sql`
+              AND EXISTS (
+                SELECT 1
+                FROM "_CategoryToProduct" filter_cp
+                JOIN "Category" filter_c
+                  ON filter_c.id = filter_cp."A"
+                WHERE filter_cp."B" = p.id
+                  AND filter_cp."A" = ${params.categoryId}
+                  AND filter_c."deletedAt" IS NULL
+              )
+            `
+          : Prisma.empty
+      }
+
+      ${params.minPrice !== undefined ? Prisma.sql`AND p."basePrice" >= ${params.minPrice}` : Prisma.empty}
+
+      ${params.maxPrice !== undefined ? Prisma.sql`AND p."basePrice" <= ${params.maxPrice}` : Prisma.empty}
+    `
+  }
 
   create(data: Prisma.ProductCreateInput) {
     return this.prisma.product.create({
@@ -74,6 +122,121 @@ export class ProductRepository {
     return this.prisma.product.update({
       where: { id },
       data: { deletedAt: new Date(), deletedById },
+    })
+  }
+
+  searchIds(params: ProductSearchParams) {
+    const filters = this.buildSearchFilters(params)
+
+    return this.prisma.$queryRaw<ProductSearchRow[]>`
+    SELECT
+      p.id,
+      ts_rank(
+        to_tsvector(
+          'simple',
+          concat_ws(
+            ' ',
+            p.name,
+            b.name,
+            string_agg(c.name, ' ')
+          )
+        ),
+        plainto_tsquery('simple', ${params.search})
+      ) AS rank
+    FROM "Product" p
+    JOIN "Brand" b
+      ON b.id = p."brandId"
+
+    LEFT JOIN "_CategoryToProduct" cp
+      ON cp."B" = p.id
+
+    LEFT JOIN "Category" c
+      ON c.id = cp."A"
+      AND c."deletedAt" IS NULL
+
+    WHERE p."deletedAt" IS NULL
+
+    ${filters}
+
+    GROUP BY p.id, b.name
+
+    HAVING
+      to_tsvector(
+        'simple',
+        concat_ws(
+          ' ',
+          p.name,
+          b.name,
+          string_agg(c.name, ' ')
+        )
+      )
+      @@ plainto_tsquery('simple', ${params.search})
+
+    ORDER BY rank DESC, p.id DESC
+
+    OFFSET ${params.skip}
+    LIMIT ${params.take}
+  `
+  }
+
+  async countSearch(params: ProductSearchFilters & { search: string }) {
+    const filters = this.buildSearchFilters(params)
+
+    const [result] = await this.prisma.$queryRaw<ProductSearchCountRow[]>`
+    SELECT COUNT(*)::bigint AS count
+    FROM (
+      SELECT p.id
+      FROM "Product" p
+
+      JOIN "Brand" b
+        ON b.id = p."brandId"
+
+      LEFT JOIN "_CategoryToProduct" cp
+        ON cp."B" = p.id
+
+      LEFT JOIN "Category" c
+        ON c.id = cp."A"
+        AND c."deletedAt" IS NULL
+
+      WHERE p."deletedAt" IS NULL
+
+      ${filters}
+
+      GROUP BY p.id, b.name
+
+      HAVING
+        to_tsvector(
+          'simple',
+          concat_ws(
+            ' ',
+            p.name,
+            b.name,
+            string_agg(c.name, ' ')
+          )
+        )
+        @@ plainto_tsquery('simple', ${params.search})
+    ) results
+  `
+
+    return Number(result?.count ?? 0n)
+  }
+
+  findManyByIds(ids: number[]) {
+    return this.prisma.product.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+        deletedAt: null,
+      },
+      include: {
+        brand: true,
+        categories: {
+          where: {
+            deletedAt: null,
+          },
+        },
+      },
     })
   }
 }
