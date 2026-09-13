@@ -441,7 +441,7 @@ model Order {
   receiver    Json
   shopId      Int?
   shop        User?                @relation("Shop", fields: [shopId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  paymentId   Int?
+  paymentId   Int?  @unique
   payment     Payment?              @relation(fields: [paymentId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   subtotal    Decimal   @db.Decimal(15, 2)
   total       Decimal   @db.Decimal(15, 2)
@@ -462,10 +462,16 @@ model Order {
 
 model Payment {
   id        Int           @id @default(autoincrement())
-  orders    Order[]
+  order    Order?
   status    PaymentStatus
+  amount    Decimal       @db.Decimal(15, 2)
+  gateway   String?       @db.VarChar(100)
+  reference String?       @db.VarChar(255)
+  transactions  PaymentTransaction[]
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+
+  @@unique([gateway, reference])
 }
 
 model Websocket {
@@ -508,6 +514,8 @@ model ReviewMedia {
 
 model PaymentTransaction {
   id                 Int      @id @default(autoincrement())
+  paymentId          Int
+  payment            Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   gateway            String   @db.VarChar(100)
   transactionDate    DateTime @default(now())
   accountNumber      String?  @db.VarChar(100)
@@ -521,6 +529,8 @@ model PaymentTransaction {
   body               String?  @db.Text
 
   createdAt DateTime @default(now())
+
+  @@unique([gateway, referenceNumber])
 }
 
 model Message {
