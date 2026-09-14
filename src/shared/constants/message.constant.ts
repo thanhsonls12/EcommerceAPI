@@ -88,6 +88,7 @@ export const MESSAGE = {
   },
   ORDER: {
     CART_EMPTY: 'Cart is empty',
+    ADDRESS_NOT_FOUND: 'Address not found',
     SKU_NO_LONGER_AVAILABLE: (skuId: number) => `SKU ${skuId} is no longer available`,
     INSUFFICIENT_STOCK_FOR_SKU: (skuId: number) => `Insufficient stock for SKU ${skuId}`,
     NOT_FOUND: 'Order not found',
@@ -137,5 +138,9 @@ export const MESSAGE = {
     MEDIA_LIMIT_REACHED: 'A review can contain at most 5 media files',
     MEDIA_NOT_FOUND: 'Review media not found',
     MEDIA_DELETED_SUCCESSFULLY: 'Review media deleted successfully',
+  },
+  ADDRESS: {
+    NOT_FOUND: 'Address not found',
+    DELETED_SUCCESSFULLY: 'Address deleted successfully',
   },
 } as const

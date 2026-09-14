@@ -19,6 +19,7 @@ import { PaymentModule } from './routes/payment/payment.module'
 import { BullModule } from '@nestjs/bullmq'
 import envConfig from './shared/config'
 import { ReviewModule } from './routes/review/review.module'
+import { AddressModule } from './routes/address/address.module'
 @Module({
   imports: [
     SharedModule,
@@ -50,6 +51,7 @@ import { ReviewModule } from './routes/review/review.module'
       },
     }),
     ReviewModule,
+    AddressModule,
   ],
   controllers: [AppController],
   providers: [

@@ -9,6 +9,17 @@ export class OrderRepository {
   transaction<T>(callback: (tx: Prisma.TransactionClient) => Promise<T>) {
     return this.prisma.$transaction(callback)
   }
+
+  findAddressForCheckout(tx: Prisma.TransactionClient, addressId: number, userId: number) {
+    return tx.address.findFirst({
+      where: {
+        id: addressId,
+        userId,
+        deletedAt: null,
+      },
+    })
+  }
+
   getCartForCheckout(tx: Prisma.TransactionClient, userId: number) {
     return tx.cartItem.findMany({
       where: {

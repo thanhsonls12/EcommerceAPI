@@ -49,6 +49,7 @@ model User {
   carts                       CartItem[]
   orders                      Order[]
   reviews                     Review[]
+  addresses                   Address[]
   createdPermissions          Permission[]          @relation("PermissionCreatedBy")
   updatedPermissions          Permission[]          @relation("PermissionUpdatedBy")
   deletedPermissions          Permission[]          @relation("PermissionDeletedBy")
@@ -603,4 +604,24 @@ model RecoveryCode {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+model Address {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String  @db.VarChar(100)
+  phoneNumber String  @db.VarChar(20)
+  address     String  @db.VarChar(500)
+  note        String? @db.VarChar(500)
+
+  isDefault Boolean @default(false)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, deletedAt])
+  @@index([userId, isDefault, deletedAt])
 }

@@ -14,6 +14,12 @@ export class OrderService {
 
   async create(userId: number, body: CreateOrderBodyDTO) {
     const order = await this.orderRepository.transaction(async (tx) => {
+      const address = await this.orderRepository.findAddressForCheckout(tx, body.addressId, userId)
+
+      if (!address) {
+        throw new NotFoundException(MESSAGE.ORDER.ADDRESS_NOT_FOUND)
+      }
+
       const cartItems = await this.orderRepository.getCartForCheckout(tx, userId)
 
       if (cartItems.length === 0) {
@@ -54,7 +60,14 @@ export class OrderService {
 
         status: OrderStatus.PENDING_PAYMENT,
 
-        receiver: body.receiver,
+        receiver: {
+          name: address.name,
+          phoneNumber: address.phoneNumber,
+          address: address.address,
+          ...(address.note !== null && {
+            note: address.note,
+          }),
+        },
 
         subtotal,
         total,
