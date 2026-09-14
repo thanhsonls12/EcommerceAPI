@@ -129,6 +129,11 @@ export class OrderRepository {
 
       include: {
         items: true,
+        couponUsage: {
+          select: {
+            promotionId: true,
+          },
+        },
       },
     })
   }

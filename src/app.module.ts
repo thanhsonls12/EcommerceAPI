@@ -20,6 +20,7 @@ import { BullModule } from '@nestjs/bullmq'
 import envConfig from './shared/config'
 import { ReviewModule } from './routes/review/review.module'
 import { AddressModule } from './routes/address/address.module'
+import { PromotionModule } from './routes/promotion/promotion.module'
 @Module({
   imports: [
     SharedModule,
@@ -52,6 +53,7 @@ import { AddressModule } from './routes/address/address.module'
     }),
     ReviewModule,
     AddressModule,
+    PromotionModule,
   ],
   controllers: [AppController],
   providers: [

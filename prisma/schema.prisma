@@ -31,16 +31,16 @@ model Language {
 }
 
 model User {
-  id            Int            @id @default(autoincrement())
-  email         String         @unique
-  name          String         @db.VarChar(500)
-  password      String         @db.VarChar(500)
-  phoneNumber   String         @unique @db.VarChar(50)
-  avatar        String?        @db.VarChar(1000)
-  totpSecret    String?        @db.VarChar(1000)
-  totpEnabled   Boolean        @default(false)
-  recoveryCodes RecoveryCode[]
-
+  id                          Int                   @id @default(autoincrement())
+  email                       String                @unique
+  name                        String                @db.VarChar(500)
+  password                    String                @db.VarChar(500)
+  phoneNumber                 String                @unique @db.VarChar(50)
+  avatar                      String?               @db.VarChar(1000)
+  totpSecret                  String?               @db.VarChar(1000)
+  totpEnabled                 Boolean               @default(false)
+  recoveryCodes               RecoveryCode[]
+  couponUsages                CouponUsage[]
   status                      UserStatus            @default(INACTIVE)
   roleId                      Int
   role                        Role                  @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -440,6 +440,7 @@ model Order {
   items       ProductSKUSnapshot[]
   products    Product[]
   reviews     Review[]
+  couponUsage CouponUsage?
   /// [Receiver]
   receiver    Json
   shopId      Int?
@@ -448,6 +449,8 @@ model Order {
   payment     Payment?             @relation(fields: [paymentId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   subtotal    Decimal              @db.Decimal(15, 2)
   total       Decimal              @db.Decimal(15, 2)
+  discount    Decimal              @default(0) @db.Decimal(15, 2)
+  coupon      Json?
   createdById Int?
   createdBy   User?                @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
   updatedById Int?
@@ -624,4 +627,59 @@ model Address {
 
   @@index([userId, deletedAt])
   @@index([userId, isDefault, deletedAt])
+}
+
+enum DiscountType {
+  FIXED
+  PERCENT
+}
+
+model Promotion {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique @db.VarChar(50)
+  name        String  @db.VarChar(200)
+  description String?
+
+  type  DiscountType
+  value Decimal      @db.Decimal(15, 2)
+
+  minOrderValue Decimal? @db.Decimal(15, 2)
+  maxDiscount   Decimal? @db.Decimal(15, 2)
+
+  usageLimit Int?
+  usedCount  Int  @default(0)
+
+  startsAt  DateTime
+  expiresAt DateTime
+
+  isActive Boolean @default(true)
+
+  usages CouponUsage[]
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([code, isActive, deletedAt])
+  @@index([startsAt, expiresAt])
+}
+
+model CouponUsage {
+  id Int @id @default(autoincrement())
+
+  promotionId Int
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: NoAction)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: NoAction)
+
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id], onDelete: NoAction)
+
+  createdAt DateTime @default(now())
+
+  @@unique([promotionId, userId])
+  @@unique([orderId])
+  @@index([promotionId])
+  @@index([userId])
 }

@@ -143,4 +143,16 @@ export const MESSAGE = {
     NOT_FOUND: 'Address not found',
     DELETED_SUCCESSFULLY: 'Address deleted successfully',
   },
+  PROMOTION: {
+    NOT_FOUND: 'Promotion not found',
+    CODE_ALREADY_EXISTS: 'Promotion code already exists',
+    INVALID_DATE_RANGE: 'Promotion expiration date must be after start date',
+    INVALID_PERCENT_VALUE: 'Percentage discount cannot exceed 100',
+    MAX_DISCOUNT_ONLY_FOR_PERCENT: 'maxDiscount only applies to percentage promotions',
+    DELETED_SUCCESSFULLY: 'Promotion deleted successfully',
+    INVALID_OR_EXPIRED: 'Promotion is invalid or expired',
+    MIN_ORDER_NOT_MET: 'Order does not meet the minimum value for this promotion',
+    USAGE_LIMIT_REACHED: 'Promotion usage limit has been reached',
+    ALREADY_USED: 'Promotion has already been used by this user',
+  },
 } as const
