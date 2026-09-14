@@ -16,6 +16,8 @@ import { ProductModule } from './routes/product/product.module'
 import { CartModule } from './routes/cart/cart.module'
 import { OrderModule } from './routes/order/order.module'
 import { PaymentModule } from './routes/payment/payment.module'
+import { BullModule } from '@nestjs/bullmq'
+import envConfig from './shared/config'
 @Module({
   imports: [
     SharedModule,
@@ -41,6 +43,11 @@ import { PaymentModule } from './routes/payment/payment.module'
     CartModule,
     OrderModule,
     PaymentModule,
+    BullModule.forRoot({
+      connection: {
+        url: envConfig.REDIS_URL,
+      },
+    }),
   ],
   controllers: [AppController],
   providers: [

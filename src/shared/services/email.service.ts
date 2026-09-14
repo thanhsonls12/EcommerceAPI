@@ -23,4 +23,13 @@ export class EmailService {
       text: MESSAGE.EMAIL.VERIFICATION_CODE_TEXT(code),
     })
   }
+
+  async sendOrderConfirmation(email: string, orderId: number) {
+    await this.transporter.sendMail({
+      from: envConfig.SMTP_FROM,
+      to: email,
+      subject: `Order #${orderId} confirmed`,
+      text: `Your order #${orderId} has been created successfully.`,
+    })
+  }
 }

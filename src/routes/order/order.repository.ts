@@ -122,6 +122,23 @@ export class OrderRepository {
     })
   }
 
+  findByIdForEmail(id: number) {
+    return this.prisma.order.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        user: {
+          select: {
+            email: true,
+          },
+        },
+      },
+    })
+  }
+
   restoreStock(tx: Prisma.TransactionClient, skuId: number, quantity: number) {
     return tx.sku.update({
       where: {

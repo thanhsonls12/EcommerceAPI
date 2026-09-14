@@ -3,13 +3,17 @@ import { OrderRepository } from './order.repository'
 import { CreateOrderBodyDTO } from './order.dto'
 import { OrderStatus, Prisma } from '../../../generated/prisma/client'
 import { MESSAGE } from '@/shared/constants/message.constant'
+import { EmailQueueService } from '@/shared/services/email-queue.service'
 
 @Injectable()
 export class OrderService {
-  constructor(private readonly orderRepository: OrderRepository) {}
+  constructor(
+    private readonly orderRepository: OrderRepository,
+    private readonly emailQueueService: EmailQueueService,
+  ) {}
 
   async create(userId: number, body: CreateOrderBodyDTO) {
-    return this.orderRepository.transaction(async (tx) => {
+    const order = await this.orderRepository.transaction(async (tx) => {
       const cartItems = await this.orderRepository.getCartForCheckout(tx, userId)
 
       if (cartItems.length === 0) {
@@ -91,6 +95,10 @@ export class OrderService {
 
       return order
     })
+
+    await this.emailQueueService.addOrderConfirmation(order.id)
+
+    return order
   }
 
   findMyOrders(userId: number) {

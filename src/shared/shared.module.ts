@@ -14,6 +14,9 @@ import { RedisService } from './services/redis.service'
 import { ThrottlerRedisStorageService } from './services/throttler-redis-storage.service'
 import { StorageService } from './services/storage.service'
 import { CacheService } from './services/cache.service'
+import { BullModule } from '@nestjs/bullmq'
+import { EMAIL_QUEUE } from './queues/email-queue.constant'
+import { EmailQueueService } from './services/email-queue.service'
 
 const sharedServices = [
   PrismaService,
@@ -24,6 +27,7 @@ const sharedServices = [
   ThrottlerRedisStorageService,
   StorageService,
   CacheService,
+  EmailQueueService,
 ]
 
 const authGuards = [AccessTokenGuard, APIKeyGuard, AuthenticationGuard, PermissionsGuard]
@@ -31,6 +35,7 @@ const authGuards = [AccessTokenGuard, APIKeyGuard, AuthenticationGuard, Permissi
 @Module({
   providers: [
     ...sharedServices,
+
     ...authGuards,
     {
       provide: APP_GUARD,
@@ -42,6 +47,6 @@ const authGuards = [AccessTokenGuard, APIKeyGuard, AuthenticationGuard, Permissi
     },
   ],
   exports: [...sharedServices, ...authGuards],
-  imports: [JwtModule],
+  imports: [JwtModule, BullModule.registerQueue({ name: EMAIL_QUEUE })],
 })
 export class SharedModule {}
