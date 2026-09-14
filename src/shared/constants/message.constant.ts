@@ -92,6 +92,7 @@ export const MESSAGE = {
     INSUFFICIENT_STOCK_FOR_SKU: (skuId: number) => `Insufficient stock for SKU ${skuId}`,
     NOT_FOUND: 'Order not found',
     CANNOT_BE_CANCELLED: 'Order cannot be cancelled',
+    INVALID_STATUS_TRANSITION: 'Invalid order status transition',
   },
   PRODUCT: {
     DUPLICATE_VARIANT_NAMES: 'Duplicate variant names',

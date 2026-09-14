@@ -122,6 +122,18 @@ export class OrderRepository {
     })
   }
 
+  findById(id: number) {
+    return this.prisma.order.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
+      include: {
+        items: true,
+      },
+    })
+  }
+
   findByIdForEmail(id: number) {
     return this.prisma.order.findFirst({
       where: {
@@ -164,6 +176,48 @@ export class OrderRepository {
 
       data: {
         status: OrderStatus.CANCELLED,
+        updatedById,
+      },
+    })
+  }
+
+  markPendingDelivery(id: number, updatedById: number) {
+    return this.prisma.order.updateMany({
+      where: {
+        id,
+        deletedAt: null,
+        status: OrderStatus.PENDING_PICKUP,
+      },
+      data: {
+        status: OrderStatus.PENDING_DELIVERY,
+        updatedById,
+      },
+    })
+  }
+
+  markDelivered(id: number, updatedById: number) {
+    return this.prisma.order.updateMany({
+      where: {
+        id,
+        deletedAt: null,
+        status: OrderStatus.PENDING_DELIVERY,
+      },
+      data: {
+        status: OrderStatus.DELIVERED,
+        updatedById,
+      },
+    })
+  }
+
+  markReturned(id: number, updatedById: number) {
+    return this.prisma.order.updateMany({
+      where: {
+        id,
+        deletedAt: null,
+        status: OrderStatus.DELIVERED,
+      },
+      data: {
+        status: OrderStatus.RETURNED,
         updatedById,
       },
     })

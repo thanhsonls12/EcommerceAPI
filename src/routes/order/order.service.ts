@@ -144,4 +144,52 @@ export class OrderService {
       return this.orderRepository.findByIdAndUserIdForUpdate(tx, id, userId)
     })
   }
+
+  async markPendingDelivery(id: number, userId: number) {
+    const order = await this.orderRepository.findById(id)
+
+    if (!order) {
+      throw new NotFoundException(MESSAGE.ORDER.NOT_FOUND)
+    }
+
+    const result = await this.orderRepository.markPendingDelivery(id, userId)
+
+    if (result.count !== 1) {
+      throw new BadRequestException(MESSAGE.ORDER.INVALID_STATUS_TRANSITION)
+    }
+
+    return this.orderRepository.findById(id)
+  }
+
+  async markDelivered(id: number, userId: number) {
+    const order = await this.orderRepository.findById(id)
+
+    if (!order) {
+      throw new NotFoundException(MESSAGE.ORDER.NOT_FOUND)
+    }
+
+    const result = await this.orderRepository.markDelivered(id, userId)
+
+    if (result.count !== 1) {
+      throw new BadRequestException(MESSAGE.ORDER.INVALID_STATUS_TRANSITION)
+    }
+
+    return this.orderRepository.findById(id)
+  }
+
+  async markReturned(id: number, userId: number) {
+    const order = await this.orderRepository.findById(id)
+
+    if (!order) {
+      throw new NotFoundException(MESSAGE.ORDER.NOT_FOUND)
+    }
+
+    const result = await this.orderRepository.markReturned(id, userId)
+
+    if (result.count !== 1) {
+      throw new BadRequestException(MESSAGE.ORDER.INVALID_STATUS_TRANSITION)
+    }
+
+    return this.orderRepository.findById(id)
+  }
 }
