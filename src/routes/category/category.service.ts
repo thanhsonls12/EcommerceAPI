@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { CategoryRepository } from './category.repository'
 import { CreateCategoryBodyDTO, UpdateCategoryBodyDTO } from './category.dto'
 import { MESSAGE } from '@/shared/constants/message.constant'
+import { CacheService } from '@/shared/services/cache.service'
 
 @Injectable()
 export class CategoryService {
@@ -16,10 +17,21 @@ export class CategoryService {
       currentId = parent?.parentCategoryId
     }
   }
-  constructor(private readonly categoryRepository: CategoryRepository) {}
+  constructor(
+    private readonly categoryRepository: CategoryRepository,
+    private readonly cacheService: CacheService,
+  ) {}
 
-  findAll() {
-    return this.categoryRepository.findMany()
+  async findAll() {
+    const cachedKey = 'category:list'
+    const cachedCategories = await this.cacheService.get(cachedKey)
+    if (cachedCategories) {
+      return cachedCategories
+    }
+    const categories = await this.categoryRepository.findMany()
+    await this.cacheService.set(cachedKey, categories, 600)
+
+    return categories
   }
 
   async create(body: CreateCategoryBodyDTO, userId: number) {
@@ -31,7 +43,11 @@ export class CategoryService {
       }
     }
 
-    return this.categoryRepository.create({ ...body, createdById: userId })
+    const category = await this.categoryRepository.create({ ...body, createdById: userId })
+
+    await this.cacheService.delete('category:list')
+
+    return category
   }
 
   async update(id: number, body: UpdateCategoryBodyDTO, userId: number) {
@@ -51,7 +67,15 @@ export class CategoryService {
       await this.ensureNoCycle(id, body.parentCategoryId)
     }
 
-    return this.categoryRepository.update(id, { ...body, updatedById: userId })
+    const updatedCategory = await this.categoryRepository.update(id, { ...body, updatedById: userId })
+
+    await this.cacheService.delete(`category:list`)
+
+    await this.cacheService.increment('product:list:version')
+
+    await this.cacheService.increment('product:detail:version')
+
+    return updatedCategory
   }
 
   async delete(id: number, userId: number) {
@@ -68,6 +92,12 @@ export class CategoryService {
     }
 
     await this.categoryRepository.softDelete(id, userId)
+
+    await this.cacheService.delete(`category:list`)
+
+    await this.cacheService.increment('product:list:version')
+
+    await this.cacheService.increment('product:detail:version')
 
     return {
       message: MESSAGE.CATEGORY.DELETED_SUCCESSFULLY,

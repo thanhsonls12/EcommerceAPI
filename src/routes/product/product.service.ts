@@ -8,6 +8,8 @@ import { SKURepository } from './sku.repository'
 import { StorageService } from '@/shared/services/storage.service'
 import { MESSAGE } from '@/shared/constants/message.constant'
 
+import { CacheService } from '@/shared/services/cache.service'
+
 @Injectable()
 export class ProductService {
   private validateVariants(
@@ -67,17 +69,72 @@ export class ProductService {
 
     return JSON.stringify(current) === JSON.stringify(next)
   }
+
+  private async getProductListCacheVersion() {
+    let version = await this.cacheService.getString('product:list:version')
+    if (!version) {
+      await this.cacheService.setString('product:list:version', '1')
+      version = '1'
+    }
+
+    return version
+  }
+
+  private buildProductListCacheKey(version: string, query: GetProductsQueryDTO) {
+    return [
+      `product:list:v${version}`,
+      `page=${query.page}`,
+      `limit=${query.limit}`,
+      `brand=${query.brandId ?? 'all'}`,
+      `category=${query.categoryId ?? 'all'}`,
+      `minPrice=${query.minPrice ?? 'none'}`,
+      `maxPrice=${query.maxPrice ?? 'none'}`,
+      `search=${query.search ?? 'none'}`,
+      `sortBy=${query.sortBy}`,
+      `sortOrder=${query.sortOrder}`,
+    ].join(':')
+  }
+
+  private async invalidateProductListCache() {
+    await this.cacheService.increment('product:list:version')
+  }
+
+  private async getProductDetailCacheVersion() {
+    let version = await this.cacheService.getString('product:detail:version')
+
+    if (!version) {
+      await this.cacheService.setString('product:detail:version', '1')
+      version = '1'
+    }
+
+    return version
+  }
+
+  private async invalidateProductDetailCache() {
+    await this.cacheService.increment('product:detail:version')
+  }
   constructor(
     private readonly productRepository: ProductRepository,
     private readonly brandRepository: BrandRepository,
     private readonly categoryRepository: CategoryRepository,
     private readonly skuRepository: SKURepository,
     private readonly storageService: StorageService,
+    private readonly cacheService: CacheService,
   ) {}
 
   async findAll(query: GetProductsQueryDTO) {
     if (query.minPrice !== undefined && query.maxPrice !== undefined && query.minPrice > query.maxPrice) {
       throw new BadRequestException(MESSAGE.PRODUCT.MIN_PRICE_GREATER_THAN_MAX_PRICE)
+    }
+
+    const version = await this.getProductListCacheVersion()
+
+    const cacheKey = this.buildProductListCacheKey(version, query)
+
+    const cachedProducts = await this.cacheService.get(cacheKey)
+
+    if (cachedProducts) {
+      return cachedProducts
     }
 
     const skip = (query.page - 1) * query.limit
@@ -103,7 +160,7 @@ export class ProductService {
       const ids = searchResults.map((result) => result.id)
 
       if (ids.length === 0) {
-        return {
+        const result = {
           data: [],
           pagination: {
             page: query.page,
@@ -112,6 +169,9 @@ export class ProductService {
             totalPages: Math.ceil(total / query.limit),
           },
         }
+
+        await this.cacheService.set(cacheKey, result, 120)
+        return result
       }
 
       const products = await this.productRepository.findManyByIds(ids)
@@ -120,7 +180,7 @@ export class ProductService {
 
       const sortedProducts = ids.map((id) => productMap.get(id)).filter((product) => product !== undefined)
 
-      return {
+      const result = {
         data: sortedProducts,
 
         pagination: {
@@ -130,6 +190,10 @@ export class ProductService {
           totalPages: Math.ceil(total / query.limit),
         },
       }
+
+      await this.cacheService.set(cacheKey, result, 120)
+
+      return result
     }
 
     const where: Prisma.ProductWhereInput = {
@@ -167,7 +231,7 @@ export class ProductService {
       this.productRepository.count(where),
     ])
 
-    return {
+    const result = {
       data: products,
 
       pagination: {
@@ -177,14 +241,26 @@ export class ProductService {
         totalPages: Math.ceil(total / query.limit),
       },
     }
+
+    await this.cacheService.set(cacheKey, result, 120)
+
+    return result
   }
 
   async findById(id: number) {
+    const version = await this.getProductDetailCacheVersion()
+    const cacheKey = `product:detail:v${version}:${id}`
+    const cachedProduct = await this.cacheService.get(cacheKey)
+    if (cachedProduct) {
+      return cachedProduct
+    }
     const product = await this.productRepository.findById(id)
 
     if (!product) {
       throw new NotFoundException(MESSAGE.PRODUCT.NOT_FOUND)
     }
+
+    await this.cacheService.set(cacheKey, product, 300)
 
     return product
   }
@@ -216,7 +292,7 @@ export class ProductService {
       this.validateVariants(body.variants)
     }
 
-    return this.productRepository.create({
+    const product = await this.productRepository.create({
       name: body.name,
       basePrice: body.basePrice,
       virtualPrice: body.virtualPrice,
@@ -238,6 +314,10 @@ export class ProductService {
         },
       },
     })
+
+    await this.invalidateProductListCache()
+
+    return product
   }
 
   async delete(id: number, userId: number) {
@@ -248,6 +328,9 @@ export class ProductService {
     }
 
     await this.productRepository.softDelete(id, userId)
+
+    await this.invalidateProductListCache()
+    await this.invalidateProductDetailCache()
 
     return {
       message: MESSAGE.PRODUCT.DELETED_SUCCESSFULLY,
@@ -304,7 +387,7 @@ export class ProductService {
       }
     }
 
-    return this.productRepository.update(id, {
+    const updatedProduct = await this.productRepository.update(id, {
       ...(body.name !== undefined && {
         name: body.name,
       }),
@@ -343,6 +426,11 @@ export class ProductService {
         },
       },
     })
+
+    await this.invalidateProductListCache()
+    await this.invalidateProductDetailCache()
+
+    return updatedProduct
   }
 
   async uploadImage(id: number, file: Express.Multer.File, userId: number) {
@@ -354,7 +442,7 @@ export class ProductService {
 
     const uploadedFile = await this.storageService.upload(file, 'products')
 
-    return this.productRepository.update(id, {
+    const updatedProduct = await this.productRepository.update(id, {
       images: {
         push: uploadedFile.url,
       },
@@ -365,5 +453,10 @@ export class ProductService {
         },
       },
     })
+
+    await this.invalidateProductListCache()
+    await this.invalidateProductDetailCache()
+
+    return updatedProduct
   }
 }

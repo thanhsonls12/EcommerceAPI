@@ -2,20 +2,37 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { BrandRepository } from './brand.repository'
 import { CreateBrandBodyDTO, UpdateBrandBodyDTO } from './brand.dto'
 import { MESSAGE } from '@/shared/constants/message.constant'
+import { CacheService } from '@/shared/services/cache.service'
 
 @Injectable()
 export class BrandService {
-  constructor(private readonly brandRepository: BrandRepository) {}
+  constructor(
+    private readonly brandRepository: BrandRepository,
+    private readonly cacheService: CacheService,
+  ) {}
 
-  findAll() {
-    return this.brandRepository.findMany()
+  async findAll() {
+    const cacheKey = 'brand:list'
+    const cachedBrands = await this.cacheService.get(cacheKey)
+    if (cachedBrands) {
+      return cachedBrands
+    }
+    const brands = await this.brandRepository.findMany()
+
+    await this.cacheService.set(cacheKey, brands, 600)
+
+    return brands
   }
 
-  create(body: CreateBrandBodyDTO, userId: number) {
-    return this.brandRepository.create({
+  async create(body: CreateBrandBodyDTO, userId: number) {
+    const brand = await this.brandRepository.create({
       ...body,
       createdById: userId,
     })
+
+    await this.cacheService.delete('brand:list')
+
+    return brand
   }
 
   async update(id: number, body: UpdateBrandBodyDTO, userId: number) {
@@ -25,10 +42,18 @@ export class BrandService {
       throw new NotFoundException(MESSAGE.BRAND.NOT_FOUND)
     }
 
-    return this.brandRepository.update(id, {
+    const updatedBrand = await this.brandRepository.update(id, {
       ...body,
       updatedById: userId,
     })
+
+    await this.cacheService.delete(`brand:list`)
+
+    await this.cacheService.increment('product:list:version')
+
+    await this.cacheService.increment('product:detail:version')
+
+    return updatedBrand
   }
 
   async delete(id: number, userId: number) {
@@ -45,6 +70,8 @@ export class BrandService {
     }
 
     await this.brandRepository.softDelete(id, userId)
+
+    await this.cacheService.delete(`brand:list`)
 
     return {
       message: MESSAGE.BRAND.DELETED_SUCCESSFULLY,
