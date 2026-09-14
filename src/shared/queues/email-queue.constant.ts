@@ -6,4 +6,5 @@ export const EMAIL_JOB = {
   ORDER_DELIVERED: 'order-delivered',
   ORDER_RETURNED: 'order-returned',
   ORDER_CANCELLED: 'order-cancelled',
+  ORDER_PAID: 'order-paid',
 } as const

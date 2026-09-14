@@ -4,6 +4,7 @@ import { PaymentRepository } from './payment.repository'
 import { CreatePaymentBodyDTO } from './payment.dto'
 import * as paymentGatewayInterface from './gateways/payment-gateway.interface'
 import { MESSAGE } from '@/shared/constants/message.constant'
+import { EmailQueueService } from '@/shared/services/email-queue.service'
 
 @Injectable()
 export class PaymentService {
@@ -11,6 +12,7 @@ export class PaymentService {
     private readonly paymentRepository: PaymentRepository,
     @Inject(paymentGatewayInterface.PAYMENT_GATEWAY)
     private readonly paymentGateway: paymentGatewayInterface.PaymentGateway,
+    private readonly emailQueueService: EmailQueueService,
   ) {}
 
   async create(userId: number, body: CreatePaymentBodyDTO) {
@@ -69,7 +71,7 @@ export class PaymentService {
   async handleWebhook(payload: unknown) {
     const webhook = await this.paymentGateway.verifyWebhook(payload)
 
-    return this.paymentRepository.transaction(async (tx) => {
+    const result = await this.paymentRepository.transaction(async (tx) => {
       const payment = await this.paymentRepository.findByGatewayReference(
         tx,
         this.paymentGateway.name,
@@ -90,6 +92,7 @@ export class PaymentService {
         return {
           success: true,
           duplicate: true,
+          shouldNotify: false,
         }
       }
 
@@ -109,6 +112,7 @@ export class PaymentService {
         return {
           success: true,
           duplicate: true,
+          shouldNotify: false,
         }
       }
 
@@ -116,16 +120,24 @@ export class PaymentService {
         return {
           success: true,
           duplicate: false,
+          shouldNotify: false,
         }
       }
 
       const paymentResult = await this.paymentRepository.markPaymentSuccess(tx, payment.id)
 
       if (paymentResult.count !== 1) {
-        if (payment.status === PaymentStatus.SUCCESS) {
+        const currentPayment = await this.paymentRepository.findByGatewayReference(
+          tx,
+          this.paymentGateway.name,
+          webhook.paymentReference,
+        )
+
+        if (currentPayment?.status === PaymentStatus.SUCCESS) {
           return {
             success: true,
             duplicate: true,
+            shouldNotify: false,
           }
         }
 
@@ -141,7 +153,16 @@ export class PaymentService {
       return {
         success: true,
         duplicate: false,
+        shouldNotify: true,
+        orderId: payment.order.id,
       }
     })
+    if (result.shouldNotify && result.orderId !== undefined) {
+      await this.emailQueueService.addOrderPaid(result.orderId)
+    }
+    return {
+      success: result.success,
+      duplicate: result.duplicate,
+    }
   }
 }

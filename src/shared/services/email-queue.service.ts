@@ -94,4 +94,21 @@ export class EmailQueueService {
       },
     )
   }
+
+  async addOrderPaid(orderId: number) {
+    await this.emailQueue.add(
+      EMAIL_JOB.ORDER_PAID,
+      { orderId },
+      {
+        jobId: `order-paid-${orderId}`,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      },
+    )
+  }
 }

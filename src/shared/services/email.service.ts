@@ -68,4 +68,13 @@ export class EmailService {
       text: `Your order #${orderId} has been cancelled.`,
     })
   }
+
+  async sendOrderPaid(email: string, orderId: number) {
+    await this.transporter.sendMail({
+      from: envConfig.SMTP_FROM,
+      to: email,
+      subject: `Payment received for order #${orderId}`,
+      text: `Payment for order #${orderId} was successful. Your order is now being prepared.`,
+    })
+  }
 }

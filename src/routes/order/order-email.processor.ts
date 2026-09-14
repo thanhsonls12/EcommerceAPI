@@ -34,6 +34,8 @@ export class OrderEmailProcessor extends WorkerHost {
       case EMAIL_JOB.ORDER_CANCELLED:
         return this.processOrderCancelled(job)
 
+      case EMAIL_JOB.ORDER_PAID:
+        return this.processOrderPaid(job)
       default:
         throw new Error(`Unknown email job: ${job.name}`)
     }
@@ -82,5 +84,13 @@ export class OrderEmailProcessor extends WorkerHost {
     const order = await this.getOrderForEmail(orderId)
 
     await this.emailService.sendOrderCancelled(order.user.email, order.id)
+  }
+
+  private async processOrderPaid(job: Job<OrderEmailJobData>) {
+    const { orderId } = job.data
+
+    const order = await this.getOrderForEmail(orderId)
+
+    await this.emailService.sendOrderPaid(order.user.email, order.id)
   }
 }
