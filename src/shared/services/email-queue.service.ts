@@ -10,12 +10,80 @@ export class EmailQueueService {
     private readonly emailQueue: Queue,
   ) {}
 
-  async addOrderConfirmation(orderId: number) {
+  async addOrderCreated(orderId: number) {
     await this.emailQueue.add(
-      EMAIL_JOB.ORDER_CONFIRMATION,
+      EMAIL_JOB.ORDER_CREATED,
       { orderId },
       {
-        jobId: `order-confirmation-${orderId}`,
+        jobId: `order-created-${orderId}`,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      },
+    )
+  }
+
+  async addOrderPendingDelivery(orderId: number) {
+    await this.emailQueue.add(
+      EMAIL_JOB.ORDER_PENDING_DELIVERY,
+      { orderId },
+      {
+        jobId: `order-pending-delivery-${orderId}`,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      },
+    )
+  }
+
+  async addOrderDelivered(orderId: number) {
+    await this.emailQueue.add(
+      EMAIL_JOB.ORDER_DELIVERED,
+      { orderId },
+      {
+        jobId: `order-delivered-${orderId}`,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      },
+    )
+  }
+
+  async addOrderReturned(orderId: number) {
+    await this.emailQueue.add(
+      EMAIL_JOB.ORDER_RETURNED,
+      { orderId },
+      {
+        jobId: `order-returned-${orderId}`,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      },
+    )
+  }
+
+  async addOrderCancelled(orderId: number) {
+    await this.emailQueue.add(
+      EMAIL_JOB.ORDER_CANCELLED,
+      { orderId },
+      {
+        jobId: `order-cancelled-${orderId}`,
         attempts: 3,
         backoff: {
           type: 'exponential',

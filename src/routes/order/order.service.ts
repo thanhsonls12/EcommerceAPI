@@ -96,7 +96,7 @@ export class OrderService {
       return order
     })
 
-    await this.emailQueueService.addOrderConfirmation(order.id)
+    await this.emailQueueService.addOrderCreated(order.id)
 
     return order
   }
@@ -116,7 +116,7 @@ export class OrderService {
   }
 
   async cancel(userId: number, id: number) {
-    return this.orderRepository.transaction(async (tx) => {
+    const order = await this.orderRepository.transaction(async (tx) => {
       const order = await this.orderRepository.findByIdAndUserIdForUpdate(tx, id, userId)
 
       if (!order) {
@@ -143,6 +143,10 @@ export class OrderService {
 
       return this.orderRepository.findByIdAndUserIdForUpdate(tx, id, userId)
     })
+
+    await this.emailQueueService.addOrderCancelled(id)
+
+    return order
   }
 
   async markPendingDelivery(id: number, userId: number) {
@@ -158,7 +162,11 @@ export class OrderService {
       throw new BadRequestException(MESSAGE.ORDER.INVALID_STATUS_TRANSITION)
     }
 
-    return this.orderRepository.findById(id)
+    const updatedOrder = await this.orderRepository.findById(id)
+
+    await this.emailQueueService.addOrderPendingDelivery(id)
+
+    return updatedOrder
   }
 
   async markDelivered(id: number, userId: number) {
@@ -174,7 +182,11 @@ export class OrderService {
       throw new BadRequestException(MESSAGE.ORDER.INVALID_STATUS_TRANSITION)
     }
 
-    return this.orderRepository.findById(id)
+    const updatedOrder = await this.orderRepository.findById(id)
+
+    await this.emailQueueService.addOrderDelivered(id)
+
+    return updatedOrder
   }
 
   async markReturned(id: number, userId: number) {
@@ -190,6 +202,10 @@ export class OrderService {
       throw new BadRequestException(MESSAGE.ORDER.INVALID_STATUS_TRANSITION)
     }
 
-    return this.orderRepository.findById(id)
+    const updatedOrder = await this.orderRepository.findById(id)
+
+    await this.emailQueueService.addOrderReturned(id)
+
+    return updatedOrder
   }
 }

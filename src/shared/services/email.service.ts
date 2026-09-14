@@ -24,12 +24,48 @@ export class EmailService {
     })
   }
 
-  async sendOrderConfirmation(email: string, orderId: number) {
+  async sendOrderCreated(email: string, orderId: number) {
     await this.transporter.sendMail({
       from: envConfig.SMTP_FROM,
       to: email,
-      subject: `Order #${orderId} confirmed`,
-      text: `Your order #${orderId} has been created successfully.`,
+      subject: `Order #${orderId} created`,
+      text: `Your order #${orderId} has been created and is awaiting payment.`,
+    })
+  }
+
+  async sendOrderPendingDelivery(email: string, orderId: number) {
+    await this.transporter.sendMail({
+      from: envConfig.SMTP_FROM,
+      to: email,
+      subject: `Order #${orderId} is on the way`,
+      text: `Your order #${orderId} is now pending delivery.`,
+    })
+  }
+
+  async sendOrderDelivered(email: string, orderId: number) {
+    await this.transporter.sendMail({
+      from: envConfig.SMTP_FROM,
+      to: email,
+      subject: `Order #${orderId} delivered`,
+      text: `Your order #${orderId} has been delivered.`,
+    })
+  }
+
+  async sendOrderReturned(email: string, orderId: number) {
+    await this.transporter.sendMail({
+      from: envConfig.SMTP_FROM,
+      to: email,
+      subject: `Order #${orderId} returned`,
+      text: `Your order #${orderId} has been marked as returned.`,
+    })
+  }
+
+  async sendOrderCancelled(email: string, orderId: number) {
+    await this.transporter.sendMail({
+      from: envConfig.SMTP_FROM,
+      to: email,
+      subject: `Order #${orderId} cancelled`,
+      text: `Your order #${orderId} has been cancelled.`,
     })
   }
 }
