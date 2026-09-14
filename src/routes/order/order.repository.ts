@@ -49,24 +49,6 @@ export class OrderRepository {
     })
   }
 
-  decrementStock(tx: Prisma.TransactionClient, skuId: number, quantity: number) {
-    return tx.sku.updateMany({
-      where: {
-        id: skuId,
-        deletedAt: null,
-        stock: {
-          gte: quantity,
-        },
-      },
-
-      data: {
-        stock: {
-          decrement: quantity,
-        },
-      },
-    })
-  }
-
   create(tx: Prisma.TransactionClient, data: Prisma.OrderCreateInput) {
     return tx.order.create({
       data,
@@ -150,6 +132,18 @@ export class OrderRepository {
     })
   }
 
+  findByIdForUpdate(tx: Prisma.TransactionClient, id: number) {
+    return tx.order.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
+      include: {
+        items: true,
+      },
+    })
+  }
+
   findByIdForEmail(id: number) {
     return this.prisma.order.findFirst({
       where: {
@@ -162,20 +156,6 @@ export class OrderRepository {
           select: {
             email: true,
           },
-        },
-      },
-    })
-  }
-
-  restoreStock(tx: Prisma.TransactionClient, skuId: number, quantity: number) {
-    return tx.sku.update({
-      where: {
-        id: skuId,
-      },
-
-      data: {
-        stock: {
-          increment: quantity,
         },
       },
     })
@@ -225,8 +205,8 @@ export class OrderRepository {
     })
   }
 
-  markReturned(id: number, updatedById: number) {
-    return this.prisma.order.updateMany({
+  markReturned(tx: Prisma.TransactionClient, id: number, updatedById: number) {
+    return tx.order.updateMany({
       where: {
         id,
         deletedAt: null,

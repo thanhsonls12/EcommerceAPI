@@ -163,7 +163,6 @@ export class SKUService {
     return this.skuRepository.update(skuId, {
       ...(value !== undefined && { value }),
       ...(body.price !== undefined && { price: body.price }),
-      ...(body.stock !== undefined && { stock: body.stock }),
       ...(body.image !== undefined && { image: body.image }),
 
       updatedBy: {

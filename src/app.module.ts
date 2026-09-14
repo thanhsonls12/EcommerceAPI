@@ -21,6 +21,7 @@ import envConfig from './shared/config'
 import { ReviewModule } from './routes/review/review.module'
 import { AddressModule } from './routes/address/address.module'
 import { PromotionModule } from './routes/promotion/promotion.module'
+import { InventoryModule } from './routes/inventory/inventory.module'
 @Module({
   imports: [
     SharedModule,
@@ -54,6 +55,7 @@ import { PromotionModule } from './routes/promotion/promotion.module'
     ReviewModule,
     AddressModule,
     PromotionModule,
+    InventoryModule,
   ],
   controllers: [AppController],
   providers: [

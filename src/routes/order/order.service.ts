@@ -1,10 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { OrderRepository } from './order.repository'
 import { CreateOrderBodyDTO } from './order.dto'
-import { OrderStatus, Prisma } from '../../../generated/prisma/client'
+import { InventoryTransactionType, OrderStatus, Prisma } from '../../../generated/prisma/client'
 import { MESSAGE } from '@/shared/constants/message.constant'
 import { EmailQueueService } from '@/shared/services/email-queue.service'
 import { PromotionRepository } from '../promotion/promotion.repository'
+import { InventoryRepository } from '../inventory/inventory.repository'
 
 @Injectable()
 export class OrderService {
@@ -12,6 +13,7 @@ export class OrderService {
     private readonly orderRepository: OrderRepository,
     private readonly emailQueueService: EmailQueueService,
     private readonly promotionRepository: PromotionRepository,
+    private readonly inventoryRepository: InventoryRepository,
   ) {}
 
   async create(userId: number, body: CreateOrderBodyDTO) {
@@ -98,12 +100,26 @@ export class OrderService {
         }
       }
       const total = subtotal.sub(discount)
-      for (const item of cartItems) {
-        const result = await this.orderRepository.decrementStock(tx, item.skuId, item.quantity)
+      const inventoryChanges: Array<{
+        skuId: number
+        quantity: number
+        stockBefore: number
+        stockAfter: number
+      }> = []
 
-        if (result.count !== 1) {
+      for (const item of cartItems) {
+        const updated = await this.inventoryRepository.decrementStock(tx, item.skuId, item.quantity)
+
+        if (!updated) {
           throw new BadRequestException(MESSAGE.ORDER.INSUFFICIENT_STOCK_FOR_SKU(item.skuId))
         }
+
+        inventoryChanges.push({
+          skuId: item.skuId,
+          quantity: -item.quantity,
+          stockBefore: updated.stock + item.quantity,
+          stockAfter: updated.stock,
+        })
       }
       const order = await this.orderRepository.create(tx, {
         user: {
@@ -179,6 +195,20 @@ export class OrderService {
           throw error
         }
       }
+
+      for (const change of inventoryChanges) {
+        await this.inventoryRepository.createTransaction(tx, {
+          skuId: change.skuId,
+          type: InventoryTransactionType.SALE,
+          quantity: change.quantity,
+          stockBefore: change.stockBefore,
+          stockAfter: change.stockAfter,
+          referenceType: 'ORDER',
+          referenceId: order.id,
+          createdById: userId,
+        })
+      }
+
       await this.orderRepository.clearCheckedOutItems(
         tx,
         userId,
@@ -230,7 +260,22 @@ export class OrderService {
           continue
         }
 
-        await this.orderRepository.restoreStock(tx, item.skuId, item.quantity)
+        const updated = await this.inventoryRepository.incrementStock(tx, item.skuId, item.quantity)
+
+        if (!updated) {
+          throw new Error('SKU no longer exists while restoring inventory')
+        }
+
+        await this.inventoryRepository.createTransaction(tx, {
+          skuId: item.skuId,
+          type: InventoryTransactionType.RESTORE,
+          quantity: item.quantity,
+          stockBefore: updated.stock - item.quantity,
+          stockAfter: updated.stock,
+          referenceType: 'ORDER',
+          referenceId: id,
+          createdById: userId,
+        })
       }
 
       if (order.couponUsage) {
@@ -301,19 +346,44 @@ export class OrderService {
   }
 
   async markReturned(id: number, userId: number) {
-    const order = await this.orderRepository.findById(id)
+    const updatedOrder = await this.orderRepository.transaction(async (tx) => {
+      const order = await this.orderRepository.findByIdForUpdate(tx, id)
 
-    if (!order) {
-      throw new NotFoundException(MESSAGE.ORDER.NOT_FOUND)
-    }
+      if (!order) {
+        throw new NotFoundException(MESSAGE.ORDER.NOT_FOUND)
+      }
 
-    const result = await this.orderRepository.markReturned(id, userId)
+      const result = await this.orderRepository.markReturned(tx, id, userId)
 
-    if (result.count !== 1) {
-      throw new BadRequestException(MESSAGE.ORDER.INVALID_STATUS_TRANSITION)
-    }
+      if (result.count !== 1) {
+        throw new BadRequestException(MESSAGE.ORDER.INVALID_STATUS_TRANSITION)
+      }
 
-    const updatedOrder = await this.orderRepository.findById(id)
+      for (const item of order.items) {
+        if (item.skuId === null) {
+          continue
+        }
+
+        const updated = await this.inventoryRepository.incrementStock(tx, item.skuId, item.quantity)
+
+        if (!updated) {
+          throw new Error('SKU no longer exists while returning inventory')
+        }
+
+        await this.inventoryRepository.createTransaction(tx, {
+          skuId: item.skuId,
+          type: InventoryTransactionType.RETURN,
+          quantity: item.quantity,
+          stockBefore: updated.stock - item.quantity,
+          stockAfter: updated.stock,
+          referenceType: 'ORDER',
+          referenceId: id,
+          createdById: userId,
+        })
+      }
+
+      return this.orderRepository.findByIdForUpdate(tx, id)
+    })
 
     await this.emailQueueService.addOrderReturned(id)
 

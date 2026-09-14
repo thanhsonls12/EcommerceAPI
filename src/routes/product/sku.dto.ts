@@ -15,7 +15,16 @@ const CreateSKUBodySchema = z
   })
   .strict()
 
-const UpdateSKUBodySchema = CreateSKUBodySchema.partial()
+const UpdateSKUBodySchema = z
+  .object({
+    value: SKUValueSchema.optional(),
+    price: z.number().positive().optional(),
+    image: z.string().url().max(1000).optional(),
+  })
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided',
+  })
 
 export class CreateSKUBodyDTO extends createZodDto(CreateSKUBodySchema) {}
 

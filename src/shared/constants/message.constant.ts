@@ -155,4 +155,10 @@ export const MESSAGE = {
     USAGE_LIMIT_REACHED: 'Promotion usage limit has been reached',
     ALREADY_USED: 'Promotion has already been used by this user',
   },
+  INVENTORY: {
+    SKU_NOT_FOUND: 'SKU not found',
+    INSUFFICIENT_STOCK: 'Inventory adjustment would make stock negative',
+    INVALID_RESTOCK_QUANTITY: 'Restock quantity must be greater than zero',
+    INVALID_ADJUSTMENT_QUANTITY: 'Adjustment quantity must not be zero',
+  },
 } as const

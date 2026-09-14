@@ -122,6 +122,48 @@ const permissions = [
     method: 'DELETE' as const,
     module: 'BRAND',
   },
+  {
+    name: PermissionName.PromotionCreate,
+    description: 'Create promotion',
+    path: '/promotions',
+    method: 'POST' as const,
+    module: 'PROMOTION',
+  },
+  {
+    name: PermissionName.PromotionRead,
+    description: 'Read promotions',
+    path: '/promotions',
+    method: 'GET' as const,
+    module: 'PROMOTION',
+  },
+  {
+    name: PermissionName.PromotionUpdate,
+    description: 'Update promotion',
+    path: '/promotions/:id',
+    method: 'PATCH' as const,
+    module: 'PROMOTION',
+  },
+  {
+    name: PermissionName.PromotionDelete,
+    description: 'Delete promotion',
+    path: '/promotions/:id',
+    method: 'DELETE' as const,
+    module: 'PROMOTION',
+  },
+  {
+    name: PermissionName.InventoryRead,
+    description: 'Read inventory',
+    path: '/inventory',
+    method: 'GET' as const,
+    module: 'INVENTORY',
+  },
+  {
+    name: PermissionName.InventoryUpdate,
+    description: 'Adjust inventory',
+    path: '/inventory/adjustments',
+    method: 'POST' as const,
+    module: 'INVENTORY',
+  },
 ]
 
 async function main() {
@@ -186,6 +228,8 @@ async function main() {
           PermissionName.BrandRead,
           PermissionName.OrderRead,
           PermissionName.OrderUpdate,
+          PermissionName.InventoryRead,
+          PermissionName.InventoryUpdate,
         ),
       },
     },

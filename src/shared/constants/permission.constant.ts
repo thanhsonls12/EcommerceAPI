@@ -24,6 +24,9 @@ export const PermissionName = {
   PromotionRead: 'PROMOTION_READ',
   PromotionUpdate: 'PROMOTION_UPDATE',
   PromotionDelete: 'PROMOTION_DELETE',
+
+  InventoryRead: 'INVENTORY_READ',
+  InventoryUpdate: 'INVENTORY_UPDATE',
 } as const
 
 export type PermissionNameType = (typeof PermissionName)[keyof typeof PermissionName]
