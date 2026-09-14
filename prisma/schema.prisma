@@ -221,13 +221,13 @@ model Role {
 }
 
 model Product {
-  id                  Int                  @id @default(autoincrement())
+  id                  Int                      @id @default(autoincrement())
   publishedAt         DateTime?
-  name                String               @db.VarChar(500)
-  basePrice           Decimal              @db.Decimal(15, 2)
-  virtualPrice        Decimal              @db.Decimal(15, 2)
+  name                String                   @db.VarChar(500)
+  basePrice           Decimal                  @db.Decimal(15, 2)
+  virtualPrice        Decimal                  @db.Decimal(15, 2)
   brandId             Int
-  brand               Brand                @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  brand               Brand                    @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   images              String[]
   categories          Category[]
   /// [Variants]
@@ -412,15 +412,15 @@ model CartItem {
 }
 
 model ProductSKUSnapshot {
-  id          Int    @id @default(autoincrement())
-  productName String @db.VarChar(500)
-  skuPrice    Decimal   @db.Decimal(15, 2)
+  id          Int     @id @default(autoincrement())
+  productName String  @db.VarChar(500)
+  skuPrice    Decimal @db.Decimal(15, 2)
   image       String
   skuValue    Json
   skuId       Int?
-  sku         Sku?   @relation(fields: [skuId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  sku         Sku?    @relation(fields: [skuId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   orderId     Int?
-  order       Order? @relation(fields: [orderId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  order       Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   quantity            Int
   productId           Int?
@@ -443,10 +443,10 @@ model Order {
   receiver    Json
   shopId      Int?
   shop        User?                @relation("Shop", fields: [shopId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  paymentId   Int?  @unique
-  payment     Payment?              @relation(fields: [paymentId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  subtotal    Decimal   @db.Decimal(15, 2)
-  total       Decimal   @db.Decimal(15, 2)
+  paymentId   Int?                 @unique
+  payment     Payment?             @relation(fields: [paymentId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  subtotal    Decimal              @db.Decimal(15, 2)
+  total       Decimal              @db.Decimal(15, 2)
   createdById Int?
   createdBy   User?                @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
   updatedById Int?
@@ -463,15 +463,15 @@ model Order {
 }
 
 model Payment {
-  id        Int           @id @default(autoincrement())
-  order    Order?
-  status    PaymentStatus
-  amount    Decimal       @db.Decimal(15, 2)
-  gateway   String?       @db.VarChar(100)
-  reference String?       @db.VarChar(255)
-  transactions  PaymentTransaction[]
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id           Int                  @id @default(autoincrement())
+  order        Order?
+  status       PaymentStatus
+  amount       Decimal              @db.Decimal(15, 2)
+  gateway      String?              @db.VarChar(100)
+  reference    String?              @db.VarChar(255)
+  transactions PaymentTransaction[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
 
   @@unique([gateway, reference])
 }
@@ -488,7 +488,7 @@ model Review {
   content     String
   rating      Int
   orderId     Int
-  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   productId   Int
   product     Product       @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   userId      Int
@@ -496,12 +496,15 @@ model Review {
   medias      ReviewMedia[]
   updateCount Int           @default(0)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@unique([orderId, productId])
   @@index([userId])
   @@index([productId])
+  @@index([deletedAt])
+  @@index([productId, deletedAt])
 }
 
 model ReviewMedia {
@@ -527,7 +530,7 @@ model PaymentTransaction {
   accumulated        Int      @default(0)
   code               String?  @db.VarChar(250)
   transactionContent String?  @db.Text
-  referenceNumber    String  @db.VarChar(255)
+  referenceNumber    String   @db.VarChar(255)
   body               String?  @db.Text
 
   createdAt DateTime @default(now())

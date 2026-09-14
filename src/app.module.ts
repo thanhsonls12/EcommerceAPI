@@ -18,6 +18,7 @@ import { OrderModule } from './routes/order/order.module'
 import { PaymentModule } from './routes/payment/payment.module'
 import { BullModule } from '@nestjs/bullmq'
 import envConfig from './shared/config'
+import { ReviewModule } from './routes/review/review.module'
 @Module({
   imports: [
     SharedModule,
@@ -48,6 +49,7 @@ import envConfig from './shared/config'
         url: envConfig.REDIS_URL,
       },
     }),
+    ReviewModule,
   ],
   controllers: [AppController],
   providers: [

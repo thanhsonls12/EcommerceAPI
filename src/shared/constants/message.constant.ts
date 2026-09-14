@@ -128,4 +128,14 @@ export const MESSAGE = {
   STORAGE: {
     UNSUPPORTED_FILE_TYPE: 'Unsupported file type',
   },
+  REVIEW: {
+    NOT_ELIGIBLE: 'You are not eligible to review this product',
+    ALREADY_EXISTS: 'This product has already been reviewed for this order',
+    NOT_FOUND: 'Review not found',
+    UPDATE_LIMIT_REACHED: 'Review update limit has been reached',
+    DELETED_SUCCESSFULLY: 'Review deleted successfully',
+    MEDIA_LIMIT_REACHED: 'A review can contain at most 5 media files',
+    MEDIA_NOT_FOUND: 'Review media not found',
+    MEDIA_DELETED_SUCCESSFULLY: 'Review media deleted successfully',
+  },
 } as const
