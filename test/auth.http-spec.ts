@@ -15,7 +15,7 @@ import { TwoFactorService } from '@/routes/auth/two-factor.service'
 import CustomZodValidationPipe from '@/shared/pipes/custom-zod-validation.pipe'
 import { UserStatus } from '../generated/prisma/client'
 
-describe('AuthController (e2e)', () => {
+describe('AuthController (http integration)', () => {
   let app: INestApplication
 
   const authService = {

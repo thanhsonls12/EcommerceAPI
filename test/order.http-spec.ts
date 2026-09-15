@@ -12,7 +12,7 @@ import CustomZodValidationPipe from '@/shared/pipes/custom-zod-validation.pipe'
 import { REQUEST_USER_KEY } from '@/shared/constants/auth.constant'
 import { OrderStatus } from '../generated/prisma/client'
 
-describe('OrderController (e2e)', () => {
+describe('OrderController (http integration)', () => {
   let app: INestApplication
 
   const userId = 1

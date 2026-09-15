@@ -11,7 +11,7 @@ import { PaymentService } from '@/routes/payment/payment.service'
 import CustomZodValidationPipe from '@/shared/pipes/custom-zod-validation.pipe'
 import { REQUEST_USER_KEY } from '@/shared/constants/auth.constant'
 
-describe('PaymentController (e2e)', () => {
+describe('PaymentController (http integration)', () => {
   let app: INestApplication
 
   const userId = 1
