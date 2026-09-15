@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod'
 import z from 'zod'
+import { zDate } from '@/shared/helpers/zod.helper'
 
 const CreatePromotionBodySchema = z
   .object({
@@ -19,9 +20,9 @@ const CreatePromotionBodySchema = z
 
     usageLimit: z.number().int().positive().optional(),
 
-    startsAt: z.coerce.date(),
+    startsAt: zDate(),
 
-    expiresAt: z.coerce.date(),
+    expiresAt: zDate(),
   })
   .strict()
   .superRefine((data, ctx) => {
@@ -59,8 +60,8 @@ const UpdatePromotionBodySchema = z
     minOrderValue: z.number().nonnegative().nullable().optional(),
     maxDiscount: z.number().positive().nullable().optional(),
     usageLimit: z.number().int().positive().nullable().optional(),
-    startsAt: z.coerce.date().optional(),
-    expiresAt: z.coerce.date().optional(),
+    startsAt: zDate().optional(),
+    expiresAt: zDate().optional(),
     isActive: z.boolean().optional(),
   })
   .strict()

@@ -2,6 +2,7 @@ import { createZodDto } from 'nestjs-zod'
 import z from 'zod'
 import { UserStatus } from '../../../generated/prisma/enums'
 import { MESSAGE } from '@/shared/constants/message.constant'
+import { zDate } from '@/shared/helpers/zod.helper'
 
 const UserSchema = z.object({
   id: z.number(),
@@ -11,11 +12,11 @@ const UserSchema = z.object({
   avatar: z.string().nullable(),
   status: z.enum([UserStatus.ACTIVE, UserStatus.INACTIVE, UserStatus.BLOCKED]),
   roleId: z.number(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
+  createdAt: zDate(),
+  updatedAt: zDate(),
   createdById: z.number().nullable(),
   updatedById: z.number().nullable(),
-  deletedAt: z.date().nullable(),
+  deletedAt: zDate().nullable(),
 })
 
 const LoginResSchema = z

@@ -29,13 +29,17 @@ import type { Request } from 'express'
 import { TwoFactorService } from './two-factor.service'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
 import { Throttle } from '@nestjs/throttler'
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly twoFactorService: TwoFactorService,
   ) {}
+
+  @ApiOperation({ summary: 'Register a new account' })
   @Public()
   @Post('register')
   @ZodSerializerDto(RegisterResDTO)
@@ -43,6 +47,7 @@ export class AuthController {
     return this.authService.register(body)
   }
 
+  @ApiOperation({ summary: 'Login with email and password' })
   @Public()
   @Post('login')
   @Throttle({
@@ -59,6 +64,7 @@ export class AuthController {
     })
   }
 
+  @ApiOperation({ summary: 'Refresh access token' })
   @Public()
   @Post('refresh-token')
   @ZodSerializerDto(RefreshTokenResDTO)
@@ -66,6 +72,7 @@ export class AuthController {
     return this.authService.refreshToken(body)
   }
 
+  @ApiOperation({ summary: 'Logout from current device' })
   @Public()
   @Post('logout')
   @ZodSerializerDto(LogoutResDTO)
@@ -73,6 +80,7 @@ export class AuthController {
     return this.authService.logout(body)
   }
 
+  @ApiOperation({ summary: 'Verify email address' })
   @Public()
   @Post('verify-email')
   @ZodSerializerDto(VerifyEmailResDTO)
@@ -80,6 +88,7 @@ export class AuthController {
     return this.authService.verifyEmail(body)
   }
 
+  @ApiOperation({ summary: 'Resend email verification code' })
   @Public()
   @Post('resend-verification-code')
   @ZodSerializerDto(ResendVerificationCodeResDTO)
@@ -87,6 +96,7 @@ export class AuthController {
     return this.authService.resendVerificationCode(body)
   }
 
+  @ApiOperation({ summary: 'Request password reset code' })
   @Public()
   @Post('forgot-password')
   @ZodSerializerDto(ForgotPasswordResDTO)
@@ -94,6 +104,7 @@ export class AuthController {
     return this.authService.forgotPassword(body)
   }
 
+  @ApiOperation({ summary: 'Reset password' })
   @Public()
   @Post('reset-password')
   @ZodSerializerDto(ResetPasswordResDTO)
@@ -101,16 +112,21 @@ export class AuthController {
     return this.authService.resetPassword(body)
   }
 
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Set up two-factor authentication' })
   @Post('2fa/setup')
   setupTwoFactor(@ActiveUser('userId') userId: number) {
     return this.twoFactorService.setup(userId)
   }
 
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Enable two-factor authentication' })
   @Post('2fa/enable')
   enableTwoFactor(@ActiveUser('userId') userId: number, @Body() body: EnableTwoFactorBodyDTO) {
     return this.twoFactorService.enable(userId, body)
   }
 
+  @ApiOperation({ summary: 'Complete login with TOTP code' })
   @Public()
   @Post('2fa/verify-login')
   @Throttle({
@@ -127,6 +143,7 @@ export class AuthController {
     })
   }
 
+  @ApiOperation({ summary: 'Complete login with recovery code' })
   @Public()
   @Post('2fa/verify-recovery-code')
   @Throttle({
@@ -142,6 +159,9 @@ export class AuthController {
       ip: req.ip ?? '',
     })
   }
+
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Disable two-factor authentication' })
   @Post('2fa/disable')
   @ZodSerializerDto(DisableTwoFactorResDTO)
   disableTwoFactor(@ActiveUser('userId') userId: number, @Body() body: DisableTwoFactorBodyDTO) {

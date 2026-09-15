@@ -4,23 +4,29 @@ import { CreateBrandBodyDTO, UpdateBrandBodyDTO } from './brand.dto'
 import { Permissions } from '@/shared/decorators/permissions.decorator'
 import { PermissionName } from '@/shared/constants/permission.constant'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 
+@ApiTags('Brands')
+@ApiBearerAuth('access-token')
 @Controller('brands')
 export class BrandController {
   constructor(private readonly brandService: BrandService) {}
 
+  @ApiOperation({ summary: 'Get brands' })
   @Get()
   @Permissions(PermissionName.BrandRead)
   findAll() {
     return this.brandService.findAll()
   }
 
+  @ApiOperation({ summary: 'Create brand' })
   @Post()
   @Permissions(PermissionName.BrandCreate)
   create(@Body() body: CreateBrandBodyDTO, @ActiveUser('userId') userId: number) {
     return this.brandService.create(body, userId)
   }
 
+  @ApiOperation({ summary: 'Update brand' })
   @Patch(':id')
   @Permissions(PermissionName.BrandUpdate)
   update(
@@ -31,6 +37,7 @@ export class BrandController {
     return this.brandService.update(id, body, userId)
   }
 
+  @ApiOperation({ summary: 'Delete brand' })
   @Delete(':id')
   @Permissions(PermissionName.BrandDelete)
   delete(@Param('id', ParseIntPipe) id: number, @ActiveUser('userId') userId: number) {
