@@ -5,6 +5,7 @@ import { CreatePaymentBodyDTO } from './payment.dto'
 import * as paymentGatewayInterface from './gateways/payment-gateway.interface'
 import { MESSAGE } from '@/shared/constants/message.constant'
 import { EmailQueueService } from '@/shared/services/email-queue.service'
+import { RealtimeService } from '../realtime/realtime.service'
 
 @Injectable()
 export class PaymentService {
@@ -13,6 +14,7 @@ export class PaymentService {
     @Inject(paymentGatewayInterface.PAYMENT_GATEWAY)
     private readonly paymentGateway: paymentGatewayInterface.PaymentGateway,
     private readonly emailQueueService: EmailQueueService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async create(userId: number, body: CreatePaymentBodyDTO) {
@@ -155,10 +157,16 @@ export class PaymentService {
         duplicate: false,
         shouldNotify: true,
         orderId: payment.order.id,
+        userId: payment.order.userId,
       }
     })
-    if (result.shouldNotify && result.orderId !== undefined) {
+    if (result.shouldNotify && result.orderId !== undefined && result.userId !== undefined) {
       await this.emailQueueService.addOrderPaid(result.orderId)
+      this.realtimeService.orderPaid(result.userId, result.orderId)
+      this.realtimeService.orderUpdated(result.userId, {
+        orderId: result.orderId,
+        status: OrderStatus.PENDING_PICKUP,
+      })
     }
     return {
       success: result.success,

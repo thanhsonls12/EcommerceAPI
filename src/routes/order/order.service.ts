@@ -6,6 +6,7 @@ import { MESSAGE } from '@/shared/constants/message.constant'
 import { EmailQueueService } from '@/shared/services/email-queue.service'
 import { PromotionRepository } from '../promotion/promotion.repository'
 import { InventoryRepository } from '../inventory/inventory.repository'
+import { RealtimeService } from '../realtime/realtime.service'
 
 @Injectable()
 export class OrderService {
@@ -14,6 +15,7 @@ export class OrderService {
     private readonly emailQueueService: EmailQueueService,
     private readonly promotionRepository: PromotionRepository,
     private readonly inventoryRepository: InventoryRepository,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async create(userId: number, body: CreateOrderBodyDTO) {
@@ -279,17 +281,10 @@ export class OrderService {
       }
 
       if (order.couponUsage) {
-        const deletedUsage = await this.promotionRepository.deleteUsageByOrder(
-          tx,
-          id,
-          order.couponUsage.promotionId,
-        )
+        const deletedUsage = await this.promotionRepository.deleteUsageByOrder(tx, id, order.couponUsage.promotionId)
 
         if (deletedUsage.count === 1) {
-          const decrementedUsage = await this.promotionRepository.decrementUsage(
-            tx,
-            order.couponUsage.promotionId,
-          )
+          const decrementedUsage = await this.promotionRepository.decrementUsage(tx, order.couponUsage.promotionId)
 
           if (decrementedUsage.count !== 1) {
             throw new Error('Promotion usage count is inconsistent')
@@ -301,6 +296,8 @@ export class OrderService {
     })
 
     await this.emailQueueService.addOrderCancelled(id)
+
+    this.realtimeService.orderCancelled(userId, id)
 
     return order
   }
@@ -322,6 +319,11 @@ export class OrderService {
 
     await this.emailQueueService.addOrderPendingDelivery(id)
 
+    this.realtimeService.orderUpdated(order.userId, {
+      orderId: id,
+      status: OrderStatus.PENDING_DELIVERY,
+    })
+
     return updatedOrder
   }
 
@@ -342,11 +344,16 @@ export class OrderService {
 
     await this.emailQueueService.addOrderDelivered(id)
 
+    this.realtimeService.orderUpdated(order.userId, {
+      orderId: id,
+      status: OrderStatus.DELIVERED,
+    })
+
     return updatedOrder
   }
 
   async markReturned(id: number, userId: number) {
-    const updatedOrder = await this.orderRepository.transaction(async (tx) => {
+    const result = await this.orderRepository.transaction(async (tx) => {
       const order = await this.orderRepository.findByIdForUpdate(tx, id)
 
       if (!order) {
@@ -382,11 +389,21 @@ export class OrderService {
         })
       }
 
-      return this.orderRepository.findByIdForUpdate(tx, id)
+      const updatedOrder = await this.orderRepository.findByIdForUpdate(tx, id)
+
+      return {
+        updatedOrder,
+        ownerUserId: order.userId,
+      }
     })
 
     await this.emailQueueService.addOrderReturned(id)
 
-    return updatedOrder
+    this.realtimeService.orderUpdated(result.ownerUserId, {
+      orderId: id,
+      status: OrderStatus.RETURNED,
+    })
+
+    return result.updatedOrder
   }
 }

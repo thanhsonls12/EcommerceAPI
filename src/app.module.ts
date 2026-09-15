@@ -22,6 +22,7 @@ import { ReviewModule } from './routes/review/review.module'
 import { AddressModule } from './routes/address/address.module'
 import { PromotionModule } from './routes/promotion/promotion.module'
 import { InventoryModule } from './routes/inventory/inventory.module'
+import { RealtimeModule } from './routes/realtime/realtime.module'
 @Module({
   imports: [
     SharedModule,
@@ -56,6 +57,7 @@ import { InventoryModule } from './routes/inventory/inventory.module'
     AddressModule,
     PromotionModule,
     InventoryModule,
+    RealtimeModule,
   ],
   controllers: [AppController],
   providers: [
