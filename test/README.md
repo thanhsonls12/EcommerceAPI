@@ -28,10 +28,12 @@ and Redis test infrastructure should use isolated test instances. External
 providers such as email and payment gateways may be replaced at their system
 boundary.
 
-Full E2E flows currently cover authentication and order/permission behavior.
-They use a dedicated PostgreSQL database with real services, repositories,
-authentication guards, permission guards, transactions, and inventory changes.
-External boundaries such as email queues and realtime delivery are mocked.
+Full E2E flows currently cover authentication, order/permission behavior, and
+payment webhook idempotency. They use a dedicated PostgreSQL database with real
+services, repositories, authentication guards, permission guards, transactions,
+inventory changes, payment state transitions, and persisted notifications.
+External boundaries such as payment providers, email queues, and realtime
+delivery are mocked.
 
 Start isolated E2E infrastructure before running it:
 
