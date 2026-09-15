@@ -5,8 +5,10 @@ import { PaymentService } from './payment.service'
 
 import { PAYMENT_GATEWAY } from './gateways/payment-gateway.interface'
 import { PayOSPaymentGateway } from './gateways/payos-payment.gateway'
+import { NotificationModule } from '../notification/notification.module'
 
 @Module({
+  imports: [NotificationModule],
   controllers: [PaymentController],
   providers: [
     PaymentService,

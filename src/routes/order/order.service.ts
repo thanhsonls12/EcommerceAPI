@@ -1,12 +1,13 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { OrderRepository } from './order.repository'
 import { CreateOrderBodyDTO } from './order.dto'
-import { InventoryTransactionType, OrderStatus, Prisma } from '../../../generated/prisma/client'
+import { InventoryTransactionType, NotificationType, OrderStatus, Prisma } from '../../../generated/prisma/client'
 import { MESSAGE } from '@/shared/constants/message.constant'
 import { EmailQueueService } from '@/shared/services/email-queue.service'
 import { PromotionRepository } from '../promotion/promotion.repository'
 import { InventoryRepository } from '../inventory/inventory.repository'
 import { RealtimeService } from '../realtime/realtime.service'
+import { NotificationService } from '../notification/notification.service'
 
 @Injectable()
 export class OrderService {
@@ -16,6 +17,7 @@ export class OrderService {
     private readonly promotionRepository: PromotionRepository,
     private readonly inventoryRepository: InventoryRepository,
     private readonly realtimeService: RealtimeService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async create(userId: number, body: CreateOrderBodyDTO) {
@@ -297,6 +299,17 @@ export class OrderService {
 
     await this.emailQueueService.addOrderCancelled(id)
 
+    await this.notificationService.create({
+      userId,
+      type: NotificationType.ORDER,
+      title: 'Order cancelled',
+      content: `Order #${id} has been cancelled`,
+      data: {
+        orderId: id,
+        status: OrderStatus.CANCELLED,
+      },
+    })
+
     this.realtimeService.orderCancelled(userId, id)
 
     return order
@@ -343,6 +356,17 @@ export class OrderService {
     const updatedOrder = await this.orderRepository.findById(id)
 
     await this.emailQueueService.addOrderDelivered(id)
+
+    await this.notificationService.create({
+      userId: order.userId,
+      type: NotificationType.ORDER,
+      title: 'Order delivered',
+      content: `Order #${id} has been delivered`,
+      data: {
+        orderId: id,
+        status: OrderStatus.DELIVERED,
+      },
+    })
 
     this.realtimeService.orderUpdated(order.userId, {
       orderId: id,

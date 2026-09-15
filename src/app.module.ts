@@ -23,6 +23,7 @@ import { AddressModule } from './routes/address/address.module'
 import { PromotionModule } from './routes/promotion/promotion.module'
 import { InventoryModule } from './routes/inventory/inventory.module'
 import { RealtimeModule } from './routes/realtime/realtime.module'
+import { NotificationModule } from './routes/notification/notification.module'
 @Module({
   imports: [
     SharedModule,
@@ -58,6 +59,7 @@ import { RealtimeModule } from './routes/realtime/realtime.module'
     PromotionModule,
     InventoryModule,
     RealtimeModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [

@@ -44,6 +44,7 @@ model User {
   status                      UserStatus             @default(INACTIVE)
   roleId                      Int
   role                        Role                   @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  notifications               Notification[]
   devices                     Device[] // Liên kết 1-n với Device
   refreshTokens               RefreshToken[]
   inventoryTransactions       InventoryTransaction[]
@@ -719,4 +720,33 @@ model InventoryTransaction {
   @@index([skuId, createdAt])
   @@index([referenceType, referenceId])
   @@index([type, createdAt])
+}
+
+enum NotificationType {
+  ORDER
+  PAYMENT
+  PROMOTION
+  INVENTORY
+  SYSTEM
+}
+
+model Notification {
+  id Int @id @default(autoincrement())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type NotificationType
+
+  title   String @db.VarChar(200)
+  content String @db.VarChar(1000)
+
+  data Json?
+
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }

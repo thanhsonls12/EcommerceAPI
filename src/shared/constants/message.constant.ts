@@ -161,4 +161,7 @@ export const MESSAGE = {
     INVALID_RESTOCK_QUANTITY: 'Restock quantity must be greater than zero',
     INVALID_ADJUSTMENT_QUANTITY: 'Adjustment quantity must not be zero',
   },
+  NOTIFICATION: {
+    NOT_FOUND: 'Notification not found',
+  },
 } as const

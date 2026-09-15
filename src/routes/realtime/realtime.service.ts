@@ -27,4 +27,8 @@ export class RealtimeService {
       orderId,
     })
   }
+
+  notificationCreated(userId: number, notification: unknown) {
+    this.realtimeGateway.emitToUser(userId, 'notification.created', notification)
+  }
 }

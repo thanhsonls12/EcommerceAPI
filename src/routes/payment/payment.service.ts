@@ -1,11 +1,12 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common'
-import { OrderStatus, PaymentStatus } from '../../../generated/prisma/client'
+import { NotificationType, OrderStatus, PaymentStatus } from '../../../generated/prisma/client'
 import { PaymentRepository } from './payment.repository'
 import { CreatePaymentBodyDTO } from './payment.dto'
 import * as paymentGatewayInterface from './gateways/payment-gateway.interface'
 import { MESSAGE } from '@/shared/constants/message.constant'
 import { EmailQueueService } from '@/shared/services/email-queue.service'
 import { RealtimeService } from '../realtime/realtime.service'
+import { NotificationService } from '../notification/notification.service'
 
 @Injectable()
 export class PaymentService {
@@ -15,6 +16,7 @@ export class PaymentService {
     private readonly paymentGateway: paymentGatewayInterface.PaymentGateway,
     private readonly emailQueueService: EmailQueueService,
     private readonly realtimeService: RealtimeService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async create(userId: number, body: CreatePaymentBodyDTO) {
@@ -162,6 +164,18 @@ export class PaymentService {
     })
     if (result.shouldNotify && result.orderId !== undefined && result.userId !== undefined) {
       await this.emailQueueService.addOrderPaid(result.orderId)
+
+      await this.notificationService.create({
+        userId: result.userId,
+        type: NotificationType.PAYMENT,
+        title: 'Payment successful',
+        content: `Payment for order #${result.orderId} was successful`,
+        data: {
+          orderId: result.orderId,
+          status: OrderStatus.PENDING_PICKUP,
+        },
+      })
+
       this.realtimeService.orderPaid(result.userId, result.orderId)
       this.realtimeService.orderUpdated(result.userId, {
         orderId: result.orderId,
