@@ -18,7 +18,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:http": "jest --config ./test/jest-http.json",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
+    "test:e2e:up": "docker compose -f docker-compose.e2e.yml up -d",
+    "test:e2e:down": "docker compose -f docker-compose.e2e.yml down -v",
     "db:seed": "tsx prisma/seed.ts",
     "db:search-vector": "prisma db execute --file prisma/search-vector.sql",
     "payos:webhook": "tsx scripts/register-payos-webhook.ts"

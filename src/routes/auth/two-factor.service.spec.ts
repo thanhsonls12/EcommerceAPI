@@ -49,7 +49,7 @@ describe('TwoFactorService', () => {
   const generateSecretMock = jest.mocked(generateSecret)
   const generateURIMock = jest.mocked(generateURI)
   const verifyMock = jest.mocked(verify)
-  const randomBytesMock = jest.mocked(randomBytes)
+  const randomBytesMock = randomBytes as unknown as jest.Mock
 
   const buildUser = (overrides: Record<string, unknown> = {}) => ({
     id: 1,
