@@ -225,9 +225,7 @@ describe('PaymentService', () => {
 
       expect(result).toEqual({ success: true, duplicate: false })
       expect(emailQueueService.addOrderPaid).toHaveBeenCalledWith(10)
-      expect(notificationService.create).toHaveBeenCalledWith(
-        expect.objectContaining({ userId: 1, type: 'PAYMENT' }),
-      )
+      expect(notificationService.create).toHaveBeenCalledWith(expect.objectContaining({ userId: 1, type: 'PAYMENT' }))
       expect(realtimeService.orderPaid).toHaveBeenCalledWith(1, 10)
       expect(realtimeService.orderUpdated).toHaveBeenCalledWith(1, {
         orderId: 10,
