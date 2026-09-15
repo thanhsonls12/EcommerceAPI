@@ -28,9 +28,10 @@ and Redis test infrastructure should use isolated test instances. External
 providers such as email and payment gateways may be replaced at their system
 boundary.
 
-The first full E2E flow lives in `test/e2e/auth-flow.e2e-spec.ts`. It uses a
-dedicated PostgreSQL database and the real auth service/repositories/guards.
-Email delivery is mocked at the external-provider boundary.
+Full E2E flows currently cover authentication and order/permission behavior.
+They use a dedicated PostgreSQL database with real services, repositories,
+authentication guards, permission guards, transactions, and inventory changes.
+External boundaries such as email queues and realtime delivery are mocked.
 
 Start isolated E2E infrastructure before running it:
 
