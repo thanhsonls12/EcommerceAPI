@@ -17,6 +17,8 @@ import { CacheService } from './services/cache.service'
 import { BullModule } from '@nestjs/bullmq'
 import { EMAIL_QUEUE } from './queues/email-queue.constant'
 import { EmailQueueService } from './services/email-queue.service'
+import { MetricsService } from './services/metrics.service'
+import { MetricsController } from './controllers/metrics.controller'
 
 const sharedServices = [
   PrismaService,
@@ -28,6 +30,7 @@ const sharedServices = [
   StorageService,
   CacheService,
   EmailQueueService,
+  MetricsService,
 ]
 
 const authGuards = [AccessTokenGuard, APIKeyGuard, AuthenticationGuard, PermissionsGuard]
@@ -48,5 +51,6 @@ const authGuards = [AccessTokenGuard, APIKeyGuard, AuthenticationGuard, Permissi
   ],
   exports: [...sharedServices, ...authGuards],
   imports: [JwtModule, BullModule.registerQueue({ name: EMAIL_QUEUE })],
+  controllers: [MetricsController],
 })
 export class SharedModule {}

@@ -27,6 +27,7 @@ import { NotificationModule } from './routes/notification/notification.module'
 
 import { LoggerModule } from 'nestjs-pino'
 import { randomUUID } from 'node:crypto'
+import { MetricsInterceptor } from './shared/interceptor/metrics.interceptor'
 @Module({
   imports: [
     SharedModule,
@@ -116,6 +117,10 @@ import { randomUUID } from 'node:crypto'
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MetricsInterceptor,
     },
   ],
 })
