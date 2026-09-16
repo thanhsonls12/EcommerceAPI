@@ -40,6 +40,12 @@ export class AuthController {
   ) {}
 
   @ApiOperation({ summary: 'Register a new account' })
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 600_000,
+    },
+  })
   @Public()
   @Post('register')
   @ZodSerializerDto(RegisterResDTO)
@@ -65,6 +71,12 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Refresh access token' })
+  @Throttle({
+    default: {
+      limit: 20,
+      ttl: 60_000,
+    },
+  })
   @Public()
   @Post('refresh-token')
   @ZodSerializerDto(RefreshTokenResDTO)
@@ -81,6 +93,12 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Verify email address' })
+  @Throttle({
+    default: {
+      limit: 10,
+      ttl: 300_000,
+    },
+  })
   @Public()
   @Post('verify-email')
   @ZodSerializerDto(VerifyEmailResDTO)
@@ -89,6 +107,12 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Resend email verification code' })
+  @Throttle({
+    default: {
+      limit: 3,
+      ttl: 300_000,
+    },
+  })
   @Public()
   @Post('resend-verification-code')
   @ZodSerializerDto(ResendVerificationCodeResDTO)
@@ -97,6 +121,12 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Request password reset code' })
+  @Throttle({
+    default: {
+      limit: 3,
+      ttl: 300_000,
+    },
+  })
   @Public()
   @Post('forgot-password')
   @ZodSerializerDto(ForgotPasswordResDTO)
@@ -105,6 +135,12 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Reset password' })
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 300_000,
+    },
+  })
   @Public()
   @Post('reset-password')
   @ZodSerializerDto(ResetPasswordResDTO)

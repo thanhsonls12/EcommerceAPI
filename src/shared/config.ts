@@ -33,6 +33,17 @@ const configSchema = z.object({
   PAYOS_CHECKSUM_KEY: z.string().min(1),
   PAYOS_RETURN_URL: z.url(),
   PAYOS_CANCEL_URL: z.url(),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PORT: z.coerce.number().int().positive().default(3000),
+  CORS_ORIGIN: z.string().min(1),
+  SWAGGER_ENABLED: z
+    .string()
+    .transform((value) => value === 'true')
+    .default('true'),
+  TRUST_PROXY: z
+    .string()
+    .transform((value) => value === 'true')
+    .default('false'),
 })
 
 const configServer = configSchema.safeParse(process.env)
