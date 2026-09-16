@@ -20,6 +20,7 @@ import { RecoveryCodeRepository } from '../recovery-code/recovery-code.repositor
 import { RedisService } from '@/shared/services/redis.service'
 import { Prisma, UserStatus, VerificationCodeType } from '../../../generated/prisma/client'
 import { hashToken } from '@/shared/helpers/token.helper'
+import { hashVerificationCode } from '@/shared/helpers/verification-code.helper'
 
 describe('AuthService', () => {
   let service: AuthService
@@ -181,14 +182,15 @@ describe('AuthService', () => {
         roleId: 2,
       })
 
+      const verificationCode = emailService.sendVerificationCode.mock.calls[0][1] as string
+      expect(verificationCode).toMatch(/^\d{6}$/)
       expect(verificationCodeRepository.upsert).toHaveBeenCalledWith(
         body.email,
         VerificationCodeType.REGISTER,
-        expect.stringMatching(/^\d{6}$/),
+        hashVerificationCode(verificationCode),
         expect.any(Date),
       )
-
-      const verificationCode = verificationCodeRepository.upsert.mock.calls[0][2] as string
+      expect(verificationCodeRepository.upsert.mock.calls[0][2]).not.toBe(verificationCode)
       expect(emailService.sendVerificationCode).toHaveBeenCalledWith(body.email, verificationCode)
       expect(result).toEqual(user)
     })
@@ -685,7 +687,7 @@ describe('AuthService', () => {
         id: 1,
         email: body.email,
         type: VerificationCodeType.REGISTER,
-        code: body.code,
+        code: hashVerificationCode(body.code),
         expiresAt: new Date(Date.now() + 60_000),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -785,13 +787,15 @@ describe('AuthService', () => {
 
       const result = await service.resendVerificationCode(body)
 
+      const code = emailService.sendVerificationCode.mock.calls[0][1] as string
+      expect(code).toMatch(/^\d{6}$/)
       expect(verificationCodeRepository.upsert).toHaveBeenCalledWith(
         user.email,
         VerificationCodeType.REGISTER,
-        expect.stringMatching(/^\d{6}$/),
+        hashVerificationCode(code),
         expect.any(Date),
       )
-      const code = verificationCodeRepository.upsert.mock.calls[0][2] as string
+      expect(verificationCodeRepository.upsert.mock.calls[0][2]).not.toBe(code)
       expect(emailService.sendVerificationCode).toHaveBeenCalledWith(user.email, code)
       expect(result).toEqual({ message: 'Verification code resent successfully' })
     })
@@ -858,13 +862,15 @@ describe('AuthService', () => {
 
       const result = await service.forgotPassword(body)
 
+      const code = emailService.sendVerificationCode.mock.calls[0][1] as string
+      expect(code).toMatch(/^\d{6}$/)
       expect(verificationCodeRepository.upsert).toHaveBeenCalledWith(
         user.email,
         VerificationCodeType.FORGOT_PASSWORD,
-        expect.stringMatching(/^\d{6}$/),
+        hashVerificationCode(code),
         expect.any(Date),
       )
-      const code = verificationCodeRepository.upsert.mock.calls[0][2] as string
+      expect(verificationCodeRepository.upsert.mock.calls[0][2]).not.toBe(code)
       expect(emailService.sendVerificationCode).toHaveBeenCalledWith(user.email, code)
       expect(result).toEqual({
         message: 'If the email exists, a reset code has been sent',
@@ -917,7 +923,7 @@ describe('AuthService', () => {
       id: 1,
       email: body.email,
       type: VerificationCodeType.FORGOT_PASSWORD,
-      code: body.code,
+      code: hashVerificationCode(body.code),
       expiresAt: new Date(Date.now() + 60_000),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -972,7 +978,7 @@ describe('AuthService', () => {
       userRepository.findByEmail.mockResolvedValue(buildUser())
       verificationCodeRepository.findByEmailAndType.mockResolvedValue({
         ...validResetCode(),
-        code: '999999',
+        code: hashVerificationCode('999999'),
       })
 
       await expect(service.resetPassword(body)).rejects.toThrow('Reset code is invalid or expired')

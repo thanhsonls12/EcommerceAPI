@@ -39,11 +39,12 @@ const configSchema = z.object({
   SWAGGER_ENABLED: z
     .string()
     .transform((value) => value === 'true')
-    .default('true'),
+    .default(true),
   TRUST_PROXY: z
     .string()
     .transform((value) => value === 'true')
-    .default('false'),
+    .default(false),
+  VERIFICATION_CODE_SECRET: z.string().min(32),
 })
 
 const configServer = configSchema.safeParse(process.env)

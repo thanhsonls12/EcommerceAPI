@@ -30,6 +30,7 @@ import { TwoFactorService } from './two-factor.service'
 import { RecoveryCodeRepository } from '../recovery-code/recovery-code.repository'
 import { RedisService } from '@/shared/services/redis.service'
 import { hashToken } from '@/shared/helpers/token.helper'
+import { hashVerificationCode } from '@/shared/helpers/verification-code.helper'
 
 type LoginDeviceInfo = {
   userAgent: string
@@ -119,9 +120,16 @@ export class AuthService {
 
     const verificationCode = randomInt(100000, 1000000).toString()
 
+    const verificationCodeHash = hashVerificationCode(verificationCode)
+
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
 
-    await this.verificationCodeRepository.upsert(user.email, VerificationCodeType.REGISTER, verificationCode, expiresAt)
+    await this.verificationCodeRepository.upsert(
+      user.email,
+      VerificationCodeType.REGISTER,
+      verificationCodeHash,
+      expiresAt,
+    )
 
     await this.emailService.sendVerificationCode(user.email, verificationCode)
     return user
@@ -274,7 +282,9 @@ export class AuthService {
       throw new UnauthorizedException(MESSAGE.AUTH.VERIFICATION_CODE_EXPIRED)
     }
 
-    if (verificationCode.code !== body.code) {
+    const codeHash = hashVerificationCode(body.code)
+
+    if (verificationCode.code !== codeHash) {
       throw new UnauthorizedException(MESSAGE.AUTH.VERIFICATION_CODE_INVALID)
     }
 
@@ -314,7 +324,13 @@ export class AuthService {
 
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
 
-    await this.verificationCodeRepository.upsert(user.email, VerificationCodeType.REGISTER, verificationCode, expiresAt)
+    const verificationCodeHash = hashVerificationCode(verificationCode)
+    await this.verificationCodeRepository.upsert(
+      user.email,
+      VerificationCodeType.REGISTER,
+      verificationCodeHash,
+      expiresAt,
+    )
 
     await this.emailService.sendVerificationCode(user.email, verificationCode)
 
@@ -346,8 +362,8 @@ export class AuthService {
     const code = randomInt(100000, 1000000).toString()
 
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
-
-    await this.verificationCodeRepository.upsert(user.email, VerificationCodeType.FORGOT_PASSWORD, code, expiresAt)
+    const codeHash = hashVerificationCode(code)
+    await this.verificationCodeRepository.upsert(user.email, VerificationCodeType.FORGOT_PASSWORD, codeHash, expiresAt)
 
     await this.emailService.sendVerificationCode(user.email, code)
 
@@ -377,8 +393,9 @@ export class AuthService {
     if (verificationCode.expiresAt < new Date()) {
       throw new UnauthorizedException(MESSAGE.AUTH.RESET_CODE_INVALID_OR_EXPIRED)
     }
+    const codeHash = hashVerificationCode(body.code)
 
-    if (verificationCode.code !== body.code) {
+    if (verificationCode.code !== codeHash) {
       throw new UnauthorizedException(MESSAGE.AUTH.RESET_CODE_INVALID_OR_EXPIRED)
     }
 
