@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
+import { Module } from '@nestjs/common'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { SharedModule } from './shared/shared.module'
@@ -24,7 +24,9 @@ import { PromotionModule } from './routes/promotion/promotion.module'
 import { InventoryModule } from './routes/inventory/inventory.module'
 import { RealtimeModule } from './routes/realtime/realtime.module'
 import { NotificationModule } from './routes/notification/notification.module'
-import { RequestIdMiddleware } from './shared/middleware/request-id.middleware'
+
+import { LoggerModule } from 'nestjs-pino'
+import { randomUUID } from 'node:crypto'
 @Module({
   imports: [
     SharedModule,
@@ -61,6 +63,40 @@ import { RequestIdMiddleware } from './shared/middleware/request-id.middleware'
     InventoryModule,
     RealtimeModule,
     NotificationModule,
+    LoggerModule.forRoot({
+      pinoHttp: {
+        genReqId: (req, res) => {
+          const headerRequestId = req.headers['x-request-id']
+
+          const requestId = typeof headerRequestId === 'string' ? headerRequestId : randomUUID()
+
+          res.setHeader('x-request-id', requestId)
+
+          return requestId
+        },
+        redact: {
+          paths: [
+            'req.headers.authorization',
+            'req.headers.cookie',
+            'req.body.password',
+            'req.body.confirmPassword',
+            'req.body.refreshToken',
+            'req.body.twoFactorToken',
+            'req.body.recoveryCode',
+          ],
+          censor: '[REDACTED]',
+        },
+        transport:
+          envConfig.NODE_ENV === 'development'
+            ? {
+                target: 'pino-pretty',
+                options: {
+                  singleLine: true,
+                },
+              }
+            : undefined,
+      },
+    }),
   ],
   controllers: [AppController],
   providers: [
@@ -83,8 +119,4 @@ import { RequestIdMiddleware } from './shared/middleware/request-id.middleware'
     },
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestIdMiddleware).forRoutes('*')
-  }
-}
+export class AppModule {}

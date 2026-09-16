@@ -7,7 +7,7 @@ import { TokenService } from './services/token.service'
 import { AccessTokenGuard } from './guards/access-token.guard'
 import { APIKeyGuard } from './guards/api-key.guard'
 import { AuthenticationGuard } from './guards/authentication.guard'
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
+import { APP_GUARD } from '@nestjs/core'
 import { EmailService } from './services/email.service'
 import { PermissionsGuard } from './guards/permissions.guard'
 import { RedisService } from './services/redis.service'
@@ -17,7 +17,6 @@ import { CacheService } from './services/cache.service'
 import { BullModule } from '@nestjs/bullmq'
 import { EMAIL_QUEUE } from './queues/email-queue.constant'
 import { EmailQueueService } from './services/email-queue.service'
-import { HttpLoggingInterceptor } from './interceptor/http-logging.interceptor'
 
 const sharedServices = [
   PrismaService,
@@ -45,10 +44,6 @@ const authGuards = [AccessTokenGuard, APIKeyGuard, AuthenticationGuard, Permissi
     {
       provide: APP_GUARD,
       useClass: PermissionsGuard,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: HttpLoggingInterceptor,
     },
   ],
   exports: [...sharedServices, ...authGuards],
