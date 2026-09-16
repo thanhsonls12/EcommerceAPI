@@ -33,6 +33,8 @@ const configSchema = z.object({
   SWAGGER_ENABLED: booleanEnv.default(true),
   TRUST_PROXY: booleanEnv.default(false),
   VERIFICATION_CODE_SECRET: z.string().min(32),
+  SENTRY_DSN: z.string().optional(),
+  SENTRY_ENABLED: booleanEnv.default(false),
 })
 
 const configServer = configSchema.safeParse(process.env)

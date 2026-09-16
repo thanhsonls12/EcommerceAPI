@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-base-to-string */
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common'
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common'
 import { HttpAdapterHost } from '@nestjs/core'
 import { ZodSerializationException } from 'nestjs-zod'
 import { isNotFoundPrismaError, isUniqueConstraintError } from '../helpers'
 import { MESSAGE } from '../constants/message.constant'
 import { Request } from 'express'
 import { PinoLogger } from 'nestjs-pino'
-
+import * as Sentry from '@sentry/nestjs'
 @Catch()
 export class CatchEverythingFilter implements ExceptionFilter {
   constructor(
@@ -47,6 +47,15 @@ export class CatchEverythingFilter implements ExceptionFilter {
     if (isNotFoundPrismaError(exception)) {
       httpStatus = HttpStatus.NOT_FOUND
       message = MESSAGE.SYSTEM.RECORD_NOT_FOUND
+    }
+
+    if (httpStatus >= 500 && exception instanceof Error) {
+      Sentry.withScope((scope) => {
+        scope.setTag('requestId', String(request.id))
+        scope.setTag('method', String(request.method))
+        scope.setTag('url', String(request.originalUrl))
+        Sentry.captureException(exception)
+      })
     }
 
     this.logger.error(
