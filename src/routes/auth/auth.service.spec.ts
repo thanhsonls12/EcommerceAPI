@@ -1286,6 +1286,7 @@ describe('AuthService', () => {
         exp: 2_000_000_000,
       })
       redisClient.get.mockResolvedValue('1')
+      redisClient.getDel.mockResolvedValue('1')
       userRepository.findById.mockResolvedValue(buildUser({ totpEnabled: true }))
       twoFactorService.verifyRecoveryCode.mockResolvedValue({
         id: 30,
@@ -1297,10 +1298,11 @@ describe('AuthService', () => {
       recoveryCodeRepository.consume.mockResolvedValue({ count: 0 })
 
       await expect(service.verifyTwoFactorRecoveryLogin(body, deviceInfo)).rejects.toThrow('Invalid recovery code')
-      expect(redisClient.getDel).not.toHaveBeenCalled()
+      expect(redisClient.getDel).toHaveBeenCalledWith(`2fa:challengeId:${challengeId}`)
+      expect(deviceRepository.create).not.toHaveBeenCalled()
     })
 
-    it('rejects when the challenge cannot be consumed after recovery-code consumption', async () => {
+    it('rejects when the challenge cannot be consumed without consuming the recovery code', async () => {
       tokenService.verifyTwoFactorToken.mockResolvedValue({
         userId: 1,
         challengeId,
@@ -1318,11 +1320,11 @@ describe('AuthService', () => {
         usedAt: null,
         createdAt: new Date(),
       })
-      recoveryCodeRepository.consume.mockResolvedValue({ count: 1 })
 
       await expect(service.verifyTwoFactorRecoveryLogin(body, deviceInfo)).rejects.toThrow(
         'Two-factor authentication challenge is invalid or expired',
       )
+      expect(recoveryCodeRepository.consume).not.toHaveBeenCalled()
       expect(deviceRepository.create).not.toHaveBeenCalled()
     })
   })

@@ -466,13 +466,13 @@ export class AuthService {
       throw new UnauthorizedException(MESSAGE.AUTH.RECOVERY_CODE_INVALID)
     }
 
+    await this.consumeTwoFactorChallenge(payload.userId, payload.challengeId)
+
     const result = await this.recoveryCodeRepository.consume(recoveryCode.id)
 
     if (result.count !== 1) {
       throw new UnauthorizedException(MESSAGE.AUTH.RECOVERY_CODE_INVALID)
     }
-
-    await this.consumeTwoFactorChallenge(payload.userId, payload.challengeId)
 
     return this.createLoginSession(user, deviceInfo)
   }
