@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common'
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { SharedModule } from './shared/shared.module'
@@ -24,6 +24,7 @@ import { PromotionModule } from './routes/promotion/promotion.module'
 import { InventoryModule } from './routes/inventory/inventory.module'
 import { RealtimeModule } from './routes/realtime/realtime.module'
 import { NotificationModule } from './routes/notification/notification.module'
+import { RequestIdMiddleware } from './shared/middleware/request-id.middleware'
 @Module({
   imports: [
     SharedModule,
@@ -82,4 +83,8 @@ import { NotificationModule } from './routes/notification/notification.module'
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestIdMiddleware).forRoutes('*')
+  }
+}

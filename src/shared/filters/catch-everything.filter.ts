@@ -3,6 +3,7 @@ import { HttpAdapterHost } from '@nestjs/core'
 import { ZodSerializationException } from 'nestjs-zod'
 import { isNotFoundPrismaError, isUniqueConstraintError } from '../helpers'
 import { MESSAGE } from '../constants/message.constant'
+import { Request } from 'express'
 
 @Catch()
 export class CatchEverythingFilter implements ExceptionFilter {
@@ -11,11 +12,11 @@ export class CatchEverythingFilter implements ExceptionFilter {
   constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
-    // In certain situations `httpAdapter` might not be available in the
-    // constructor method, thus we should resolve it here.
     const { httpAdapter } = this.httpAdapterHost
 
     const ctx = host.switchToHttp()
+
+    const request = ctx.getRequest<Request>()
 
     let httpStatus = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR
 
@@ -39,6 +40,7 @@ export class CatchEverythingFilter implements ExceptionFilter {
     const responseBody = {
       statusCode: httpStatus,
       message,
+      requestId: request.requestId,
     }
 
     httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus)
