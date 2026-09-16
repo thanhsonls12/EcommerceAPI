@@ -1,14 +1,8 @@
-import fs from 'fs'
-import path from 'path'
 import z from 'zod'
 import { config } from 'dotenv'
 import { MESSAGE } from './constants/message.constant'
 config()
-if (!fs.existsSync(path.resolve('.env'))) {
-  console.log(MESSAGE.SYSTEM.ENV_FILE_NOT_FOUND)
-  process.exit(1)
-}
-
+const booleanEnv = z.enum(['true', 'false']).transform((value) => value === 'true')
 const configSchema = z.object({
   DATABASE_URL: z.string().min(1),
   ACCESS_TOKEN_SECRET: z.string().min(32),
@@ -36,14 +30,8 @@ const configSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
   CORS_ORIGIN: z.string().min(1),
-  SWAGGER_ENABLED: z
-    .string()
-    .transform((value) => value === 'true')
-    .default(true),
-  TRUST_PROXY: z
-    .string()
-    .transform((value) => value === 'true')
-    .default(false),
+  SWAGGER_ENABLED: booleanEnv.default(true),
+  TRUST_PROXY: booleanEnv.default(false),
   VERIFICATION_CODE_SECRET: z.string().min(32),
 })
 

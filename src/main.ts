@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { cleanupOpenApiDoc } from 'nestjs-zod'
 import envConfig from './shared/config'
+import { json, urlencoded } from 'express'
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
 
@@ -15,6 +16,17 @@ async function bootstrap() {
   })
   app.use(helmet())
   app.use(cookieParser())
+  app.use(
+    json({
+      limit: '1mb',
+    }),
+  )
+  app.use(
+    urlencoded({
+      extended: true,
+      limit: '1mb',
+    }),
+  )
   app.setGlobalPrefix('api')
   if (envConfig.SWAGGER_ENABLED) {
     const swaggerConfig = new DocumentBuilder()
