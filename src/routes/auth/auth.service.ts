@@ -29,6 +29,7 @@ import { MESSAGE } from '@/shared/constants/message.constant'
 import { TwoFactorService } from './two-factor.service'
 import { RecoveryCodeRepository } from '../recovery-code/recovery-code.repository'
 import { RedisService } from '@/shared/services/redis.service'
+import { hashToken } from '@/shared/helpers/token.helper'
 
 type LoginDeviceInfo = {
   userAgent: string
@@ -59,8 +60,10 @@ export class AuthService {
 
     const expiresAt = new Date(refreshTokenPayload.exp * 1000)
 
+    const refreshTokenHash = hashToken(refreshToken)
+
     await this.refreshTokenRepository.create({
-      token: refreshToken,
+      token: refreshTokenHash,
       userId: user.id,
       deviceId: device.id,
       expiresAt,
@@ -164,7 +167,9 @@ export class AuthService {
   async refreshToken(body: RefreshTokenBodyDTO) {
     const payload = await this.tokenService.verifyRefreshToken(body.refreshToken)
 
-    const refreshToken = await this.refreshTokenRepository.findByToken(body.refreshToken)
+    const oldTokenHash = hashToken(body.refreshToken)
+
+    const refreshToken = await this.refreshTokenRepository.findByToken(oldTokenHash)
 
     if (!refreshToken) {
       throw new UnauthorizedException(MESSAGE.AUTH.REFRESH_TOKEN_INVALID)
@@ -197,12 +202,18 @@ export class AuthService {
 
     const expiresAt = new Date(newRefreshTokenPayload.exp * 1000)
 
+    const newTokenHash = hashToken(newRefreshToken)
+
     await this.prismaService.$transaction(async (tx) => {
-      await this.refreshTokenRepository.deleteByToken(body.refreshToken, tx)
+      const consumed = await this.refreshTokenRepository.consumeByToken(oldTokenHash, tx)
+
+      if (consumed.count !== 1) {
+        throw new UnauthorizedException(MESSAGE.AUTH.REFRESH_TOKEN_INVALID)
+      }
 
       await this.refreshTokenRepository.create(
         {
-          token: newRefreshToken,
+          token: newTokenHash,
           userId: payload.userId,
           deviceId: device.id,
           expiresAt,
@@ -215,14 +226,19 @@ export class AuthService {
   }
 
   async logout(body: LogoutBodyDTO) {
-    const refreshToken = await this.refreshTokenRepository.findByToken(body.refreshToken)
+    const tokenHash = hashToken(body.refreshToken)
+    const refreshToken = await this.refreshTokenRepository.findByToken(tokenHash)
 
     if (!refreshToken) {
       throw new UnauthorizedException(MESSAGE.AUTH.REFRESH_TOKEN_INVALID)
     }
 
     await this.prismaService.$transaction(async (tx) => {
-      await this.refreshTokenRepository.deleteByToken(body.refreshToken, tx)
+      const consumed = await this.refreshTokenRepository.consumeByToken(tokenHash, tx)
+
+      if (consumed.count !== 1) {
+        throw new UnauthorizedException(MESSAGE.AUTH.REFRESH_TOKEN_INVALID)
+      }
 
       await this.deviceRepository.updateActiveStatus(refreshToken.deviceId, false, tx)
     })

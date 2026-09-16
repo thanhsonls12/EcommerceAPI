@@ -35,4 +35,12 @@ export class RefreshTokenRepository {
       },
     })
   }
+
+  consumeByToken(token: string, tx?: Prisma.TransactionClient) {
+    const prismaClient = tx ?? this.prisma
+
+    return prismaClient.refreshToken.deleteMany({
+      where: { token },
+    })
+  }
 }

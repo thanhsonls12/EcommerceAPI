@@ -19,6 +19,7 @@ import { TwoFactorService } from './two-factor.service'
 import { RecoveryCodeRepository } from '../recovery-code/recovery-code.repository'
 import { RedisService } from '@/shared/services/redis.service'
 import { Prisma, UserStatus, VerificationCodeType } from '../../../generated/prisma/client'
+import { hashToken } from '@/shared/helpers/token.helper'
 
 describe('AuthService', () => {
   let service: AuthService
@@ -60,6 +61,7 @@ describe('AuthService', () => {
     create: jest.fn(),
     findByToken: jest.fn(),
     deleteByToken: jest.fn(),
+    consumeByToken: jest.fn(),
     deleteAllByUserId: jest.fn(),
   }
 
@@ -146,6 +148,7 @@ describe('AuthService', () => {
     jest.clearAllMocks()
     redisService.getClient.mockReturnValue(redisClient)
     prismaService.$transaction.mockImplementation((callback) => callback(tx))
+    refreshTokenRepository.consumeByToken.mockResolvedValue({ count: 1 })
   })
 
   describe('register', () => {
@@ -273,7 +276,7 @@ describe('AuthService', () => {
       expect(tokenService.signAccessToken).toHaveBeenCalledWith({ userId: user.id })
       expect(tokenService.signRefreshToken).toHaveBeenCalledWith({ userId: user.id })
       expect(refreshTokenRepository.create).toHaveBeenCalledWith({
-        token: 'refresh-token',
+        token: hashToken('refresh-token'),
         userId: user.id,
         deviceId: 10,
         expiresAt: new Date(refreshTokenExpiresAt * 1000),
@@ -414,10 +417,11 @@ describe('AuthService', () => {
       expect(tokenService.signRefreshToken).toHaveBeenCalledWith({ userId: user.id })
       expect(tokenService.verifyRefreshToken).toHaveBeenNthCalledWith(2, 'new-refresh-token')
 
-      expect(refreshTokenRepository.deleteByToken).toHaveBeenCalledWith(body.refreshToken, tx)
+      expect(refreshTokenRepository.findByToken).toHaveBeenCalledWith(hashToken(body.refreshToken))
+      expect(refreshTokenRepository.consumeByToken).toHaveBeenCalledWith(hashToken(body.refreshToken), tx)
       expect(refreshTokenRepository.create).toHaveBeenCalledWith(
         {
-          token: 'new-refresh-token',
+          token: hashToken('new-refresh-token'),
           userId: user.id,
           deviceId: 20,
           expiresAt: new Date(newRefreshTokenExpiresAt * 1000),
@@ -429,6 +433,51 @@ describe('AuthService', () => {
         accessToken: 'new-access-token',
         refreshToken: 'new-refresh-token',
       })
+    })
+
+    it('rejects when the refresh token was consumed concurrently', async () => {
+      const user = buildUser()
+
+      tokenService.verifyRefreshToken
+        .mockResolvedValueOnce({
+          userId: user.id,
+          type: 'refresh',
+          iat: 1,
+          exp: 2_000_000_000,
+        })
+        .mockResolvedValueOnce({
+          userId: user.id,
+          type: 'refresh',
+          iat: 2,
+          exp: 2_100_000_000,
+        })
+
+      refreshTokenRepository.findByToken.mockResolvedValue({
+        id: 10,
+        token: hashToken(body.refreshToken),
+        userId: user.id,
+        deviceId: 20,
+        expiresAt: new Date(2_000_000_000 * 1000),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      userRepository.findById.mockResolvedValue(user)
+      deviceRepository.findById.mockResolvedValue({
+        id: 20,
+        userId: user.id,
+        userAgent: 'jest',
+        ip: '127.0.0.1',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      tokenService.signAccessToken.mockResolvedValue('new-access-token')
+      tokenService.signRefreshToken.mockResolvedValue('new-refresh-token')
+      refreshTokenRepository.consumeByToken.mockResolvedValue({ count: 0 })
+
+      await expect(service.refreshToken(body)).rejects.toThrow('Refresh token is invalid')
+
+      expect(refreshTokenRepository.create).not.toHaveBeenCalled()
     })
 
     it('rejects when the refresh token is not stored', async () => {
@@ -589,7 +638,8 @@ describe('AuthService', () => {
 
       const result = await service.logout(body)
 
-      expect(refreshTokenRepository.deleteByToken).toHaveBeenCalledWith(body.refreshToken, tx)
+      expect(refreshTokenRepository.findByToken).toHaveBeenCalledWith(hashToken(body.refreshToken))
+      expect(refreshTokenRepository.consumeByToken).toHaveBeenCalledWith(hashToken(body.refreshToken), tx)
       expect(deviceRepository.updateActiveStatus).toHaveBeenCalledWith(20, false, tx)
       expect(result).toEqual({
         message: 'Logout successful',
@@ -602,6 +652,23 @@ describe('AuthService', () => {
       await expect(service.logout(body)).rejects.toThrow('Refresh token is invalid')
 
       expect(prismaService.$transaction).not.toHaveBeenCalled()
+      expect(deviceRepository.updateActiveStatus).not.toHaveBeenCalled()
+    })
+
+    it('rejects logout when the refresh token was consumed concurrently', async () => {
+      refreshTokenRepository.findByToken.mockResolvedValue({
+        id: 10,
+        token: hashToken(body.refreshToken),
+        userId: 1,
+        deviceId: 20,
+        expiresAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      refreshTokenRepository.consumeByToken.mockResolvedValue({ count: 0 })
+
+      await expect(service.logout(body)).rejects.toThrow('Refresh token is invalid')
+
       expect(deviceRepository.updateActiveStatus).not.toHaveBeenCalled()
     })
   })
