@@ -153,11 +153,12 @@ export class ReviewRepository {
     })
   }
 
-  createMedia(reviewId: number, url: string, type: MediaType) {
+  createMedia(reviewId: number, url: string, storageKey: string, type: MediaType) {
     return this.prisma.reviewMedia.create({
       data: {
         reviewId,
         url,
+        storageKey,
         type,
       },
     })

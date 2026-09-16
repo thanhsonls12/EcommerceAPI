@@ -1,0 +1,2 @@
+ALTER TABLE "ReviewMedia"
+ADD COLUMN "storageKey" VARCHAR(1000);

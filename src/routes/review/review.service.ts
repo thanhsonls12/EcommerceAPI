@@ -120,7 +120,12 @@ export class ReviewService {
 
     const uploadedFile = await this.storageService.upload(file, 'reviews')
 
-    return this.reviewRepository.createMedia(id, uploadedFile.url, MediaType.IMAGE)
+    try {
+      return await this.reviewRepository.createMedia(id, uploadedFile.url, uploadedFile.key, MediaType.IMAGE)
+    } catch (error) {
+      await this.storageService.remove(uploadedFile.key)
+      throw error
+    }
   }
 
   async deleteMedia(id: number, mediaId: number, userId: number) {
@@ -134,6 +139,10 @@ export class ReviewService {
 
     if (!media) {
       throw new NotFoundException(MESSAGE.REVIEW.MEDIA_NOT_FOUND)
+    }
+
+    if (media.storageKey) {
+      await this.storageService.remove(media.storageKey)
     }
 
     const result = await this.reviewRepository.deleteMedia(mediaId, id)

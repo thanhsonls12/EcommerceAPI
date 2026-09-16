@@ -529,11 +529,12 @@ model Review {
 }
 
 model ReviewMedia {
-  id       Int       @id @default(autoincrement())
-  url      String    @db.VarChar(1000)
-  type     MediaType
-  reviewId Int
-  review   Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id         Int       @id @default(autoincrement())
+  url        String    @db.VarChar(1000)
+  storageKey String?   @db.VarChar(1000)
+  type       MediaType
+  reviewId   Int
+  review     Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   createdAt DateTime @default(now())
 

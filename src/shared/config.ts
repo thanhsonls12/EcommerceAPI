@@ -35,6 +35,9 @@ const configSchema = z.object({
   VERIFICATION_CODE_SECRET: z.string().min(32),
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENABLED: booleanEnv.default(false),
+  SUPABASE_URL: z.url(),
+  SUPABASE_SECRET_KEY: z.string().min(1),
+  SUPABASE_STORAGE_BUCKET: z.string().min(1),
 })
 
 const configServer = configSchema.safeParse(process.env)
