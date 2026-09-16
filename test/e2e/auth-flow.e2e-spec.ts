@@ -222,9 +222,6 @@ describe('Auth flow (e2e)', () => {
       status: UserStatus.ACTIVE,
     })
 
-    await request(app.getHttpServer())
-      .get('/api/users')
-      .set('authorization', `Bearer ${accessToken}`)
-      .expect(403)
+    await request(app.getHttpServer()).get('/api/users').set('authorization', `Bearer ${accessToken}`).expect(403)
   })
 })

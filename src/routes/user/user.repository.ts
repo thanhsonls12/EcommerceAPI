@@ -44,7 +44,7 @@ export class UserRepository {
     })
   }
 
-  findMany() {
+  findMany(skip: number, take: number) {
     return this.prisma.user.findMany({
       where: { deletedAt: null },
       select: {
@@ -60,6 +60,16 @@ export class UserRepository {
       },
       orderBy: {
         createdAt: 'desc',
+      },
+      skip,
+      take,
+    })
+  }
+
+  countActive() {
+    return this.prisma.user.count({
+      where: {
+        deletedAt: null,
       },
     })
   }

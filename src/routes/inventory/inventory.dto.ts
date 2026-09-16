@@ -33,5 +33,13 @@ const LowStockQuerySchema = z
   })
   .strict()
 
+const InventoryHistoryQuerySchema = z
+  .object({
+    page: z.coerce.number().int().positive().default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict()
+
 export class AdjustInventoryBodyDTO extends createZodDto(AdjustInventoryBodySchema) {}
 export class LowStockQueryDTO extends createZodDto(LowStockQuerySchema) {}
+export class InventoryHistoryQueryDTO extends createZodDto(InventoryHistoryQuerySchema) {}

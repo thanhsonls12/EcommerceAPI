@@ -3,6 +3,7 @@ import { NotificationRepository } from './notification.repository'
 import { NotificationType, Prisma } from '../../../generated/prisma/client'
 import { RealtimeService } from '../realtime/realtime.service'
 import { MESSAGE } from '@/shared/constants/message.constant'
+import { GetNotificationsQueryDTO } from './notification.dto'
 
 type CreateNotificationInput = {
   userId: number
@@ -27,8 +28,22 @@ export class NotificationService {
     return notification
   }
 
-  findMyNotifications(userId: number) {
-    return this.notificationRepository.findManyByUserId(userId)
+  async findMyNotifications(userId: number, query: GetNotificationsQueryDTO) {
+    const skip = (query.page - 1) * query.limit
+    const [data, total] = await Promise.all([
+      this.notificationRepository.findManyByUserId(userId, skip, query.limit),
+      this.notificationRepository.countByUserId(userId),
+    ])
+
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        totalPages: Math.ceil(total / query.limit),
+      },
+    }
   }
 
   async getUnreadCount(userId: number) {

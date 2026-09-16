@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common'
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
-import { CreateOrderBodyDTO } from './order.dto'
+import { CreateOrderBodyDTO, GetOrdersQueryDTO } from './order.dto'
 import { OrderService } from './order.service'
 import { PermissionName } from '@/shared/constants/permission.constant'
 import { Permissions } from '@/shared/decorators/permissions.decorator'
@@ -20,8 +20,8 @@ export class OrderController {
 
   @ApiOperation({ summary: 'Get current user orders' })
   @Get()
-  findMyOrders(@ActiveUser('userId') userId: number) {
-    return this.orderService.findMyOrders(userId)
+  findMyOrders(@ActiveUser('userId') userId: number, @Query() query: GetOrdersQueryDTO) {
+    return this.orderService.findMyOrders(userId, query)
   }
 
   @ApiOperation({ summary: 'Get current user order by id' })

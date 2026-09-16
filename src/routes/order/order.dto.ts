@@ -8,4 +8,12 @@ const CreateOrderBodySchema = z
   })
   .strict()
 
+const GetOrdersQuerySchema = z
+  .object({
+    page: z.coerce.number().int().positive().default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict()
+
 export class CreateOrderBodyDTO extends createZodDto(CreateOrderBodySchema) {}
+export class GetOrdersQueryDTO extends createZodDto(GetOrdersQuerySchema) {}

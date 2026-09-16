@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common'
 import { UserRepository } from './user.repository'
-import { ChangePasswordBodyDTO, UpdateProfileBodyDto } from './user.dto'
+import { ChangePasswordBodyDTO, GetUsersQueryDTO, UpdateProfileBodyDto } from './user.dto'
 import { HashingService } from '@/shared/services/hashing.service'
 import { PrismaService } from '@/shared/services/prisma.service'
 import { RefreshTokenRepository } from '../refresh-token/refresh-token.repository'
@@ -17,8 +17,22 @@ export class UserService {
     private readonly deviceRepository: DeviceRepository,
   ) {}
 
-  findAll() {
-    return this.userRepository.findMany()
+  async findAll(query: GetUsersQueryDTO) {
+    const skip = (query.page - 1) * query.limit
+    const [data, total] = await Promise.all([
+      this.userRepository.findMany(skip, query.limit),
+      this.userRepository.countActive(),
+    ])
+
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        totalPages: Math.ceil(total / query.limit),
+      },
+    }
   }
 
   async findById(id: number) {

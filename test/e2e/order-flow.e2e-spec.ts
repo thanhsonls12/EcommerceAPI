@@ -31,12 +31,7 @@ import { CatchEverythingFilter } from '@/shared/filters/catch-everything.filter'
 import { RealtimeService } from '@/routes/realtime/realtime.service'
 import { PermissionName } from '@/shared/constants/permission.constant'
 import { RoleName } from '@/shared/constants/role.constant'
-import {
-  HTTPMethod,
-  InventoryTransactionType,
-  OrderStatus,
-  UserStatus,
-} from '../../generated/prisma/client'
+import { HTTPMethod, InventoryTransactionType, OrderStatus, UserStatus } from '../../generated/prisma/client'
 
 const emailService = {
   sendVerificationCode: jest.fn(),

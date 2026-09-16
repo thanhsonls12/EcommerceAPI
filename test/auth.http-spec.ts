@@ -340,10 +340,7 @@ describe('AuthController (http integration)', () => {
         code: '123456',
       }
 
-      const response = await request(app.getHttpServer())
-        .post('/api/auth/2fa/verify-login')
-        .send(body)
-        .expect(201)
+      const response = await request(app.getHttpServer()).post('/api/auth/2fa/verify-login').send(body).expect(201)
 
       expect(authService.verifyTwoFactorLogin).toHaveBeenCalledWith(
         body,

@@ -1,7 +1,8 @@
-import { Controller, Get, Param, ParseIntPipe, Patch } from '@nestjs/common'
+import { Controller, Get, Param, ParseIntPipe, Patch, Query } from '@nestjs/common'
 import { NotificationService } from './notification.service'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { GetNotificationsQueryDTO } from './notification.dto'
 
 @ApiTags('Notifications')
 @ApiBearerAuth('access-token')
@@ -11,8 +12,8 @@ export class NotificationController {
 
   @ApiOperation({ summary: 'Get current user notifications' })
   @Get()
-  findMyNotifications(@ActiveUser('userId') userId: number) {
-    return this.notificationService.findMyNotifications(userId)
+  findMyNotifications(@ActiveUser('userId') userId: number, @Query() query: GetNotificationsQueryDTO) {
+    return this.notificationService.findMyNotifications(userId, query)
   }
 
   @ApiOperation({ summary: 'Get unread notification count' })

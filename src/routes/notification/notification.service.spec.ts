@@ -10,6 +10,7 @@ describe('NotificationService', () => {
   const notificationRepository = {
     create: jest.fn(),
     findManyByUserId: jest.fn(),
+    countByUserId: jest.fn(),
     countUnreadByUserId: jest.fn(),
     markAsRead: jest.fn(),
     markAllAsRead: jest.fn(),
@@ -84,12 +85,22 @@ describe('NotificationService', () => {
     ]
 
     notificationRepository.findManyByUserId.mockResolvedValue(notifications)
+    notificationRepository.countByUserId.mockResolvedValue(1)
 
-    const result = await service.findMyNotifications(1)
+    const result = await service.findMyNotifications(1, { page: 1, limit: 20 })
 
-    expect(notificationRepository.findManyByUserId).toHaveBeenCalledWith(1)
+    expect(notificationRepository.findManyByUserId).toHaveBeenCalledWith(1, 0, 20)
+    expect(notificationRepository.countByUserId).toHaveBeenCalledWith(1)
 
-    expect(result).toEqual(notifications)
+    expect(result).toEqual({
+      data: notifications,
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+      },
+    })
   })
 
   it('should return unread notification count', async () => {

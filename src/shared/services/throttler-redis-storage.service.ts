@@ -6,13 +6,7 @@ import { RedisService } from './redis.service'
 export class ThrottlerRedisStorageService implements ThrottlerStorage {
   constructor(private readonly redisService: RedisService) {}
 
-  async increment(
-    key: string,
-    ttl: number,
-    limit: number,
-    blockDuration: number,
-    throttlerName: string,
-  ) {
+  async increment(key: string, ttl: number, limit: number, blockDuration: number, throttlerName: string) {
     const redis = this.redisService.getClient()
 
     const redisKey = `throttle:${throttlerName}:${key}`

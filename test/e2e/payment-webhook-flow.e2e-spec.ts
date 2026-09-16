@@ -13,10 +13,7 @@ import { ZodSerializerInterceptor } from 'nestjs-zod'
 import { PaymentController } from '@/routes/payment/payment.controller'
 import { PaymentService } from '@/routes/payment/payment.service'
 import { PaymentRepository } from '@/routes/payment/payment.repository'
-import {
-  PAYMENT_GATEWAY,
-  PaymentGateway,
-} from '@/routes/payment/gateways/payment-gateway.interface'
+import { PAYMENT_GATEWAY, PaymentGateway } from '@/routes/payment/gateways/payment-gateway.interface'
 import { NotificationService } from '@/routes/notification/notification.service'
 import { NotificationRepository } from '@/routes/notification/notification.repository'
 import { PrismaService } from '@/shared/services/prisma.service'
@@ -33,12 +30,7 @@ import CustomZodValidationPipe from '@/shared/pipes/custom-zod-validation.pipe'
 import { CatchEverythingFilter } from '@/shared/filters/catch-everything.filter'
 import { RealtimeService } from '@/routes/realtime/realtime.service'
 import { RoleName } from '@/shared/constants/role.constant'
-import {
-  NotificationType,
-  OrderStatus,
-  PaymentStatus,
-  UserStatus,
-} from '../../generated/prisma/client'
+import { NotificationType, OrderStatus, PaymentStatus, UserStatus } from '../../generated/prisma/client'
 
 const emailService = {
   sendVerificationCode: jest.fn(),
@@ -174,9 +166,7 @@ describe('Payment webhook flow (e2e)', () => {
     })
 
     const orderIds = orders.map((order) => order.id)
-    const paymentIds = orders
-      .map((order) => order.paymentId)
-      .filter((id): id is number => id !== null)
+    const paymentIds = orders.map((order) => order.paymentId).filter((id): id is number => id !== null)
 
     await prisma.notification.deleteMany({
       where: { userId: user.id },
@@ -326,10 +316,7 @@ describe('Payment webhook flow (e2e)', () => {
       rawBody: rawPayload,
     })
 
-    const firstResponse = await request(app.getHttpServer())
-      .post('/api/payments/webhook')
-      .send(rawPayload)
-      .expect(201)
+    const firstResponse = await request(app.getHttpServer()).post('/api/payments/webhook').send(rawPayload).expect(201)
 
     expect(firstResponse.body).toEqual({
       success: true,
@@ -383,10 +370,7 @@ describe('Payment webhook flow (e2e)', () => {
       status: OrderStatus.PENDING_PICKUP,
     })
 
-    const secondResponse = await request(app.getHttpServer())
-      .post('/api/payments/webhook')
-      .send(rawPayload)
-      .expect(201)
+    const secondResponse = await request(app.getHttpServer()).post('/api/payments/webhook').send(rawPayload).expect(201)
 
     expect(secondResponse.body).toEqual({
       success: true,

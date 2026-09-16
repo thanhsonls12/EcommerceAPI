@@ -143,13 +143,27 @@ describe('OrderController (http integration)', () => {
 
   describe('GET /api/orders', () => {
     it('returns the current user orders', async () => {
-      orderService.findMyOrders.mockResolvedValue([order])
+      orderService.findMyOrders.mockResolvedValue({
+        data: [order],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 1,
+          totalPages: 1,
+        },
+      })
 
       const response = await request(app.getHttpServer()).get('/api/orders').expect(200)
 
-      expect(orderService.findMyOrders).toHaveBeenCalledWith(userId)
-      expect(response.body).toHaveLength(1)
-      expect(response.body[0].id).toBe(order.id)
+      expect(orderService.findMyOrders).toHaveBeenCalledWith(userId, { page: 1, limit: 20 })
+      expect(response.body.data).toHaveLength(1)
+      expect(response.body.data[0].id).toBe(order.id)
+      expect(response.body.pagination).toEqual({
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+      })
     })
   })
 

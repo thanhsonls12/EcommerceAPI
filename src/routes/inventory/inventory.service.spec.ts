@@ -12,6 +12,7 @@ describe('InventoryService', () => {
     adjustStock: jest.fn(),
     createTransaction: jest.fn(),
     findHistoryBySkuId: jest.fn(),
+    countHistoryBySkuId: jest.fn(),
     findLowStock: jest.fn(),
   }
 
@@ -248,26 +249,46 @@ describe('InventoryService', () => {
     ]
 
     inventoryRepository.findHistoryBySkuId.mockResolvedValue(history)
+    inventoryRepository.countHistoryBySkuId.mockResolvedValue(1)
 
-    const result = await service.findHistory(1)
+    const result = await service.findHistory(1, { page: 1, limit: 20 })
 
-    expect(result).toEqual(history)
+    expect(inventoryRepository.findHistoryBySkuId).toHaveBeenCalledWith(1, 0, 20)
+    expect(result).toEqual({
+      data: history,
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+      },
+    })
   })
 
   it('should return empty history when SKU exists', async () => {
     inventoryRepository.findHistoryBySkuId.mockResolvedValue([])
+    inventoryRepository.countHistoryBySkuId.mockResolvedValue(0)
     inventoryRepository.findSkuById.mockResolvedValue({ id: 1 })
 
-    const result = await service.findHistory(1)
+    const result = await service.findHistory(1, { page: 1, limit: 20 })
 
-    expect(result).toEqual([])
+    expect(result).toEqual({
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+      },
+    })
   })
 
   it('should throw when SKU has no history and does not exist', async () => {
     inventoryRepository.findHistoryBySkuId.mockResolvedValue([])
+    inventoryRepository.countHistoryBySkuId.mockResolvedValue(0)
     inventoryRepository.findSkuById.mockResolvedValue(null)
 
-    await expect(service.findHistory(999)).rejects.toThrow('SKU not found')
+    await expect(service.findHistory(999, { page: 1, limit: 20 })).rejects.toThrow('SKU not found')
   })
 
   it('should delegate low stock query to repository', async () => {

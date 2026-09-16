@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { InventoryRepository } from './inventory.repository'
-import { AdjustInventoryBodyDTO } from './inventory.dto'
+import { AdjustInventoryBodyDTO, InventoryHistoryQueryDTO } from './inventory.dto'
 import { InventoryTransactionType } from '../../../generated/prisma/client'
 import { MESSAGE } from '@/shared/constants/message.constant'
 
@@ -35,10 +35,7 @@ export class InventoryService {
 
       const transaction = await this.inventoryRepository.createTransaction(tx, {
         skuId: body.skuId,
-        type:
-          body.type === 'RESTOCK'
-            ? InventoryTransactionType.RESTOCK
-            : InventoryTransactionType.ADJUSTMENT,
+        type: body.type === 'RESTOCK' ? InventoryTransactionType.RESTOCK : InventoryTransactionType.ADJUSTMENT,
         quantity: body.quantity,
         stockBefore,
         stockAfter,
@@ -54,20 +51,30 @@ export class InventoryService {
     })
   }
 
-  async findHistory(skuId: number) {
-    const history = await this.inventoryRepository.findHistoryBySkuId(skuId)
+  async findHistory(skuId: number, query: InventoryHistoryQueryDTO) {
+    const skip = (query.page - 1) * query.limit
+    const [data, total] = await Promise.all([
+      this.inventoryRepository.findHistoryBySkuId(skuId, skip, query.limit),
+      this.inventoryRepository.countHistoryBySkuId(skuId),
+    ])
 
-    if (history.length === 0) {
-      const sku = await this.inventoryRepository.transaction((tx) =>
-        this.inventoryRepository.findSkuById(tx, skuId),
-      )
+    if (total === 0) {
+      const sku = await this.inventoryRepository.transaction((tx) => this.inventoryRepository.findSkuById(tx, skuId))
 
       if (!sku) {
         throw new NotFoundException(MESSAGE.INVENTORY.SKU_NOT_FOUND)
       }
     }
 
-    return history
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        totalPages: Math.ceil(total / query.limit),
+      },
+    }
   }
 
   findLowStock(threshold: number) {

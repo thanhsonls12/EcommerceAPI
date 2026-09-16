@@ -31,5 +31,13 @@ const ChangePasswordBodySchema = z
     }
   })
 
+const GetUsersQuerySchema = z
+  .object({
+    page: z.coerce.number().int().positive().default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict()
+
 export class ChangePasswordBodyDTO extends createZodDto(ChangePasswordBodySchema) {}
 export class UpdateProfileBodyDto extends createZodDto(UpdateProfileBodySchema) {}
+export class GetUsersQueryDTO extends createZodDto(GetUsersQuerySchema) {}

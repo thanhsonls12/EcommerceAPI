@@ -17,9 +17,7 @@ async function waitForPostgres() {
         return
       } catch {
         if (attempt === 20) {
-          throw new Error(
-            'E2E PostgreSQL is not available. Start it with "npm run test:e2e:up" and retry.',
-          )
+          throw new Error('E2E PostgreSQL is not available. Start it with "npm run test:e2e:up" and retry.')
         }
 
         await sleep(500)

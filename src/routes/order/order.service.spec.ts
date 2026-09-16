@@ -27,6 +27,7 @@ describe('OrderService', () => {
     create: jest.fn(),
     clearCheckedOutItems: jest.fn(),
     findManyByUserId: jest.fn(),
+    countByUserId: jest.fn(),
     findByIdAndUserId: jest.fn(),
     findByIdAndUserIdForUpdate: jest.fn(),
     findById: jest.fn(),
@@ -380,12 +381,22 @@ describe('OrderService', () => {
   })
 
   describe('findMyOrders', () => {
-    it('delegates to the repository', async () => {
+    it('returns paginated orders', async () => {
       const orders = [{ id: 1 }, { id: 2 }]
       orderRepository.findManyByUserId.mockResolvedValue(orders)
+      orderRepository.countByUserId.mockResolvedValue(2)
 
-      await expect(service.findMyOrders(USER_ID)).resolves.toEqual(orders)
-      expect(orderRepository.findManyByUserId).toHaveBeenCalledWith(USER_ID)
+      await expect(service.findMyOrders(USER_ID, { page: 1, limit: 20 })).resolves.toEqual({
+        data: orders,
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 2,
+          totalPages: 1,
+        },
+      })
+      expect(orderRepository.findManyByUserId).toHaveBeenCalledWith(USER_ID, 0, 20)
+      expect(orderRepository.countByUserId).toHaveBeenCalledWith(USER_ID)
     })
   })
 
@@ -468,9 +479,7 @@ describe('OrderService', () => {
       orderRepository.cancelIfPending.mockResolvedValue({ count: 1 })
       inventoryRepository.incrementStock.mockResolvedValueOnce(null)
 
-      await expect(service.cancel(USER_ID, ORDER_ID)).rejects.toThrow(
-        'SKU no longer exists while restoring inventory',
-      )
+      await expect(service.cancel(USER_ID, ORDER_ID)).rejects.toThrow('SKU no longer exists while restoring inventory')
 
       expect(inventoryRepository.createTransaction).not.toHaveBeenCalled()
       expect(emailQueueService.addOrderCancelled).not.toHaveBeenCalled()
@@ -484,9 +493,7 @@ describe('OrderService', () => {
       promotionRepository.deleteUsageByOrder.mockResolvedValue({ count: 1 })
       promotionRepository.decrementUsage.mockResolvedValue({ count: 0 })
 
-      await expect(service.cancel(USER_ID, ORDER_ID)).rejects.toThrow(
-        'Promotion usage count is inconsistent',
-      )
+      await expect(service.cancel(USER_ID, ORDER_ID)).rejects.toThrow('Promotion usage count is inconsistent')
 
       expect(emailQueueService.addOrderCancelled).not.toHaveBeenCalled()
       expect(notificationService.create).not.toHaveBeenCalled()

@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common'
+import { Body, Controller, Get, Patch, Query } from '@nestjs/common'
 import { UserService } from './user.service'
 import { Permissions } from '@/shared/decorators/permissions.decorator'
 import { PermissionName } from '@/shared/constants/permission.constant'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
-import { ChangePasswordBodyDTO, UpdateProfileBodyDto } from './user.dto'
+import { ChangePasswordBodyDTO, GetUsersQueryDTO, UpdateProfileBodyDto } from './user.dto'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 @ApiTags('Users')
 @ApiBearerAuth('access-token')
@@ -14,8 +14,8 @@ export class UserController {
   @ApiOperation({ summary: 'Get all users' })
   @Get()
   @Permissions(PermissionName.UserRead)
-  findAll() {
-    return this.userService.findAll()
+  findAll(@Query() query: GetUsersQueryDTO) {
+    return this.userService.findAll(query)
   }
 
   @ApiOperation({ summary: 'Get current user profile' })

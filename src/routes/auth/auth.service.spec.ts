@@ -340,14 +340,10 @@ describe('AuthService', () => {
 
       const result = await service.login(body, deviceInfo)
 
-      expect(redisClient.set).toHaveBeenCalledWith(
-        expect.stringMatching(/^2fa:challengeId:/),
-        user.id.toString(),
-        {
-          EX: 300,
-          NX: true,
-        },
-      )
+      expect(redisClient.set).toHaveBeenCalledWith(expect.stringMatching(/^2fa:challengeId:/), user.id.toString(), {
+        EX: 300,
+        NX: true,
+      })
 
       expect(tokenService.signTwoFactorToken).toHaveBeenCalledWith({
         userId: user.id,

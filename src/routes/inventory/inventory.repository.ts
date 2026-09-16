@@ -81,7 +81,7 @@ export class InventoryRepository {
     })
   }
 
-  findHistoryBySkuId(skuId: number) {
+  findHistoryBySkuId(skuId: number, skip: number, take: number) {
     return this.prisma.inventoryTransaction.findMany({
       where: {
         skuId,
@@ -97,6 +97,16 @@ export class InventoryRepository {
       },
       orderBy: {
         createdAt: 'desc',
+      },
+      skip,
+      take,
+    })
+  }
+
+  countHistoryBySkuId(skuId: number) {
+    return this.prisma.inventoryTransaction.count({
+      where: {
+        skuId,
       },
     })
   }

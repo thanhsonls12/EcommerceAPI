@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { OrderRepository } from './order.repository'
-import { CreateOrderBodyDTO } from './order.dto'
+import { CreateOrderBodyDTO, GetOrdersQueryDTO } from './order.dto'
 import { InventoryTransactionType, NotificationType, OrderStatus, Prisma } from '../../../generated/prisma/client'
 import { MESSAGE } from '@/shared/constants/message.constant'
 import { EmailQueueService } from '@/shared/services/email-queue.service'
@@ -227,8 +227,22 @@ export class OrderService {
     return order
   }
 
-  findMyOrders(userId: number) {
-    return this.orderRepository.findManyByUserId(userId)
+  async findMyOrders(userId: number, query: GetOrdersQueryDTO) {
+    const skip = (query.page - 1) * query.limit
+    const [data, total] = await Promise.all([
+      this.orderRepository.findManyByUserId(userId, skip, query.limit),
+      this.orderRepository.countByUserId(userId),
+    ])
+
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        totalPages: Math.ceil(total / query.limit),
+      },
+    }
   }
 
   async findMyOrderById(userId: number, id: number) {

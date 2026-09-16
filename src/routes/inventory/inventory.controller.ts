@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common'
 import { InventoryService } from './inventory.service'
-import { AdjustInventoryBodyDTO, LowStockQueryDTO } from './inventory.dto'
+import { AdjustInventoryBodyDTO, InventoryHistoryQueryDTO, LowStockQueryDTO } from './inventory.dto'
 import { Permissions } from '@/shared/decorators/permissions.decorator'
 import { PermissionName } from '@/shared/constants/permission.constant'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
@@ -29,7 +29,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Get SKU inventory history' })
   @Get('skus/:skuId/history')
   @Permissions(PermissionName.InventoryRead)
-  findHistory(@Param('skuId', ParseIntPipe) skuId: number) {
-    return this.inventoryService.findHistory(skuId)
+  findHistory(@Param('skuId', ParseIntPipe) skuId: number, @Query() query: InventoryHistoryQueryDTO) {
+    return this.inventoryService.findHistory(skuId, query)
   }
 }

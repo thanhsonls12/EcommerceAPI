@@ -70,7 +70,7 @@ export class OrderRepository {
     })
   }
 
-  findManyByUserId(userId: number) {
+  findManyByUserId(userId: number, skip: number, take: number) {
     return this.prisma.order.findMany({
       where: {
         userId,
@@ -83,6 +83,17 @@ export class OrderRepository {
 
       orderBy: {
         createdAt: 'desc',
+      },
+      skip,
+      take,
+    })
+  }
+
+  countByUserId(userId: number) {
+    return this.prisma.order.count({
+      where: {
+        userId,
+        deletedAt: null,
       },
     })
   }

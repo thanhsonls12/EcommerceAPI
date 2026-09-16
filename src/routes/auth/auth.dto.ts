@@ -31,7 +31,11 @@ const LoginResSchema = z
   .superRefine((data, ctx) => {
     if (data.requiresTwoFactor) {
       if (!data.twoFactorToken) {
-        ctx.addIssue({ code: 'custom', message: MESSAGE.VALIDATION.TWO_FACTOR_TOKEN_REQUIRED, path: ['twoFactorToken'] })
+        ctx.addIssue({
+          code: 'custom',
+          message: MESSAGE.VALIDATION.TWO_FACTOR_TOKEN_REQUIRED,
+          path: ['twoFactorToken'],
+        })
       }
       return
     }
