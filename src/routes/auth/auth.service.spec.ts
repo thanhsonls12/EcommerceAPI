@@ -60,9 +60,9 @@ describe('AuthService', () => {
 
   const refreshTokenRepository = {
     create: jest.fn(),
-    findByToken: jest.fn(),
-    deleteByToken: jest.fn(),
-    consumeByToken: jest.fn(),
+    findByTokenHash: jest.fn(),
+    deleteByTokenHash: jest.fn(),
+    consumeByTokenHash: jest.fn(),
     deleteAllByUserId: jest.fn(),
   }
 
@@ -149,7 +149,7 @@ describe('AuthService', () => {
     jest.clearAllMocks()
     redisService.getClient.mockReturnValue(redisClient)
     prismaService.$transaction.mockImplementation((callback) => callback(tx))
-    refreshTokenRepository.consumeByToken.mockResolvedValue({ count: 1 })
+    refreshTokenRepository.consumeByTokenHash.mockResolvedValue({ count: 1 })
   })
 
   describe('register', () => {
@@ -259,7 +259,7 @@ describe('AuthService', () => {
       })
       refreshTokenRepository.create.mockResolvedValue({
         id: 20,
-        token: 'refresh-token',
+        tokenHash: hashToken('refresh-token'),
         userId: user.id,
         deviceId: 10,
         expiresAt: new Date(refreshTokenExpiresAt * 1000),
@@ -278,7 +278,7 @@ describe('AuthService', () => {
       expect(tokenService.signAccessToken).toHaveBeenCalledWith({ userId: user.id })
       expect(tokenService.signRefreshToken).toHaveBeenCalledWith({ userId: user.id })
       expect(refreshTokenRepository.create).toHaveBeenCalledWith({
-        token: hashToken('refresh-token'),
+        tokenHash: hashToken('refresh-token'),
         userId: user.id,
         deviceId: 10,
         expiresAt: new Date(refreshTokenExpiresAt * 1000),
@@ -385,9 +385,9 @@ describe('AuthService', () => {
           exp: newRefreshTokenExpiresAt,
         })
 
-      refreshTokenRepository.findByToken.mockResolvedValue({
+      refreshTokenRepository.findByTokenHash.mockResolvedValue({
         id: 10,
-        token: body.refreshToken,
+        tokenHash: hashToken(body.refreshToken),
         userId: user.id,
         deviceId: 20,
         expiresAt: new Date(2_000_000_000 * 1000),
@@ -415,11 +415,11 @@ describe('AuthService', () => {
       expect(tokenService.signRefreshToken).toHaveBeenCalledWith({ userId: user.id })
       expect(tokenService.verifyRefreshToken).toHaveBeenNthCalledWith(2, 'new-refresh-token')
 
-      expect(refreshTokenRepository.findByToken).toHaveBeenCalledWith(hashToken(body.refreshToken))
-      expect(refreshTokenRepository.consumeByToken).toHaveBeenCalledWith(hashToken(body.refreshToken), tx)
+      expect(refreshTokenRepository.findByTokenHash).toHaveBeenCalledWith(hashToken(body.refreshToken))
+      expect(refreshTokenRepository.consumeByTokenHash).toHaveBeenCalledWith(hashToken(body.refreshToken), tx)
       expect(refreshTokenRepository.create).toHaveBeenCalledWith(
         {
-          token: hashToken('new-refresh-token'),
+          tokenHash: hashToken('new-refresh-token'),
           userId: user.id,
           deviceId: 20,
           expiresAt: new Date(newRefreshTokenExpiresAt * 1000),
@@ -450,9 +450,9 @@ describe('AuthService', () => {
           exp: 2_100_000_000,
         })
 
-      refreshTokenRepository.findByToken.mockResolvedValue({
+      refreshTokenRepository.findByTokenHash.mockResolvedValue({
         id: 10,
-        token: hashToken(body.refreshToken),
+        tokenHash: hashToken(body.refreshToken),
         userId: user.id,
         deviceId: 20,
         expiresAt: new Date(2_000_000_000 * 1000),
@@ -471,7 +471,7 @@ describe('AuthService', () => {
       })
       tokenService.signAccessToken.mockResolvedValue('new-access-token')
       tokenService.signRefreshToken.mockResolvedValue('new-refresh-token')
-      refreshTokenRepository.consumeByToken.mockResolvedValue({ count: 0 })
+      refreshTokenRepository.consumeByTokenHash.mockResolvedValue({ count: 0 })
 
       await expect(service.refreshToken(body)).rejects.toThrow('Refresh token is invalid')
 
@@ -485,7 +485,7 @@ describe('AuthService', () => {
         iat: 1,
         exp: 2_000_000_000,
       })
-      refreshTokenRepository.findByToken.mockResolvedValue(null)
+      refreshTokenRepository.findByTokenHash.mockResolvedValue(null)
 
       await expect(service.refreshToken(body)).rejects.toThrow('Refresh token is invalid')
 
@@ -500,9 +500,9 @@ describe('AuthService', () => {
         iat: 1,
         exp: 2_000_000_000,
       })
-      refreshTokenRepository.findByToken.mockResolvedValue({
+      refreshTokenRepository.findByTokenHash.mockResolvedValue({
         id: 10,
-        token: body.refreshToken,
+        tokenHash: hashToken(body.refreshToken),
         userId: 2,
         deviceId: 20,
         expiresAt: new Date(),
@@ -522,9 +522,9 @@ describe('AuthService', () => {
         iat: 1,
         exp: 2_000_000_000,
       })
-      refreshTokenRepository.findByToken.mockResolvedValue({
+      refreshTokenRepository.findByTokenHash.mockResolvedValue({
         id: 10,
-        token: body.refreshToken,
+        tokenHash: hashToken(body.refreshToken),
         userId: 1,
         deviceId: 20,
         expiresAt: new Date(),
@@ -545,9 +545,9 @@ describe('AuthService', () => {
         iat: 1,
         exp: 2_000_000_000,
       })
-      refreshTokenRepository.findByToken.mockResolvedValue({
+      refreshTokenRepository.findByTokenHash.mockResolvedValue({
         id: 10,
-        token: body.refreshToken,
+        tokenHash: hashToken(body.refreshToken),
         userId: 1,
         deviceId: 20,
         expiresAt: new Date(),
@@ -568,9 +568,9 @@ describe('AuthService', () => {
         iat: 1,
         exp: 2_000_000_000,
       })
-      refreshTokenRepository.findByToken.mockResolvedValue({
+      refreshTokenRepository.findByTokenHash.mockResolvedValue({
         id: 10,
-        token: body.refreshToken,
+        tokenHash: hashToken(body.refreshToken),
         userId: 1,
         deviceId: 20,
         expiresAt: new Date(),
@@ -592,9 +592,9 @@ describe('AuthService', () => {
         iat: 1,
         exp: 2_000_000_000,
       })
-      refreshTokenRepository.findByToken.mockResolvedValue({
+      refreshTokenRepository.findByTokenHash.mockResolvedValue({
         id: 10,
-        token: body.refreshToken,
+        tokenHash: hashToken(body.refreshToken),
         userId: 1,
         deviceId: 20,
         expiresAt: new Date(),
@@ -624,9 +624,9 @@ describe('AuthService', () => {
     }
 
     it('deletes the refresh token and deactivates the device', async () => {
-      refreshTokenRepository.findByToken.mockResolvedValue({
+      refreshTokenRepository.findByTokenHash.mockResolvedValue({
         id: 10,
-        token: body.refreshToken,
+        tokenHash: hashToken(body.refreshToken),
         userId: 1,
         deviceId: 20,
         expiresAt: new Date(),
@@ -636,8 +636,8 @@ describe('AuthService', () => {
 
       const result = await service.logout(body)
 
-      expect(refreshTokenRepository.findByToken).toHaveBeenCalledWith(hashToken(body.refreshToken))
-      expect(refreshTokenRepository.consumeByToken).toHaveBeenCalledWith(hashToken(body.refreshToken), tx)
+      expect(refreshTokenRepository.findByTokenHash).toHaveBeenCalledWith(hashToken(body.refreshToken))
+      expect(refreshTokenRepository.consumeByTokenHash).toHaveBeenCalledWith(hashToken(body.refreshToken), tx)
       expect(deviceRepository.updateActiveStatus).toHaveBeenCalledWith(20, false, tx)
       expect(result).toEqual({
         message: 'Logout successful',
@@ -645,7 +645,7 @@ describe('AuthService', () => {
     })
 
     it('rejects logout when the refresh token is invalid', async () => {
-      refreshTokenRepository.findByToken.mockResolvedValue(null)
+      refreshTokenRepository.findByTokenHash.mockResolvedValue(null)
 
       await expect(service.logout(body)).rejects.toThrow('Refresh token is invalid')
 
@@ -654,16 +654,16 @@ describe('AuthService', () => {
     })
 
     it('rejects logout when the refresh token was consumed concurrently', async () => {
-      refreshTokenRepository.findByToken.mockResolvedValue({
+      refreshTokenRepository.findByTokenHash.mockResolvedValue({
         id: 10,
-        token: hashToken(body.refreshToken),
+        tokenHash: hashToken(body.refreshToken),
         userId: 1,
         deviceId: 20,
         expiresAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
       })
-      refreshTokenRepository.consumeByToken.mockResolvedValue({ count: 0 })
+      refreshTokenRepository.consumeByTokenHash.mockResolvedValue({ count: 0 })
 
       await expect(service.logout(body)).rejects.toThrow('Refresh token is invalid')
 

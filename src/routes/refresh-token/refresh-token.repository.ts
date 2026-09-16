@@ -11,18 +11,18 @@ export class RefreshTokenRepository {
     return prismaClient.refreshToken.create({ data })
   }
 
-  findByToken(token: string) {
+  findByTokenHash(tokenHash: string) {
     return this.prisma.refreshToken.findUnique({
       where: {
-        token,
+        tokenHash,
       },
     })
   }
 
-  deleteByToken(token: string, tx?: Prisma.TransactionClient) {
+  deleteByTokenHash(tokenHash: string, tx?: Prisma.TransactionClient) {
     const prismaClient = tx ?? this.prisma
     return prismaClient.refreshToken.delete({
-      where: { token },
+      where: { tokenHash },
     })
   }
 
@@ -36,11 +36,11 @@ export class RefreshTokenRepository {
     })
   }
 
-  consumeByToken(token: string, tx?: Prisma.TransactionClient) {
+  consumeByTokenHash(tokenHash: string, tx?: Prisma.TransactionClient) {
     const prismaClient = tx ?? this.prisma
 
     return prismaClient.refreshToken.deleteMany({
-      where: { token },
+      where: { tokenHash },
     })
   }
 }

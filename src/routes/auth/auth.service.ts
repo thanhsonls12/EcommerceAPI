@@ -64,7 +64,7 @@ export class AuthService {
     const refreshTokenHash = hashToken(refreshToken)
 
     await this.refreshTokenRepository.create({
-      token: refreshTokenHash,
+      tokenHash: refreshTokenHash,
       userId: user.id,
       deviceId: device.id,
       expiresAt,
@@ -177,7 +177,7 @@ export class AuthService {
 
     const oldTokenHash = hashToken(body.refreshToken)
 
-    const refreshToken = await this.refreshTokenRepository.findByToken(oldTokenHash)
+    const refreshToken = await this.refreshTokenRepository.findByTokenHash(oldTokenHash)
 
     if (!refreshToken) {
       throw new UnauthorizedException(MESSAGE.AUTH.REFRESH_TOKEN_INVALID)
@@ -213,7 +213,7 @@ export class AuthService {
     const newTokenHash = hashToken(newRefreshToken)
 
     await this.prismaService.$transaction(async (tx) => {
-      const consumed = await this.refreshTokenRepository.consumeByToken(oldTokenHash, tx)
+      const consumed = await this.refreshTokenRepository.consumeByTokenHash(oldTokenHash, tx)
 
       if (consumed.count !== 1) {
         throw new UnauthorizedException(MESSAGE.AUTH.REFRESH_TOKEN_INVALID)
@@ -221,7 +221,7 @@ export class AuthService {
 
       await this.refreshTokenRepository.create(
         {
-          token: newTokenHash,
+          tokenHash: newTokenHash,
           userId: payload.userId,
           deviceId: device.id,
           expiresAt,
@@ -235,14 +235,14 @@ export class AuthService {
 
   async logout(body: LogoutBodyDTO) {
     const tokenHash = hashToken(body.refreshToken)
-    const refreshToken = await this.refreshTokenRepository.findByToken(tokenHash)
+    const refreshToken = await this.refreshTokenRepository.findByTokenHash(tokenHash)
 
     if (!refreshToken) {
       throw new UnauthorizedException(MESSAGE.AUTH.REFRESH_TOKEN_INVALID)
     }
 
     await this.prismaService.$transaction(async (tx) => {
-      const consumed = await this.refreshTokenRepository.consumeByToken(tokenHash, tx)
+      const consumed = await this.refreshTokenRepository.consumeByTokenHash(tokenHash, tx)
 
       if (consumed.count !== 1) {
         throw new UnauthorizedException(MESSAGE.AUTH.REFRESH_TOKEN_INVALID)
