@@ -242,6 +242,7 @@ model Product {
   variants            Json?
   skus                Sku[]
   reviews             Review[]
+  medias              ProductMedia[]
   productTranslations ProductTranslation[]
   orders              Order[]
   productSKUSnapshots ProductSKUSnapshot[]
@@ -261,6 +262,19 @@ model Product {
   @@index([deletedAt])
   @@index([brandId, deletedAt])
   @@index([searchVector], type: Gin)
+}
+
+model ProductMedia {
+  id         Int       @id @default(autoincrement())
+  url        String    @db.VarChar(1000)
+  storageKey String?   @db.VarChar(1000)
+  type       MediaType @default(IMAGE)
+  productId  Int
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
 }
 
 model ProductTranslation {

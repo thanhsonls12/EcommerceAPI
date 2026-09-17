@@ -1,6 +1,6 @@
 import { PrismaService } from '@/shared/services/prisma.service'
 import { Injectable } from '@nestjs/common'
-import { Prisma } from '../../../generated/prisma/client'
+import { MediaType, Prisma } from '../../../generated/prisma/client'
 
 type ProductSearchRow = {
   id: number
@@ -59,6 +59,7 @@ export class ProductRepository {
       data,
       include: {
         brand: true,
+        medias: true,
         categories: true,
       },
     })
@@ -72,6 +73,7 @@ export class ProductRepository {
       },
       include: {
         brand: true,
+        medias: true,
         categories: {
           where: {
             deletedAt: null,
@@ -93,6 +95,7 @@ export class ProductRepository {
       take: params.take,
       include: {
         brand: true,
+        medias: true,
         categories: {
           where: {
             deletedAt: null,
@@ -113,9 +116,80 @@ export class ProductRepository {
       data,
       include: {
         brand: true,
+        medias: true,
         categories: true,
       },
     })
+  }
+
+  addImage(productId: number, url: string, storageKey: string, userId: number) {
+    return this.prisma.$transaction([
+      this.prisma.productMedia.create({
+        data: {
+          productId,
+          url,
+          storageKey,
+          type: MediaType.IMAGE,
+        },
+      }),
+      this.prisma.product.update({
+        where: { id: productId },
+        data: {
+          images: {
+            push: url,
+          },
+          updatedBy: {
+            connect: {
+              id: userId,
+            },
+          },
+        },
+        include: {
+          brand: true,
+          medias: true,
+          categories: true,
+        },
+      }),
+    ])
+  }
+
+  findImageByIdAndProductId(imageId: number, productId: number) {
+    return this.prisma.productMedia.findFirst({
+      where: {
+        id: imageId,
+        productId,
+      },
+    })
+  }
+
+  removeImage(productId: number, imageId: number, images: string[], userId: number) {
+    return this.prisma.$transaction([
+      this.prisma.productMedia.delete({
+        where: {
+          id: imageId,
+        },
+      }),
+      this.prisma.product.update({
+        where: {
+          id: productId,
+        },
+        data: {
+          images: {
+            set: images,
+          },
+          updatedBy: {
+            connect: {
+              id: userId,
+            },
+          },
+        },
+        include: {
+          brand: true,
+          medias: true,
+          categories: true,
+        },
+      }),
+    ])
   }
 
   softDelete(id: number, deletedById: number) {
@@ -169,6 +243,7 @@ export class ProductRepository {
       },
       include: {
         brand: true,
+        medias: true,
         categories: {
           where: {
             deletedAt: null,

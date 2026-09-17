@@ -106,6 +106,8 @@ export const MESSAGE = {
     VIRTUAL_PRICE_LESS_THAN_BASE_PRICE: 'Virtual price cannot be less than base price',
     CANNOT_UPDATE_VARIANTS_WITH_ACTIVE_SKUS: 'Cannot update variants when there are active SKUs',
     DELETED_SUCCESSFULLY: 'Product deleted successfully',
+    IMAGE_NOT_FOUND: 'Product image not found',
+    IMAGE_DELETED_SUCCESSFULLY: 'Product image deleted successfully',
   },
   SKU: {
     INVALID_PRODUCT_VARIANTS: 'Invalid product variants',

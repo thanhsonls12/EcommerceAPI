@@ -104,4 +104,15 @@ export class ProductController {
   ) {
     return this.productService.uploadImage(id, file, userId)
   }
+
+  @ApiOperation({ summary: 'Delete product image' })
+  @Delete(':id/images/:imageId')
+  @Permissions(PermissionName.ProductUpdate)
+  deleteImage(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('imageId', ParseIntPipe) imageId: number,
+    @ActiveUser('userId') userId: number,
+  ) {
+    return this.productService.deleteImage(id, imageId, userId)
+  }
 }

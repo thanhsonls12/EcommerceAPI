@@ -442,21 +442,48 @@ export class ProductService {
 
     const uploadedFile = await this.storageService.upload(file, 'products')
 
-    const updatedProduct = await this.productRepository.update(id, {
-      images: {
-        push: uploadedFile.url,
-      },
+    let updatedProduct
 
-      updatedBy: {
-        connect: {
-          id: userId,
-        },
-      },
-    })
+    try {
+      const [, productWithImage] = await this.productRepository.addImage(id, uploadedFile.url, uploadedFile.key, userId)
+      updatedProduct = productWithImage
+    } catch (error) {
+      await this.storageService.remove(uploadedFile.key)
+      throw error
+    }
 
     await this.invalidateProductListCache()
     await this.invalidateProductDetailCache()
 
     return updatedProduct
+  }
+
+  async deleteImage(id: number, imageId: number, userId: number) {
+    const product = await this.productRepository.findById(id)
+
+    if (!product) {
+      throw new NotFoundException(MESSAGE.PRODUCT.NOT_FOUND)
+    }
+
+    const image = await this.productRepository.findImageByIdAndProductId(imageId, id)
+
+    if (!image) {
+      throw new NotFoundException(MESSAGE.PRODUCT.IMAGE_NOT_FOUND)
+    }
+
+    if (image.storageKey) {
+      await this.storageService.remove(image.storageKey)
+    }
+
+    const nextImages = product.images.filter((url) => url !== image.url)
+
+    await this.productRepository.removeImage(id, imageId, nextImages, userId)
+
+    await this.invalidateProductListCache()
+    await this.invalidateProductDetailCache()
+
+    return {
+      message: MESSAGE.PRODUCT.IMAGE_DELETED_SUCCESSFULLY,
+    }
   }
 }

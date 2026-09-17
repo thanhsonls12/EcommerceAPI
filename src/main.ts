@@ -4,7 +4,6 @@ import { AppModule } from './app.module'
 import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
 import { NestExpressApplication } from '@nestjs/platform-express'
-import { join } from 'node:path'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { cleanupOpenApiDoc } from 'nestjs-zod'
 import envConfig from './shared/config'
@@ -16,10 +15,6 @@ async function bootstrap() {
   })
 
   app.useLogger(app.get(Logger))
-
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-  })
   app.use(helmet())
   app.use(cookieParser())
   app.use(
