@@ -10,6 +10,7 @@ import { JwtModule } from '@nestjs/jwt'
 import { Test } from '@nestjs/testing'
 import request from 'supertest'
 import { ZodSerializerInterceptor } from 'nestjs-zod'
+import { PinoLogger } from 'nestjs-pino'
 import { PaymentController } from '@/routes/payment/payment.controller'
 import { PaymentService } from '@/routes/payment/payment.service'
 import { PaymentRepository } from '@/routes/payment/payment.repository'
@@ -60,6 +61,14 @@ const redisService = {
   })),
 }
 
+const pinoLogger = {
+  setContext: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+}
+
 const verifyWebhookMock = jest.fn<
   ReturnType<PaymentGateway['verifyWebhook']>,
   Parameters<PaymentGateway['verifyWebhook']>
@@ -86,6 +95,7 @@ const paymentGateway: PaymentGateway = {
     { provide: EmailQueueService, useValue: emailQueueService },
     { provide: RealtimeService, useValue: realtimeService },
     { provide: RedisService, useValue: redisService },
+    { provide: PinoLogger, useValue: pinoLogger },
   ],
   exports: [
     PrismaService,
@@ -99,6 +109,7 @@ const paymentGateway: PaymentGateway = {
     EmailQueueService,
     RealtimeService,
     RedisService,
+    PinoLogger,
   ],
 })
 class E2ETestSharedModule {}

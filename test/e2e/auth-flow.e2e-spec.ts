@@ -10,6 +10,7 @@ import { JwtModule } from '@nestjs/jwt'
 import { Test } from '@nestjs/testing'
 import request from 'supertest'
 import { ZodSerializerInterceptor } from 'nestjs-zod'
+import { PinoLogger } from 'nestjs-pino'
 import { AuthModule } from '@/routes/auth/auth.module'
 import { UserModule } from '@/routes/user/user.module'
 import { PrismaService } from '@/shared/services/prisma.service'
@@ -37,6 +38,14 @@ const redisService = {
   })),
 }
 
+const pinoLogger = {
+  setContext: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+}
+
 @Global()
 @Module({
   imports: [JwtModule.register({})],
@@ -50,6 +59,7 @@ const redisService = {
     PermissionsGuard,
     { provide: EmailService, useValue: emailService },
     { provide: RedisService, useValue: redisService },
+    { provide: PinoLogger, useValue: pinoLogger },
   ],
   exports: [
     PrismaService,
@@ -61,6 +71,7 @@ const redisService = {
     PermissionsGuard,
     EmailService,
     RedisService,
+    PinoLogger,
   ],
 })
 class E2ETestSharedModule {}
@@ -182,11 +193,14 @@ describe('Auth flow (e2e)', () => {
 
     expect(verificationCode).not.toBeNull()
 
+    const sentVerificationCode = emailService.sendVerificationCode.mock.calls[0][1] as string
+    expect(sentVerificationCode).toMatch(/^\d{6}$/)
+
     await request(app.getHttpServer())
       .post('/api/auth/verify-email')
       .send({
         email,
-        code: verificationCode!.code,
+        code: sentVerificationCode,
       })
       .expect(201)
 

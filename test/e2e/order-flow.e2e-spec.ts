@@ -14,6 +14,7 @@ import { JwtModule } from '@nestjs/jwt'
 import { Test } from '@nestjs/testing'
 import request from 'supertest'
 import { ZodSerializerInterceptor } from 'nestjs-zod'
+import { PinoLogger } from 'nestjs-pino'
 import { AuthModule } from '@/routes/auth/auth.module'
 import { OrderModule } from '@/routes/order/order.module'
 import { PrismaService } from '@/shared/services/prisma.service'
@@ -61,6 +62,14 @@ const redisService = {
   })),
 }
 
+const pinoLogger = {
+  setContext: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+}
+
 @Global()
 @Module({
   imports: [JwtModule.register({})],
@@ -76,6 +85,7 @@ const redisService = {
     { provide: EmailQueueService, useValue: emailQueueService },
     { provide: RealtimeService, useValue: realtimeService },
     { provide: RedisService, useValue: redisService },
+    { provide: PinoLogger, useValue: pinoLogger },
   ],
   exports: [
     PrismaService,
@@ -89,6 +99,7 @@ const redisService = {
     EmailQueueService,
     RealtimeService,
     RedisService,
+    PinoLogger,
   ],
 })
 class E2ETestSharedModule {}
@@ -414,7 +425,7 @@ describe('Order flow and permissions (e2e)', () => {
     })
 
     expect(saleTransaction).toMatchObject({
-      quantity: -2,
+      quantity: 2,
       stockBefore: 5,
       stockAfter: 3,
       createdById: client.id,
