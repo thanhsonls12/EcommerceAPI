@@ -1,0 +1,155 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  NODE_ENV: test
+  DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/ecommerce_ci?schema=public
+  REDIS_URL: redis://127.0.0.1:6379
+  ACCESS_TOKEN_SECRET: ci-access-token-secret-000000000000000000000000
+  ACCESS_TOKEN_EXPIRES_IN: 15m
+  REFRESH_TOKEN_SECRET: ci-refresh-token-secret-0000000000000000000000
+  REFRESH_TOKEN_EXPIRES_IN: 7d
+  TWO_FACTOR_TOKEN_SECRET: ci-two-factor-token-secret-00000000000000000000
+  TWO_FACTOR_TOKEN_EXPIRES_IN: 5m
+  VERIFICATION_CODE_SECRET: ci-verification-code-secret-00000000000000000
+  API_SECRET_KEY: ci-api-secret-key-0000000000000000000000000000
+  ADMIN_NAME: CI Admin
+  ADMIN_PASSWORD: CI-Admin-Password-123!
+  ADMIN_EMAIL: ci-admin@example.com
+  ADMIN_PHONENUMBER: '0900000000'
+  SMTP_HOST: smtp.example.com
+  SMTP_PORT: '587'
+  SMTP_USER: ci-smtp-user
+  SMTP_PASSWORD: ci-smtp-password
+  SMTP_FROM: ci@example.com
+  PAYOS_CLIENT_ID: ci-payos-client
+  PAYOS_API_KEY: ci-payos-api-key
+  PAYOS_CHECKSUM_KEY: ci-payos-checksum-key
+  PAYOS_RETURN_URL: http://localhost:3001/payment/success
+  PAYOS_CANCEL_URL: http://localhost:3001/payment/cancel
+  CORS_ORIGIN: http://localhost:3001
+  SWAGGER_ENABLED: 'false'
+  TRUST_PROXY: 'false'
+  SENTRY_ENABLED: 'false'
+  SUPABASE_URL: https://example.supabase.co
+  SUPABASE_SECRET_KEY: ci-supabase-secret
+  SUPABASE_STORAGE_BUCKET: ecommerce-media
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint:check
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm test
+
+      - name: HTTP integration tests
+        run: npm run test:http
+
+      - name: Production dependency audit
+        run: npm run audit:prod
+
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: ecommerce_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ecommerce_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/ecommerce_ci?schema=public
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply migrations to clean database
+        run: npm run db:migrate:deploy
+
+      - name: Verify migration status
+        run: npm run db:migrate:status
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: ecommerce_e2e
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ecommerce_e2e"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      E2E_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5434/ecommerce_e2e?schema=public
+      E2E_REDIS_URL: redis://127.0.0.1:6380
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5434/ecommerce_e2e?schema=public
+      REDIS_URL: redis://127.0.0.1:6380
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run E2E tests
+        run: npm run test:e2e

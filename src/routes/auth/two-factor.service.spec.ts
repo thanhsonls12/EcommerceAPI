@@ -130,7 +130,7 @@ describe('TwoFactorService', () => {
 
   describe('verifyCode', () => {
     it('returns true for a valid TOTP code', async () => {
-      verifyMock.mockResolvedValue({ valid: true } as Awaited<ReturnType<typeof verify>>)
+      verifyMock.mockResolvedValue({ valid: true })
 
       const result = await service.verifyCode('SECRET', '123456')
 
@@ -142,7 +142,7 @@ describe('TwoFactorService', () => {
     })
 
     it('returns false for an invalid TOTP code', async () => {
-      verifyMock.mockResolvedValue({ valid: false } as Awaited<ReturnType<typeof verify>>)
+      verifyMock.mockResolvedValue({ valid: false })
 
       await expect(service.verifyCode('SECRET', '000000')).resolves.toBe(false)
     })
@@ -156,7 +156,7 @@ describe('TwoFactorService', () => {
     it('enables two-factor authentication and creates eight hashed recovery codes', async () => {
       const user = buildUser({ totpSecret: 'TOTP-SECRET' })
       userRepository.findById.mockResolvedValue(user)
-      verifyMock.mockResolvedValue({ valid: true } as Awaited<ReturnType<typeof verify>>)
+      verifyMock.mockResolvedValue({ valid: true })
 
       randomBytesMock
         .mockReturnValueOnce(Buffer.from('000001000001', 'hex'))
@@ -168,7 +168,7 @@ describe('TwoFactorService', () => {
         .mockReturnValueOnce(Buffer.from('000007000007', 'hex'))
         .mockReturnValueOnce(Buffer.from('000008000008', 'hex'))
 
-      hashingService.hash.mockImplementation(async (value: string) => `hash:${value}`)
+      hashingService.hash.mockImplementation((value: string) => Promise.resolve(`hash:${value}`))
 
       const result = await service.enable(user.id, body)
 
@@ -220,7 +220,7 @@ describe('TwoFactorService', () => {
 
     it('rejects an invalid TOTP code', async () => {
       userRepository.findById.mockResolvedValue(buildUser({ totpSecret: 'SECRET' }))
-      verifyMock.mockResolvedValue({ valid: false } as Awaited<ReturnType<typeof verify>>)
+      verifyMock.mockResolvedValue({ valid: false })
 
       await expect(service.enable(1, body)).rejects.toThrow('Invalid two-factor authentication code')
 
@@ -322,7 +322,7 @@ describe('TwoFactorService', () => {
     it('rejects an invalid TOTP code', async () => {
       userRepository.findById.mockResolvedValue(buildUser({ totpEnabled: true, totpSecret: 'SECRET' }))
       hashingService.compare.mockResolvedValue(true)
-      verifyMock.mockResolvedValue({ valid: false } as Awaited<ReturnType<typeof verify>>)
+      verifyMock.mockResolvedValue({ valid: false })
 
       await expect(service.disable(1, body)).rejects.toThrow('Invalid two-factor authentication code')
 

@@ -60,10 +60,15 @@ const redisService = {
   })),
 }
 
+const verifyWebhookMock = jest.fn<
+  ReturnType<PaymentGateway['verifyWebhook']>,
+  Parameters<PaymentGateway['verifyWebhook']>
+>()
+
 const paymentGateway: PaymentGateway = {
   name: 'E2E_GATEWAY',
   createPayment: jest.fn(),
-  verifyWebhook: jest.fn(),
+  verifyWebhook: verifyWebhookMock,
 }
 
 @Global()
@@ -308,7 +313,7 @@ describe('Payment webhook flow (e2e)', () => {
       },
     }
 
-    jest.mocked(paymentGateway.verifyWebhook).mockResolvedValue({
+    verifyWebhookMock.mockResolvedValue({
       paymentReference,
       transactionReference,
       amount,
