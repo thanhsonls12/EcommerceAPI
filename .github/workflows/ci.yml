@@ -22,11 +22,8 @@ env:
   ADMIN_PASSWORD: CI-Admin-Password-123!
   ADMIN_EMAIL: ci-admin@example.com
   ADMIN_PHONENUMBER: '0900000000'
-  SMTP_HOST: smtp.example.com
-  SMTP_PORT: '587'
-  SMTP_USER: ci-smtp-user
-  SMTP_PASSWORD: ci-smtp-password
-  SMTP_FROM: ci@example.com
+  RESEND_API_KEY: re_ci_placeholder
+  EMAIL_FROM: Ecommerce CI <ci@example.com>
   PAYOS_CLIENT_ID: ci-payos-client
   PAYOS_API_KEY: ci-payos-api-key
   PAYOS_CHECKSUM_KEY: ci-payos-checksum-key

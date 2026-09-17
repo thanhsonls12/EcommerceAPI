@@ -60,7 +60,7 @@ async function bootstrap() {
     credentials: true,
   })
 
-  await app.listen(envConfig.PORT)
+  await app.listen(envConfig.PORT, '0.0.0.0')
 }
 
 void bootstrap()
