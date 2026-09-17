@@ -7,7 +7,8 @@ describe('AppController', () => {
 
   const appService = {
     getHello: jest.fn(() => 'Hello World!'),
-    getHealth: jest.fn(() =>
+    getLiveness: jest.fn(() => ({ status: 'ok' })),
+    getReadiness: jest.fn(() =>
       Promise.resolve({
         status: 'ok',
         database: 'up',
@@ -39,13 +40,18 @@ describe('AppController', () => {
   })
 
   describe('health', () => {
-    it('should return service health', async () => {
-      await expect(appController.getHealth()).resolves.toEqual({
+    it('should return liveness', () => {
+      expect(appController.getLiveness()).toEqual({ status: 'ok' })
+      expect(appService.getLiveness).toHaveBeenCalledTimes(1)
+    })
+
+    it('should return readiness', async () => {
+      await expect(appController.getReadiness()).resolves.toEqual({
         status: 'ok',
         database: 'up',
         redis: 'up',
       })
-      expect(appService.getHealth).toHaveBeenCalledTimes(1)
+      expect(appService.getReadiness).toHaveBeenCalledTimes(1)
     })
   })
 })

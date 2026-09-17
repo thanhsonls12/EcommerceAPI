@@ -14,6 +14,8 @@ async function bootstrap() {
     bufferLogs: true,
   })
 
+  app.enableShutdownHooks()
+
   app.useLogger(app.get(Logger))
   app.use(helmet())
   app.use(cookieParser())

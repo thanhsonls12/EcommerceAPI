@@ -13,21 +13,33 @@ export class AppService {
     return 'Hello World!'
   }
 
-  async getHealth() {
-    try {
-      await Promise.all([this.prisma.$queryRaw`SELECT 1`, this.redis.getClient().ping()])
+  getLiveness() {
+    return {
+      status: 'ok',
+    }
+  }
 
-      return {
-        status: 'ok',
-        database: 'up',
-        redis: 'up',
-      }
-    } catch {
+  async getReadiness() {
+    const [databaseResult, redisResult] = await Promise.allSettled([
+      this.prisma.$queryRaw`SELECT 1`,
+      this.redis.getClient().ping(),
+    ])
+
+    const database = databaseResult.status === 'fulfilled' ? 'up' : 'down'
+    const redis = redisResult.status === 'fulfilled' ? 'up' : 'down'
+
+    if (database === 'down' || redis === 'down') {
       throw new ServiceUnavailableException({
         status: 'error',
-        database: 'unknown',
-        redis: 'unknown',
+        database,
+        redis,
       })
+    }
+
+    return {
+      status: 'ok',
+      database,
+      redis,
     }
   }
 }
