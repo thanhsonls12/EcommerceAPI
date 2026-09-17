@@ -104,27 +104,34 @@ export class OrderService {
         }
       }
       const total = subtotal.sub(discount)
-      const inventoryChanges: Array<{
-        skuId: number
-        quantity: number
-        stockBefore: number
-        stockAfter: number
-      }> = []
+      const requestedChanges = cartItems.map((item) => ({
+        skuId: item.skuId,
+        quantity: item.quantity,
+      }))
+      const decrementedStocks = await this.inventoryRepository.decrementStocks(tx, requestedChanges)
 
-      for (const item of cartItems) {
-        const updated = await this.inventoryRepository.decrementStock(tx, item.skuId, item.quantity)
+      // Every requested SKU must have moved, otherwise the whole checkout is
+      // rolled back: a missing row means the SKU was deleted or another
+      // checkout took the stock in between.
+      if (decrementedStocks.length !== requestedChanges.length) {
+        const decrementedSkuIds = new Set(decrementedStocks.map((row) => row.id))
+        const failedItem = requestedChanges.find((change) => !decrementedSkuIds.has(change.skuId))!
 
-        if (!updated) {
-          throw new BadRequestException(MESSAGE.ORDER.INSUFFICIENT_STOCK_FOR_SKU(item.skuId))
-        }
-
-        inventoryChanges.push({
-          skuId: item.skuId,
-          quantity: -item.quantity,
-          stockBefore: updated.stock + item.quantity,
-          stockAfter: updated.stock,
-        })
+        throw new BadRequestException(MESSAGE.ORDER.INSUFFICIENT_STOCK_FOR_SKU(failedItem.skuId))
       }
+
+      const stockAfterBySkuId = new Map(decrementedStocks.map((row) => [row.id, row.stock]))
+
+      const inventoryMovements = requestedChanges.map((change) => {
+        const stockAfter = stockAfterBySkuId.get(change.skuId)!
+
+        return {
+          skuId: change.skuId,
+          quantity: change.quantity,
+          stockBefore: stockAfter + change.quantity,
+          stockAfter,
+        }
+      })
       const order = await this.orderRepository.create(tx, {
         user: {
           connect: {
@@ -200,18 +207,19 @@ export class OrderService {
         }
       }
 
-      for (const change of inventoryChanges) {
-        await this.inventoryRepository.createTransaction(tx, {
-          skuId: change.skuId,
+      await this.inventoryRepository.createTransactions(
+        tx,
+        inventoryMovements.map((movement) => ({
+          skuId: movement.skuId,
           type: InventoryTransactionType.SALE,
-          quantity: change.quantity,
-          stockBefore: change.stockBefore,
-          stockAfter: change.stockAfter,
+          quantity: movement.quantity,
+          stockBefore: movement.stockBefore,
+          stockAfter: movement.stockAfter,
           referenceType: 'ORDER',
           referenceId: order.id,
           createdById: userId,
-        })
-      }
+        })),
+      )
 
       await this.orderRepository.clearCheckedOutItems(
         tx,
@@ -273,28 +281,34 @@ export class OrderService {
         throw new BadRequestException(MESSAGE.ORDER.CANNOT_BE_CANCELLED)
       }
 
-      for (const item of order.items) {
-        if (item.skuId === null) {
-          continue
-        }
-
-        const updated = await this.inventoryRepository.incrementStock(tx, item.skuId, item.quantity)
-
-        if (!updated) {
-          throw new Error('SKU no longer exists while restoring inventory')
-        }
-
-        await this.inventoryRepository.createTransaction(tx, {
+      const restorableItems = order.items
+      const requestedChanges = restorableItems
+        .filter((item): item is typeof item & { skuId: number } => item.skuId !== null)
+        .map((item) => ({
           skuId: item.skuId,
-          type: InventoryTransactionType.RESTORE,
           quantity: item.quantity,
-          stockBefore: updated.stock - item.quantity,
-          stockAfter: updated.stock,
+        }))
+      const restoredStocks = await this.inventoryRepository.incrementStocks(tx, requestedChanges)
+
+      if (restoredStocks.length !== requestedChanges.length) {
+        throw new Error('SKU no longer exists while restoring inventory')
+      }
+
+      const inventoryReversals = this.orderRepository.buildInventoryReversal(
+        restorableItems,
+        new Map(restoredStocks.map((row) => [row.id, row.stock])),
+      )
+
+      await this.inventoryRepository.createTransactions(
+        tx,
+        inventoryReversals.map((reversal) => ({
+          ...reversal,
+          type: InventoryTransactionType.RESTORE,
           referenceType: 'ORDER',
           referenceId: id,
           createdById: userId,
-        })
-      }
+        })),
+      )
 
       if (order.couponUsage) {
         const deletedUsage = await this.promotionRepository.deleteUsageByOrder(tx, id, order.couponUsage.promotionId)
@@ -404,28 +418,34 @@ export class OrderService {
         throw new BadRequestException(MESSAGE.ORDER.INVALID_STATUS_TRANSITION)
       }
 
-      for (const item of order.items) {
-        if (item.skuId === null) {
-          continue
-        }
-
-        const updated = await this.inventoryRepository.incrementStock(tx, item.skuId, item.quantity)
-
-        if (!updated) {
-          throw new Error('SKU no longer exists while returning inventory')
-        }
-
-        await this.inventoryRepository.createTransaction(tx, {
+      const returnableItems = order.items
+      const requestedChanges = returnableItems
+        .filter((item): item is typeof item & { skuId: number } => item.skuId !== null)
+        .map((item) => ({
           skuId: item.skuId,
-          type: InventoryTransactionType.RETURN,
           quantity: item.quantity,
-          stockBefore: updated.stock - item.quantity,
-          stockAfter: updated.stock,
+        }))
+      const returnedStocks = await this.inventoryRepository.incrementStocks(tx, requestedChanges)
+
+      if (returnedStocks.length !== requestedChanges.length) {
+        throw new Error('SKU no longer exists while returning inventory')
+      }
+
+      const inventoryReversals = this.orderRepository.buildInventoryReversal(
+        returnableItems,
+        new Map(returnedStocks.map((row) => [row.id, row.stock])),
+      )
+
+      await this.inventoryRepository.createTransactions(
+        tx,
+        inventoryReversals.map((reversal) => ({
+          ...reversal,
+          type: InventoryTransactionType.RETURN,
           referenceType: 'ORDER',
           referenceId: id,
           createdById: userId,
-        })
-      }
+        })),
+      )
 
       const updatedOrder = await this.orderRepository.findByIdForUpdate(tx, id)
 

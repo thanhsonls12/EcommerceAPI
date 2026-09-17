@@ -3,7 +3,18 @@ import { Injectable } from '@nestjs/common'
 import { InventoryTransactionType, Prisma } from '../../../generated/prisma/client'
 
 type StockRow = {
+  id: number
   stock: number
+}
+
+type StockChange = {
+  skuId: number
+  quantity: number
+}
+
+type AggregatedStockChange = StockChange & {
+  ordering: number
+  duplicated: boolean
 }
 
 type CreateInventoryTransactionData = {
@@ -43,10 +54,14 @@ export class InventoryRepository {
       WHERE id = ${skuId}
         AND "deletedAt" IS NULL
         AND stock >= ${quantity}
-      RETURNING stock
+      RETURNING id, stock
     `
 
     return rows[0] ?? null
+  }
+
+  async decrementStocks(tx: Prisma.TransactionClient, changes: StockChange[]) {
+    return this.applyStockChanges(tx, changes, -1)
   }
 
   async incrementStock(tx: Prisma.TransactionClient, skuId: number, quantity: number) {
@@ -55,10 +70,90 @@ export class InventoryRepository {
       SET stock = stock + ${quantity},
           "updatedAt" = NOW()
       WHERE id = ${skuId}
-      RETURNING stock
+      RETURNING id, stock
     `
 
     return rows[0] ?? null
+  }
+
+  async incrementStocks(tx: Prisma.TransactionClient, changes: StockChange[]) {
+    return this.applyStockChanges(tx, changes, 1)
+  }
+
+  private aggregateStockChanges(changes: StockChange[]) {
+    const bySkuId = new Map<number, AggregatedStockChange>()
+
+    changes.forEach((change, index) => {
+      const existing = bySkuId.get(change.skuId)
+
+      if (existing) {
+        existing.quantity += change.quantity
+        existing.duplicated = true
+        return
+      }
+
+      bySkuId.set(change.skuId, {
+        skuId: change.skuId,
+        quantity: change.quantity,
+        ordering: index,
+        duplicated: false,
+      })
+    })
+
+    return [...bySkuId.values()].sort((a, b) => a.ordering - b.ordering)
+  }
+
+  // Bulk stock movement inside a caller transaction. The rows are locked in a
+  // deterministic order to avoid deadlocks, and every requested SKU must be
+  // updated for the statement to return, otherwise the caller rolls back.
+  private async applyStockChanges(tx: Prisma.TransactionClient, changes: StockChange[], direction: 1 | -1) {
+    if (changes.length === 0) {
+      return []
+    }
+
+    const aggregated = this.aggregateStockChanges(changes)
+
+    // Duplicated SKU ids would collapse into a single locked row, which breaks
+    // the "one returned row per requested SKU" contract the callers rely on.
+    if (aggregated.some((change) => change.duplicated)) {
+      throw new Error('Stock changes must reference each SKU at most once')
+    }
+
+    const payload = JSON.stringify(
+      aggregated.map((change) => ({
+        skuId: change.skuId,
+        quantity: change.quantity * direction,
+      })),
+    )
+
+    return tx.$queryRaw<StockRow[]>`
+      WITH requested AS (
+        SELECT "skuId", quantity
+        FROM jsonb_to_recordset(${payload}::jsonb) AS item("skuId" int, quantity int)
+      ),
+      filtered AS (
+        SELECT requested."skuId", requested.quantity
+        FROM requested
+        INNER JOIN "SKU" AS sku
+          ON sku.id = requested."skuId"
+        WHERE sku."deletedAt" IS NULL
+          AND sku.stock + requested.quantity >= 0
+      ),
+      locked AS (
+        SELECT sku.id, sku.stock, filtered.quantity
+        FROM "SKU" AS sku
+        INNER JOIN filtered
+          ON filtered."skuId" = sku.id
+        ORDER BY sku.id
+        FOR UPDATE OF sku
+      )
+      UPDATE "SKU" AS sku
+      SET stock = locked.stock + locked.quantity,
+          "updatedAt" = NOW()
+      FROM locked
+      WHERE sku.id = locked.id
+      RETURNING sku.id, sku.stock
+    `
   }
 
   async adjustStock(tx: Prisma.TransactionClient, skuId: number, quantity: number) {
@@ -69,7 +164,7 @@ export class InventoryRepository {
       WHERE id = ${skuId}
         AND "deletedAt" IS NULL
         AND stock + ${quantity} >= 0
-      RETURNING stock
+      RETURNING id, stock
     `
 
     return rows[0] ?? null
@@ -77,6 +172,16 @@ export class InventoryRepository {
 
   createTransaction(tx: Prisma.TransactionClient, data: CreateInventoryTransactionData) {
     return tx.inventoryTransaction.create({
+      data,
+    })
+  }
+
+  createTransactions(tx: Prisma.TransactionClient, data: CreateInventoryTransactionData[]) {
+    if (data.length === 0) {
+      return Promise.resolve({ count: 0 })
+    }
+
+    return tx.inventoryTransaction.createMany({
       data,
     })
   }

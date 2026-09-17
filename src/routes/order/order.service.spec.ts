@@ -32,6 +32,7 @@ describe('OrderService', () => {
     findByIdAndUserIdForUpdate: jest.fn(),
     findById: jest.fn(),
     findByIdForUpdate: jest.fn(),
+    buildInventoryReversal: jest.fn(),
     cancelIfPending: jest.fn(),
     markPendingDelivery: jest.fn(),
     markDelivered: jest.fn(),
@@ -58,8 +59,11 @@ describe('OrderService', () => {
 
   const inventoryRepository = {
     decrementStock: jest.fn(),
+    decrementStocks: jest.fn(),
     incrementStock: jest.fn(),
+    incrementStocks: jest.fn(),
     createTransaction: jest.fn(),
+    createTransactions: jest.fn(),
   }
 
   const realtimeService = {
@@ -184,9 +188,40 @@ describe('OrderService', () => {
 
     // Run the transaction callback immediately with a dummy tx client.
     orderRepository.transaction.mockImplementation((cb: (tx: unknown) => unknown) => cb({}))
-    inventoryRepository.decrementStock.mockResolvedValue({ stock: 1 })
-    inventoryRepository.incrementStock.mockResolvedValue({ stock: 9 })
+    inventoryRepository.decrementStock.mockResolvedValue({ id: 10, stock: 1 })
+    inventoryRepository.decrementStocks.mockResolvedValue([
+      { id: 10, stock: 3 },
+      { id: 11, stock: 2 },
+    ])
+    inventoryRepository.incrementStock.mockResolvedValue({ id: 10, stock: 9 })
+    inventoryRepository.incrementStocks.mockResolvedValue([
+      { id: 10, stock: 9 },
+      { id: 11, stock: 9 },
+    ])
     inventoryRepository.createTransaction.mockResolvedValue(undefined)
+    inventoryRepository.createTransactions.mockResolvedValue({ count: 2 })
+    orderRepository.buildInventoryReversal.mockImplementation(
+      (items: { skuId: number | null; quantity: number }[], stockAfterBySkuId: Map<number, number>) => {
+        const rows: { skuId: number; quantity: number; stockBefore: number; stockAfter: number }[] = []
+
+        for (const item of items) {
+          if (item.skuId === null) {
+            continue
+          }
+
+          const stockAfter = stockAfterBySkuId.get(item.skuId)!
+
+          rows.push({
+            skuId: item.skuId,
+            quantity: item.quantity,
+            stockBefore: stockAfter - item.quantity,
+            stockAfter,
+          })
+        }
+
+        return rows
+      },
+    )
     orderRepository.create.mockResolvedValue(createdOrder)
   })
 
@@ -204,12 +239,14 @@ describe('OrderService', () => {
       expect(arg.status).toBe(OrderStatus.PENDING_PAYMENT)
       expect(arg.coupon).toBeUndefined()
 
-      // Stock decremented + a SALE ledger entry per cart item
-      expect(inventoryRepository.decrementStock).toHaveBeenCalledTimes(2)
-      expect(inventoryRepository.createTransaction).toHaveBeenCalledTimes(2)
-      expect(inventoryRepository.createTransaction).toHaveBeenCalledWith(
+      // Stock and inventory ledger are both handled in bulk.
+      expect(inventoryRepository.decrementStocks).toHaveBeenCalledTimes(1)
+      expect(inventoryRepository.createTransactions).toHaveBeenCalledTimes(1)
+      expect(inventoryRepository.createTransactions).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ type: InventoryTransactionType.SALE, referenceId: ORDER_ID }),
+        expect.arrayContaining([
+          expect.objectContaining({ type: InventoryTransactionType.SALE, referenceId: ORDER_ID }),
+        ]),
       )
 
       // Cart cleared for exactly the checked-out items, email queued
@@ -244,7 +281,7 @@ describe('OrderService', () => {
       await expect(service.create(USER_ID, { addressId: validAddress.id })).rejects.toThrow(
         'SKU 10 is no longer available',
       )
-      expect(inventoryRepository.decrementStock).not.toHaveBeenCalled()
+      expect(inventoryRepository.decrementStocks).not.toHaveBeenCalled()
     })
 
     it('throws when requested quantity exceeds available stock', async () => {
@@ -357,7 +394,7 @@ describe('OrderService', () => {
     it('throws when stock is depleted between validation and decrement (race)', async () => {
       orderRepository.findAddressForCheckout.mockResolvedValue(validAddress)
       orderRepository.getCartForCheckout.mockResolvedValue(buildCartItems())
-      inventoryRepository.decrementStock.mockResolvedValueOnce(null)
+      inventoryRepository.decrementStocks.mockResolvedValueOnce([{ id: 11, stock: 2 }])
 
       await expect(service.create(USER_ID, { addressId: validAddress.id })).rejects.toThrow(
         'Insufficient stock for SKU 10',
@@ -435,10 +472,10 @@ describe('OrderService', () => {
 
       await service.cancel(USER_ID, ORDER_ID)
 
-      expect(inventoryRepository.incrementStock).toHaveBeenCalledTimes(2)
-      expect(inventoryRepository.createTransaction).toHaveBeenCalledWith(
+      expect(inventoryRepository.incrementStocks).toHaveBeenCalledTimes(1)
+      expect(inventoryRepository.createTransactions).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ type: InventoryTransactionType.RESTORE }),
+        expect.arrayContaining([expect.objectContaining({ type: InventoryTransactionType.RESTORE })]),
       )
       expect(promotionRepository.deleteUsageByOrder).toHaveBeenCalledWith(expect.anything(), ORDER_ID, 5)
       expect(promotionRepository.decrementUsage).toHaveBeenCalledWith(expect.anything(), 5)
@@ -471,17 +508,17 @@ describe('OrderService', () => {
       orderRepository.cancelIfPending.mockResolvedValue({ count: 0 })
 
       await expect(service.cancel(USER_ID, ORDER_ID)).rejects.toThrow('Order cannot be cancelled')
-      expect(inventoryRepository.incrementStock).not.toHaveBeenCalled()
+      expect(inventoryRepository.incrementStocks).not.toHaveBeenCalled()
     })
 
     it('throws when a SKU no longer exists while restoring inventory', async () => {
       orderRepository.findByIdAndUserIdForUpdate.mockResolvedValue(pendingOrder)
       orderRepository.cancelIfPending.mockResolvedValue({ count: 1 })
-      inventoryRepository.incrementStock.mockResolvedValueOnce(null)
+      inventoryRepository.incrementStocks.mockResolvedValueOnce([{ id: 11, stock: 9 }])
 
       await expect(service.cancel(USER_ID, ORDER_ID)).rejects.toThrow('SKU no longer exists while restoring inventory')
 
-      expect(inventoryRepository.createTransaction).not.toHaveBeenCalled()
+      expect(inventoryRepository.createTransactions).not.toHaveBeenCalled()
       expect(emailQueueService.addOrderCancelled).not.toHaveBeenCalled()
       expect(notificationService.create).not.toHaveBeenCalled()
       expect(realtimeService.orderCancelled).not.toHaveBeenCalled()
@@ -586,10 +623,10 @@ describe('OrderService', () => {
 
       await service.markReturned(ORDER_ID, USER_ID)
 
-      expect(inventoryRepository.incrementStock).toHaveBeenCalledTimes(2)
-      expect(inventoryRepository.createTransaction).toHaveBeenCalledWith(
+      expect(inventoryRepository.incrementStocks).toHaveBeenCalledTimes(1)
+      expect(inventoryRepository.createTransactions).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ type: InventoryTransactionType.RETURN }),
+        expect.arrayContaining([expect.objectContaining({ type: InventoryTransactionType.RETURN })]),
       )
       expect(emailQueueService.addOrderReturned).toHaveBeenCalledWith(ORDER_ID)
       expect(realtimeService.orderUpdated).toHaveBeenCalledWith(USER_ID, {
@@ -610,19 +647,19 @@ describe('OrderService', () => {
       orderRepository.markReturned.mockResolvedValue({ count: 0 })
 
       await expect(service.markReturned(ORDER_ID, USER_ID)).rejects.toThrow('Invalid order status transition')
-      expect(inventoryRepository.incrementStock).not.toHaveBeenCalled()
+      expect(inventoryRepository.incrementStocks).not.toHaveBeenCalled()
     })
 
     it('throws when a SKU no longer exists while returning inventory', async () => {
       orderRepository.findByIdForUpdate.mockResolvedValue(order)
       orderRepository.markReturned.mockResolvedValue({ count: 1 })
-      inventoryRepository.incrementStock.mockResolvedValueOnce(null)
+      inventoryRepository.incrementStocks.mockResolvedValueOnce([{ id: 11, stock: 9 }])
 
       await expect(service.markReturned(ORDER_ID, USER_ID)).rejects.toThrow(
         'SKU no longer exists while returning inventory',
       )
 
-      expect(inventoryRepository.createTransaction).not.toHaveBeenCalled()
+      expect(inventoryRepository.createTransactions).not.toHaveBeenCalled()
       expect(emailQueueService.addOrderReturned).not.toHaveBeenCalled()
       expect(realtimeService.orderUpdated).not.toHaveBeenCalled()
     })

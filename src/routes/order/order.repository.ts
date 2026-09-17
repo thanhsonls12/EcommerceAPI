@@ -2,12 +2,64 @@ import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@/shared/services/prisma.service'
 import { OrderStatus, Prisma } from '../../../generated/prisma/client'
 
+type OrderItem = Prisma.ProductSKUSnapshotGetPayload<Record<string, never>>
+
 @Injectable()
 export class OrderRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   transaction<T>(callback: (tx: Prisma.TransactionClient) => Promise<T>) {
     return this.prisma.$transaction(callback)
+  }
+
+  // Aggregate the order lines per SKU so callers can settle inventory in one
+  // statement: a null skuId means the SKU row was deleted, and the totals are
+  // the only place a bug in the order lines would show up.
+  private sumQuantitiesBySkuId(items: OrderItem[]) {
+    const quantities = new Map<number, number>()
+
+    for (const item of items) {
+      if (item.skuId === null) {
+        continue
+      }
+
+      if (!Number.isSafeInteger(item.quantity) || item.quantity <= 0) {
+        throw new Error('Order item has an invalid quantity')
+      }
+
+      quantities.set(item.skuId, (quantities.get(item.skuId) ?? 0) + item.quantity)
+    }
+
+    return quantities
+  }
+
+  // Rebuild the stock ledger from the order lines: the stock after the movement
+  // is known from the current level, so walking the totals backwards restores
+  // the exact level recorded when the order was created.
+  buildInventoryReversal(items: OrderItem[], stockAfterBySkuId: Map<number, number>) {
+    const rows: {
+      skuId: number
+      quantity: number
+      stockBefore: number
+      stockAfter: number
+    }[] = []
+
+    for (const [skuId, quantity] of this.sumQuantitiesBySkuId(items)) {
+      const stockAfter = stockAfterBySkuId.get(skuId)
+
+      if (stockAfter === undefined) {
+        throw new Error(`SKU ${skuId} no longer exists while restoring inventory`)
+      }
+
+      rows.push({
+        skuId,
+        quantity,
+        stockBefore: stockAfter - quantity,
+        stockAfter,
+      })
+    }
+
+    return rows
   }
 
   findAddressForCheckout(tx: Prisma.TransactionClient, addressId: number, userId: number) {
