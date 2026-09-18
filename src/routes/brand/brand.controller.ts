@@ -5,6 +5,7 @@ import { Permissions } from '@/shared/decorators/permissions.decorator'
 import { PermissionName } from '@/shared/constants/permission.constant'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { Public } from '@/shared/decorators/public.decorator'
 
 @ApiTags('Brands')
 @ApiBearerAuth('access-token')
@@ -13,6 +14,7 @@ export class BrandController {
   constructor(private readonly brandService: BrandService) {}
 
   @ApiOperation({ summary: 'Get brands' })
+  @Public()
   @Get()
   @Permissions(PermissionName.BrandRead)
   findAll() {

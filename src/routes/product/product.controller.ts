@@ -21,6 +21,7 @@ import { PermissionName } from '@/shared/constants/permission.constant'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { Public } from '@/shared/decorators/public.decorator'
 @ApiTags('Products')
 @ApiBearerAuth('access-token')
 @Controller('products')
@@ -28,6 +29,7 @@ export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @ApiOperation({ summary: 'Get products' })
+  @Public()
   @Get()
   @Permissions(PermissionName.ProductRead)
   findAll(@Query() query: GetProductsQueryDTO) {
@@ -35,6 +37,7 @@ export class ProductController {
   }
 
   @ApiOperation({ summary: 'Get product by id' })
+  @Public()
   @Get(':id')
   @Permissions(PermissionName.ProductRead)
   findById(@Param('id', ParseIntPipe) id: number) {

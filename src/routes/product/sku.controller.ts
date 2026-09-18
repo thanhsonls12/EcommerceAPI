@@ -5,6 +5,7 @@ import { Permissions } from '@/shared/decorators/permissions.decorator'
 import { PermissionName } from '@/shared/constants/permission.constant'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { Public } from '@/shared/decorators/public.decorator'
 
 @ApiTags('SKUs')
 @ApiBearerAuth('access-token')
@@ -13,6 +14,7 @@ export class SKUController {
   constructor(private readonly skuService: SKUService) {}
 
   @ApiOperation({ summary: 'Get SKUs for a product' })
+  @Public()
   @ApiParam({ name: 'productId', type: Number })
   @Get()
   @Permissions(PermissionName.ProductRead)
@@ -21,6 +23,7 @@ export class SKUController {
   }
 
   @ApiOperation({ summary: 'Get a product SKU by id' })
+  @Public()
   @ApiParam({ name: 'productId', type: Number })
   @ApiParam({ name: 'skuId', type: Number })
   @Get(':skuId')

@@ -5,6 +5,7 @@ import { PermissionName } from '@/shared/constants/permission.constant'
 import { CreateCategoryBodyDTO, UpdateCategoryBodyDTO } from './category.dto'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { Public } from '@/shared/decorators/public.decorator'
 
 @ApiTags('Categories')
 @ApiBearerAuth('access-token')
@@ -13,6 +14,7 @@ export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @ApiOperation({ summary: 'Get categories' })
+  @Public()
   @Get()
   @Permissions(PermissionName.CategoryRead)
   findAll() {

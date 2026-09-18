@@ -19,6 +19,7 @@ import { ReviewService } from './review.service'
 import { CreateReviewBodyDTO, GetReviewsQueryDTO, UpdateReviewBodyDTO } from './review.dto'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { Public } from '@/shared/decorators/public.decorator'
 
 @ApiTags('Reviews')
 @ApiBearerAuth('access-token')
@@ -33,6 +34,7 @@ export class ReviewController {
   }
 
   @ApiOperation({ summary: 'Get reviews for a product' })
+  @Public()
   @Get('product/:productId')
   findByProduct(
     @Param('productId', ParseIntPipe)

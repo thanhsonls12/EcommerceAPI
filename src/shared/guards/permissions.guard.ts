@@ -5,6 +5,7 @@ import { PERMISSIONS_KEY } from '../decorators/permissions.decorator'
 import { REQUEST_USER_KEY } from '../constants/auth.constant'
 import type { Request } from 'express'
 import { MESSAGE } from '../constants/message.constant'
+import { PUBLIC_KEY } from '../decorators/public.decorator'
 
 type RequestUser = {
   userId: number
@@ -18,6 +19,9 @@ export class PermissionsGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(PUBLIC_KEY, [context.getHandler(), context.getClass()])
+    if (isPublic) return true
+
     const requiredPermissions = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
       context.getHandler(),
       context.getClass(),
