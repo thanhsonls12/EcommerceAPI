@@ -13,10 +13,10 @@ export function date(value?: string) {
 }
 
 export function discountPercent(product: Product) {
-  const base = Number(product.basePrice)
-  const sale = Number(product.virtualPrice)
-  if (!base || sale >= base) return 0
-  return Math.round((1 - sale / base) * 100)
+  const current = Number(product.basePrice)
+  const compareAt = Number(product.virtualPrice)
+  if (!current || compareAt <= current) return 0
+  return Math.round((1 - current / compareAt) * 100)
 }
 
 export function productImage(product?: Pick<Product, 'images'> | null, sku?: Pick<Sku, 'image'> | null) {
