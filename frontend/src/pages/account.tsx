@@ -182,6 +182,7 @@ function AccountNav() {
       <NavLink to="/account/orders">Đơn hàng</NavLink>
       <NavLink to="/account/addresses">Địa chỉ</NavLink>
       <NavLink to="/account">Tài khoản</NavLink>
+      <NavLink to="/account/security">Bảo mật</NavLink>
     </nav>
   )
 }
@@ -307,13 +308,23 @@ export function OrderDetailPage() {
 function ReviewForm({ orderId, productId, productName }: { orderId: number; productId: number; productName: string }) {
   const [rating, setRating] = useState(5)
   const [content, setContent] = useState('')
+  const [files, setFiles] = useState<File[]>([])
   const [submitted, setSubmitted] = useState(false)
   const mutation = useMutation({
-    mutationFn: () =>
-      api('/reviews', {
+    mutationFn: async () => {
+      const review = await api<{ id: number }>('/reviews', {
         method: 'POST',
         body: JSON.stringify({ orderId, productId, rating, content: content.trim() }),
-      }),
+      })
+      await Promise.all(
+        files.slice(0, 5).map((file) => {
+          const formData = new FormData()
+          formData.append('media', file)
+          return api(`/reviews/${review.id}/media`, { method: 'POST', body: formData })
+        }),
+      )
+      return review
+    },
     onSuccess: () => setSubmitted(true),
   })
   if (submitted) return <div className="inline-alert success">Cảm ơn bạn đã đánh giá {productName}.</div>
@@ -346,6 +357,13 @@ function ReviewForm({ orderId, productId, productName }: { orderId: number; prod
         maxLength={2000}
         required
         placeholder="Điều bạn thích ở sản phẩm này?"
+      />
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        onChange={(event) => setFiles(Array.from(event.target.files || []).slice(0, 5))}
+        aria-label="Ảnh đánh giá (không bắt buộc)"
       />
       {mutation.isError ? (
         <div className="inline-alert error">

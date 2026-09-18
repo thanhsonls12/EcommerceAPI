@@ -11,6 +11,7 @@ import { CheckoutPage } from './pages/checkout'
 import { AccountPage, AddressesPage, OrderDetailPage, OrdersPage } from './pages/account'
 import { HomePage, ProductDetailPage, ProductsPage, CartPage } from './pages/storefront'
 import { NotFoundPage, PaymentPage } from './pages/misc'
+import { SecurityPage } from './pages/security'
 import type { Cart, GuestCartItem, Product, Sku, User } from './types'
 
 function App() {
@@ -166,6 +167,7 @@ function AppRoutes() {
       <Route path="/account/orders" element={<OrdersPage />} />
       <Route path="/account/orders/:id" element={<OrderDetailPage />} />
       <Route path="/account/addresses" element={<AddressesPage />} />
+      <Route path="/account/security" element={<SecurityPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )

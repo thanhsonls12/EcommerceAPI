@@ -116,7 +116,8 @@ export async function api<T>(path: string, options: RequestInit | boolean = {}, 
   const requestOptions = typeof options === 'boolean' ? {} : options
   const requestAuth = typeof options === 'boolean' ? options : auth
   const headers = new Headers(requestOptions.headers)
-  if (requestOptions.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+  if (requestOptions.body && !(requestOptions.body instanceof FormData) && !headers.has('Content-Type'))
+    headers.set('Content-Type', 'application/json')
   if (requestAuth) {
     const token = getAccessToken()
     if (token) headers.set('Authorization', `Bearer ${token}`)

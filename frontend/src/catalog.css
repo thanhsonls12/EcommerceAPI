@@ -1,0 +1,17 @@
+.price-filter {
+  display: grid;
+  gap: 12px;
+}
+.price-filter > strong {
+  font-size: 12px;
+}
+.price-filter-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.price-filter-fields input {
+  min-width: 0;
+  padding: 9px 8px;
+  font-size: 11px;
+}

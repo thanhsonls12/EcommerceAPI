@@ -141,10 +141,12 @@ export function ProductsPage() {
   const search = params.get('search') || ''
   const categoryId = params.get('categoryId') || ''
   const brandId = params.get('brandId') || ''
+  const minPrice = params.get('minPrice') || ''
+  const maxPrice = params.get('maxPrice') || ''
   const sortBy = params.get('sortBy') || 'createdAt'
   const sortOrder = params.get('sortOrder') || 'desc'
   const page = Number(params.get('page') || 1)
-  const query = `/products?page=${page}&limit=12${search ? `&search=${encodeURIComponent(search)}` : ''}${categoryId ? `&categoryId=${categoryId}` : ''}${brandId ? `&brandId=${brandId}` : ''}&sortBy=${sortBy}&sortOrder=${sortOrder}`
+  const query = `/products?page=${page}&limit=12${search ? `&search=${encodeURIComponent(search)}` : ''}${categoryId ? `&categoryId=${categoryId}` : ''}${brandId ? `&brandId=${brandId}` : ''}${minPrice ? `&minPrice=${minPrice}` : ''}${maxPrice ? `&maxPrice=${maxPrice}` : ''}&sortBy=${sortBy}&sortOrder=${sortOrder}`
   const products = useQuery({ queryKey: ['products', query], queryFn: () => api<ProductListResponse>(query, false) })
   const categories = useQuery({ queryKey: ['categories'], queryFn: () => api<Category[]>('/categories', false) })
   const brands = useQuery({ queryKey: ['brands'], queryFn: () => api<Brand[]>('/brands', false) })
@@ -228,7 +230,28 @@ export function ProductsPage() {
               </button>
             ))}
           </FilterGroup>
-          {categoryId || brandId || search ? (
+          <div className="price-filter">
+            <strong>Khoảng giá</strong>
+            <div className="price-filter-fields">
+              <input
+                type="number"
+                min="0"
+                value={minPrice}
+                onChange={(event) => setParam('minPrice', event.target.value)}
+                placeholder="Từ"
+                aria-label="Giá từ"
+              />
+              <input
+                type="number"
+                min="0"
+                value={maxPrice}
+                onChange={(event) => setParam('maxPrice', event.target.value)}
+                placeholder="Đến"
+                aria-label="Giá đến"
+              />
+            </div>
+          </div>
+          {categoryId || brandId || search || minPrice || maxPrice ? (
             <Button
               variant="ghost"
               className="clear-filter"

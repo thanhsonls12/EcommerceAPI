@@ -113,7 +113,8 @@ Header desktop gồm logo, tìm kiếm lớn, danh mục, tài khoản và giỏ
 1. Cho phép sửa số lượng và xóa tại chỗ; cập nhật lạc quan nhưng rollback kèm thông báo nếu API lỗi.
 2. Tổng tiền luôn do backend trả về; frontend không tự quyết định giá hoặc giảm giá.
 3. Checkout chọn địa chỉ có sẵn trước, “Thêm địa chỉ” mở dialog gọn. Địa chỉ mặc định được chọn sẵn.
-4. Coupon được kiểm tra khi tạo đơn theo API hiện tại; lỗi coupon hiển thị ngay cạnh trường và không xóa dữ liệu đã nhập.
+4. Filter catalog hỗ trợ danh mục, thương hiệu và khoảng giá; trạng thái filter nằm trong URL để back/forward vẫn đúng.
+5. Coupon được kiểm tra khi tạo đơn theo API hiện tại; lỗi coupon hiển thị ngay cạnh trường và không xóa dữ liệu đã nhập.
 5. Tạo đơn và tạo payment là hai mutation có trạng thái riêng. Không tạo lặp đơn khi double-click.
 6. Trang success không tuyên bố “đã thanh toán” chỉ dựa vào redirect; cần đọc lại trạng thái đơn/payment rồi mới kết luận.
 
