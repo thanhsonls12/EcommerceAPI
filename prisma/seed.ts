@@ -1,4 +1,13 @@
-import { PrismaClient, UserStatus } from '../generated/prisma/client'
+import {
+  DiscountType,
+  InventoryTransactionType,
+  NotificationType,
+  OrderStatus,
+  PaymentStatus,
+  Prisma,
+  PrismaClient,
+  UserStatus,
+} from '../generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 import bcrypt from 'bcrypt'
@@ -280,6 +289,44 @@ async function main() {
     },
   })
 
+  const demoPassword = process.env.DEMO_USER_PASSWORD ?? 'Demo@123456'
+  const hashedDemoPassword = await bcrypt.hash(demoPassword, 10)
+
+  const seedUser = async (email: string, name: string, phoneNumber: string, roleId: number) =>
+    prisma.user.upsert({
+      where: { email },
+      update: {
+        name,
+        phoneNumber,
+        password: hashedDemoPassword,
+        status: UserStatus.ACTIVE,
+        roleId,
+        deletedAt: null,
+      },
+      create: {
+        email,
+        name,
+        phoneNumber,
+        password: hashedDemoPassword,
+        status: UserStatus.ACTIVE,
+        roleId,
+      },
+    })
+
+  const sellerUser = await seedUser('seller.demo@example.com', 'Demo Seller', '0900000001', sellerRole.id)
+  const clientUser = await seedUser('client.demo@example.com', 'Demo Customer', '0900000002', clientRole.id)
+
+  await prisma.language.upsert({
+    where: { id: 'vi' },
+    update: { name: 'Tiếng Việt', deletedAt: null, updatedById: adminUser.id },
+    create: { id: 'vi', name: 'Tiếng Việt', createdById: adminUser.id },
+  })
+  await prisma.language.upsert({
+    where: { id: 'en' },
+    update: { name: 'English', deletedAt: null, updatedById: adminUser.id },
+    create: { id: 'en', name: 'English', createdById: adminUser.id },
+  })
+
   const seedBrand = async (name: string, logo: string) => {
     const existingBrand = await prisma.brand.findFirst({
       where: { name },
@@ -308,6 +355,8 @@ async function main() {
 
   const apple = await seedBrand('Apple', 'https://placehold.co/400x400?text=Apple')
   const samsung = await seedBrand('Samsung', 'https://placehold.co/400x400?text=Samsung')
+  const logitech = await seedBrand('Logitech', 'https://placehold.co/400x400?text=Logitech')
+  const sony = await seedBrand('Sony', 'https://placehold.co/400x400?text=Sony')
 
   const seedCategory = async (name: string, parentCategoryId?: number) => {
     const existingCategory = await prisma.category.findFirst({
@@ -340,6 +389,44 @@ async function main() {
   const electronics = await seedCategory('Electronics')
   const phones = await seedCategory('Phones', electronics.id)
   const laptops = await seedCategory('Laptops', electronics.id)
+  const accessories = await seedCategory('Accessories', electronics.id)
+  const audio = await seedCategory('Audio', electronics.id)
+
+  for (const [brand, viName, description] of [
+    [apple, 'Apple', 'Thiết bị và phụ kiện Apple'],
+    [samsung, 'Samsung', 'Thiết bị điện tử Samsung'],
+    [logitech, 'Logitech', 'Phụ kiện máy tính Logitech'],
+    [sony, 'Sony', 'Thiết bị âm thanh Sony'],
+  ] as const) {
+    for (const languageId of ['vi', 'en'] as const) {
+      await prisma.brandTranslation.upsert({
+        where: { brandId_languageId: { brandId: brand.id, languageId } },
+        update: { name: viName, description, deletedAt: null, updatedById: adminUser.id },
+        create: { brandId: brand.id, languageId, name: viName, description, createdById: adminUser.id },
+      })
+    }
+  }
+
+  for (const category of [electronics, phones, laptops, accessories, audio]) {
+    for (const languageId of ['vi', 'en'] as const) {
+      await prisma.categoryTranslation.upsert({
+        where: { categoryId_languageId: { categoryId: category.id, languageId } },
+        update: {
+          name: category.name,
+          description: `Seeded ${category.name} category`,
+          deletedAt: null,
+          updatedById: adminUser.id,
+        },
+        create: {
+          categoryId: category.id,
+          languageId,
+          name: category.name,
+          description: `Seeded ${category.name} category`,
+          createdById: adminUser.id,
+        },
+      })
+    }
+  }
 
   const productSeeds = [
     ['iPhone 17 Pro', 28990000, 31990000, apple.id, phones.id],
@@ -372,52 +459,394 @@ async function main() {
     ['Samsung Galaxy Book4 Edge', 25990000, 29990000, samsung.id, laptops.id],
     ['iPhone 16e', 16990000, 18990000, apple.id, phones.id],
     ['Samsung Galaxy Z Flip7', 25990000, 28990000, samsung.id, phones.id],
+    ['Logitech MX Master 4', 2990000, 3490000, logitech.id, accessories.id],
+    ['Logitech MX Keys S', 2590000, 2990000, logitech.id, accessories.id],
+    ['Sony WH-1000XM6', 8990000, 9990000, sony.id, audio.id],
+    ['Sony WF-1000XM6', 5990000, 6990000, sony.id, audio.id],
   ] as const
 
   let seededProducts = 0
+  let seededSkus = 0
+  const seededProductRecords: Array<{ id: number; name: string }> = []
+
+  const buildSeedVariantData = (name: string, categoryId: number, basePrice: number) => {
+    if (categoryId === phones.id) {
+      return {
+        variants: [
+          { name: 'Color', options: ['Black', 'White'] },
+          { name: 'Storage', options: ['256GB', '512GB'] },
+        ],
+        skus: [
+          { value: { Color: 'Black', Storage: '256GB' }, price: basePrice, stock: 30 },
+          { value: { Color: 'White', Storage: '256GB' }, price: basePrice + 500000, stock: 22 },
+          { value: { Color: 'Black', Storage: '512GB' }, price: basePrice + 2500000, stock: 16 },
+          { value: { Color: 'White', Storage: '512GB' }, price: basePrice + 3000000, stock: 12 },
+        ],
+      }
+    }
+
+    if (categoryId === laptops.id) {
+      return {
+        variants: [
+          { name: 'Memory', options: ['16GB', '32GB'] },
+          { name: 'Storage', options: ['512GB', '1TB'] },
+        ],
+        skus: [
+          { value: { Memory: '16GB', Storage: '512GB' }, price: basePrice, stock: 18 },
+          { value: { Memory: '16GB', Storage: '1TB' }, price: basePrice + 3000000, stock: 14 },
+          { value: { Memory: '32GB', Storage: '512GB' }, price: basePrice + 4500000, stock: 10 },
+          { value: { Memory: '32GB', Storage: '1TB' }, price: basePrice + 7500000, stock: 8 },
+        ],
+      }
+    }
+
+    if (name.includes('MX Master')) {
+      return {
+        variants: [{ name: 'Color', options: ['Graphite', 'Pale Grey', 'Black', 'White'] }],
+        skus: [
+          { value: { Color: 'Graphite' }, price: basePrice, stock: 35 },
+          { value: { Color: 'Pale Grey' }, price: basePrice, stock: 24 },
+          { value: { Color: 'Black' }, price: basePrice + 100000, stock: 28 },
+          { value: { Color: 'White' }, price: basePrice + 100000, stock: 20 },
+        ],
+      }
+    }
+
+    if (name.includes('MX Keys')) {
+      return {
+        variants: [
+          { name: 'Color', options: ['Graphite', 'Pale Grey'] },
+          { name: 'Layout', options: ['US', 'UK'] },
+        ],
+        skus: [
+          { value: { Color: 'Graphite', Layout: 'US' }, price: basePrice, stock: 26 },
+          { value: { Color: 'Graphite', Layout: 'UK' }, price: basePrice + 100000, stock: 17 },
+          { value: { Color: 'Pale Grey', Layout: 'US' }, price: basePrice, stock: 21 },
+          { value: { Color: 'Pale Grey', Layout: 'UK' }, price: basePrice + 100000, stock: 13 },
+        ],
+      }
+    }
+
+    return {
+      variants: [{ name: 'Color', options: ['Black', 'Silver', 'Blue', 'White'] }],
+      skus: [
+        { value: { Color: 'Black' }, price: basePrice, stock: 32 },
+        { value: { Color: 'Silver' }, price: basePrice, stock: 20 },
+        { value: { Color: 'Blue' }, price: basePrice + 200000, stock: 18 },
+        { value: { Color: 'White' }, price: basePrice + 200000, stock: 15 },
+      ],
+    }
+  }
 
   for (const [name, basePrice, virtualPrice, brandId, categoryId] of productSeeds) {
     const existingProduct = await prisma.product.findFirst({ where: { name } })
+    const variantData = buildSeedVariantData(name, categoryId, basePrice)
     const data = {
       basePrice,
       virtualPrice,
       brandId,
       images: [`https://placehold.co/800x800?text=${encodeURIComponent(name)}`],
-      variants: [
-        { name: 'Color', options: ['Black', 'White'] },
-        { name: 'Storage', options: ['256GB', '512GB'] },
-      ],
+      variants: variantData.variants,
       deletedAt: null,
       deletedById: null,
       updatedById: adminUser.id,
     }
 
-    if (existingProduct) {
-      await prisma.product.update({
-        where: { id: existingProduct.id },
-        data: {
-          ...data,
-          categories: { set: [{ id: categoryId }] },
+    const product = existingProduct
+      ? await prisma.product.update({
+          where: { id: existingProduct.id },
+          data: {
+            ...data,
+            categories: { set: [{ id: categoryId }] },
+          },
+        })
+      : await prisma.product.create({
+          data: {
+            name,
+            ...data,
+            categories: { connect: [{ id: categoryId }] },
+            createdById: adminUser.id,
+          },
+        })
+
+    seededProductRecords.push({ id: product.id, name: product.name })
+
+    for (const languageId of ['vi', 'en'] as const) {
+      await prisma.productTranslation.upsert({
+        where: { productId_languageId: { productId: product.id, languageId } },
+        update: {
+          name: product.name,
+          description: `${product.name} demo product for ecommerce testing`,
+          deletedAt: null,
+          updatedById: adminUser.id,
         },
-      })
-    } else {
-      await prisma.product.create({
-        data: {
-          name,
-          ...data,
-          categories: { connect: [{ id: categoryId }] },
+        create: {
+          productId: product.id,
+          languageId,
+          name: product.name,
+          description: `${product.name} demo product for ecommerce testing`,
           createdById: adminUser.id,
         },
       })
     }
 
+    const currentSkus = await prisma.sku.findMany({ where: { productId: product.id }, orderBy: { id: 'asc' } })
+    for (const [skuIndex, skuSeed] of variantData.skus.entries()) {
+      const existingSku = currentSkus[skuIndex]
+      const image = `https://placehold.co/800x800?text=${encodeURIComponent(`${name} ${Object.values(skuSeed.value).join(' ')}`)}`
+      const sku = existingSku
+        ? await prisma.sku.update({
+            where: { id: existingSku.id },
+            data: {
+              value: skuSeed.value,
+              price: skuSeed.price,
+              stock: skuSeed.stock,
+              image,
+              deletedAt: null,
+              deletedById: null,
+              updatedById: adminUser.id,
+            },
+          })
+        : await prisma.sku.create({
+            data: {
+              productId: product.id,
+              value: skuSeed.value,
+              price: skuSeed.price,
+              stock: skuSeed.stock,
+              image,
+              createdById: adminUser.id,
+            },
+          })
+
+      const seedInventoryNote = 'Initial demo inventory seed'
+      const inventoryExists = await prisma.inventoryTransaction.findFirst({
+        where: { skuId: sku.id, type: InventoryTransactionType.RESTOCK, note: seedInventoryNote },
+      })
+      if (inventoryExists) {
+        await prisma.inventoryTransaction.update({
+          where: { id: inventoryExists.id },
+          data: {
+            quantity: sku.stock,
+            stockBefore: 0,
+            stockAfter: sku.stock,
+          },
+        })
+      } else {
+        await prisma.inventoryTransaction.create({
+          data: {
+            skuId: sku.id,
+            type: InventoryTransactionType.RESTOCK,
+            quantity: sku.stock,
+            stockBefore: 0,
+            stockAfter: sku.stock,
+            note: seedInventoryNote,
+            createdById: adminUser.id,
+          },
+        })
+      }
+
+      seededSkus += 1
+    }
+
     seededProducts += 1
+  }
+
+  const mediaProductIds = seededProductRecords.slice(0, 8)
+  for (const product of mediaProductIds) {
+    const url = `https://placehold.co/1200x800?text=${encodeURIComponent(product.name)}`
+    const exists = await prisma.productMedia.findFirst({ where: { productId: product.id, url } })
+    if (!exists) {
+      await prisma.productMedia.create({ data: { productId: product.id, url, type: 'IMAGE' } })
+    }
+  }
+
+  const now = new Date()
+  const month = 30 * 24 * 60 * 60 * 1000
+  const promotionSeeds = [
+    {
+      code: 'WELCOME10',
+      name: 'Welcome 10%',
+      description: '10% off for demo checkout',
+      type: DiscountType.PERCENT,
+      value: 10,
+      minOrderValue: 500000,
+      maxDiscount: 2000000,
+      usageLimit: 1000,
+    },
+    {
+      code: 'SAVE500K',
+      name: 'Save 500K',
+      description: '500,000 VND fixed discount',
+      type: DiscountType.FIXED,
+      value: 500000,
+      minOrderValue: 5000000,
+      maxDiscount: null,
+      usageLimit: 500,
+    },
+  ]
+
+  for (const promotion of promotionSeeds) {
+    await prisma.promotion.upsert({
+      where: { code: promotion.code },
+      update: {
+        ...promotion,
+        startsAt: new Date(now.getTime() - month),
+        expiresAt: new Date(now.getTime() + 12 * month),
+        isActive: true,
+        deletedAt: null,
+      },
+      create: {
+        ...promotion,
+        startsAt: new Date(now.getTime() - month),
+        expiresAt: new Date(now.getTime() + 12 * month),
+        isActive: true,
+      },
+    })
+  }
+
+  const addressSeeds = [
+    {
+      name: 'Demo Customer',
+      phoneNumber: '0900000002',
+      address: '1 Demo Street, Hanoi',
+      note: 'Home',
+      isDefault: true,
+    },
+    {
+      name: 'Demo Customer',
+      phoneNumber: '0900000002',
+      address: '99 Test Avenue, Hanoi',
+      note: 'Office',
+      isDefault: false,
+    },
+  ]
+  for (const addressSeed of addressSeeds) {
+    const existing = await prisma.address.findFirst({ where: { userId: clientUser.id, address: addressSeed.address } })
+    if (existing) {
+      await prisma.address.update({ where: { id: existing.id }, data: { ...addressSeed, deletedAt: null } })
+    } else {
+      await prisma.address.create({ data: { userId: clientUser.id, ...addressSeed } })
+    }
+  }
+
+  const firstSkus = await prisma.sku.findMany({
+    where: { deletedAt: null },
+    orderBy: { id: 'asc' },
+    take: 3,
+  })
+  for (const [index, sku] of firstSkus.entries()) {
+    await prisma.cartItem.upsert({
+      where: { userId_skuId: { userId: clientUser.id, skuId: sku.id } },
+      update: { quantity: index + 1 },
+      create: { userId: clientUser.id, skuId: sku.id, quantity: index + 1 },
+    })
+  }
+
+  const sampleSku = firstSkus[0]
+  const sampleProduct = sampleSku ? await prisma.product.findUnique({ where: { id: sampleSku.productId } }) : null
+  const sampleAddress = await prisma.address.findFirst({
+    where: { userId: clientUser.id, isDefault: true, deletedAt: null },
+  })
+
+  let demoOrder = await prisma.order.findFirst({
+    where: { userId: clientUser.id, receiver: { path: ['seedKey'], equals: 'demo-delivered-order' } },
+  })
+
+  if (sampleSku && sampleProduct && sampleAddress && !demoOrder) {
+    const payment = await prisma.payment.create({
+      data: {
+        status: PaymentStatus.SUCCESS,
+        amount: sampleSku.price,
+        gateway: 'SEED',
+        reference: `seed-${clientUser.id}-delivered`,
+      },
+    })
+
+    demoOrder = await prisma.order.create({
+      data: {
+        userId: clientUser.id,
+        status: OrderStatus.DELIVERED,
+        receiver: {
+          seedKey: 'demo-delivered-order',
+          name: sampleAddress.name,
+          phoneNumber: sampleAddress.phoneNumber,
+          address: sampleAddress.address,
+          note: sampleAddress.note,
+        },
+        subtotal: sampleSku.price,
+        total: sampleSku.price,
+        discount: 0,
+        paymentId: payment.id,
+        createdById: clientUser.id,
+        products: { connect: [{ id: sampleProduct.id }] },
+        items: {
+          create: {
+            productName: sampleProduct.name,
+            skuPrice: sampleSku.price,
+            image: sampleSku.image,
+            skuValue: sampleSku.value as Prisma.InputJsonValue,
+            skuId: sampleSku.id,
+            quantity: 1,
+            productId: sampleProduct.id,
+            productTranslations: [],
+          },
+        },
+      },
+    })
+
+    await prisma.paymentTransaction.create({
+      data: {
+        paymentId: payment.id,
+        gateway: 'SEED',
+        amountIn: Number(sampleSku.price),
+        referenceNumber: `seed-txn-${payment.id}`,
+        transactionContent: `Demo payment for order ${demoOrder.id}`,
+      },
+    })
+  }
+
+  if (demoOrder && sampleProduct) {
+    await prisma.review.upsert({
+      where: { orderId_productId: { orderId: demoOrder.id, productId: sampleProduct.id } },
+      update: { rating: 5, content: 'Great demo product!', deletedAt: null },
+      create: {
+        orderId: demoOrder.id,
+        productId: sampleProduct.id,
+        userId: clientUser.id,
+        rating: 5,
+        content: 'Great demo product!',
+      },
+    })
+  }
+
+  const notificationExists = await prisma.notification.findFirst({
+    where: { userId: clientUser.id, title: 'Welcome to Ecommerce Demo' },
+  })
+  if (!notificationExists) {
+    await prisma.notification.create({
+      data: {
+        userId: clientUser.id,
+        type: NotificationType.SYSTEM,
+        title: 'Welcome to Ecommerce Demo',
+        content: 'Your demo account is ready for end-to-end testing.',
+        data: { source: 'seed' },
+      },
+    })
+  }
+
+  const messageExists = await prisma.message.findFirst({
+    where: { fromUserId: sellerUser.id, toUserId: clientUser.id, content: 'Welcome to the demo store!' },
+  })
+  if (!messageExists) {
+    await prisma.message.create({
+      data: { fromUserId: sellerUser.id, toUserId: clientUser.id, content: 'Welcome to the demo store!' },
+    })
   }
 
   console.log(
     `Seeded ${allPermissions.length} permissions, 3 roles, 1 admin user, ` +
-      `brands [${apple.id}, ${samsung.id}], categories [${electronics.id}, ${phones.id}, ${laptops.id}], ` +
-      `${seededProducts} products.`,
+      `4 brands, 5 categories, ${seededProducts} products, ${seededSkus} SKUs, inventory history, ` +
+      `2 promotions, demo users, addresses, cart, order/payment/review, notification and message data.`,
   )
 }
 
