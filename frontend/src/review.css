@@ -1,0 +1,54 @@
+.review-forms {
+  display: grid;
+  gap: 13px;
+  padding: 22px;
+  margin-bottom: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.review-forms h3 {
+  font-size: 17px;
+}
+.review-form {
+  display: grid;
+  gap: 10px;
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+}
+.review-form > strong {
+  font-size: 12px;
+}
+.review-form textarea {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  background: var(--surface);
+  color: var(--text);
+  outline: 0;
+  font: inherit;
+  font-size: 12px;
+}
+.review-form textarea:focus {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px rgb(79 117 208 / 0.18);
+}
+.review-rating-input {
+  display: flex;
+  gap: 3px;
+  color: var(--text-muted);
+}
+.review-rating-input button {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+.review-rating-input button.active {
+  color: var(--accent);
+}
+.success-text {
+  color: var(--success) !important;
+}

@@ -1,78 +1,2154 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, CircleUserRound, Heart, LoaderCircle, LockKeyhole, Menu, Minus, Package, Plus, Search, ShieldCheck, ShoppingBag, Star, Trash2, Truck, UserRound, X } from 'lucide-react'
+import {
+  Link,
+  Navigate,
+  NavLink,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom'
+import {
+  ArrowRight,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CircleUserRound,
+  Heart,
+  LoaderCircle,
+  LockKeyhole,
+  Menu,
+  Minus,
+  Package,
+  Plus,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  Star,
+  Trash2,
+  Truck,
+  UserRound,
+  X,
+} from 'lucide-react'
 import { ApiError, api, clearTokens, getAccessToken, getRefreshToken, setTokens } from './api'
 import { date, discountPercent, initials, money, productImage, skuLabel } from './lib'
-import type { Address, Brand, Cart, CartItem, Category, GuestCartItem, Order, Product, ProductListResponse, ProductVariant, ReviewResponse, Sku, User } from './types'
+import type {
+  Address,
+  Brand,
+  Cart,
+  CartItem,
+  Category,
+  GuestCartItem,
+  Order,
+  Product,
+  ProductListResponse,
+  ProductVariant,
+  ReviewResponse,
+  Sku,
+  User,
+} from './types'
 
 type Notice = { kind: 'success' | 'error' | 'info'; text: string }
-type AuthContextValue = { user: User | null; login: (user: User, accessToken: string, refreshToken: string) => void; logout: () => void }
-type CommerceContextValue = { user: User | null; cart: Cart | null; guestCart: GuestCartItem[]; addToCart: (sku: Sku, product: Product, quantity?: number) => Promise<void>; updateCart: (skuId: number, quantity: number) => Promise<void>; removeFromCart: (skuId: number) => Promise<void>; refreshCart: () => Promise<void>; cartCount: number }
+type AuthContextValue = {
+  user: User | null
+  login: (user: User, accessToken: string, refreshToken: string) => void
+  logout: () => void
+}
+type CommerceContextValue = {
+  user: User | null
+  cart: Cart | null
+  guestCart: GuestCartItem[]
+  addToCart: (sku: Sku, product: Product, quantity?: number) => Promise<void>
+  updateCart: (skuId: number, quantity: number) => Promise<void>
+  removeFromCart: (skuId: number) => Promise<void>
+  refreshCart: () => Promise<void>
+  cartCount: number
+}
 const AuthContext = createContext<AuthContextValue | null>(null)
 const CommerceContext = createContext<CommerceContextValue | null>(null)
 const guestCartKey = 'ecommerce-guest-cart'
-function useAuth() { const value = useContext(AuthContext); if (!value) throw new Error('AuthContext missing'); return value }
-function useCommerce() { const value = useContext(CommerceContext); if (!value) throw new Error('CommerceContext missing'); return value }
-function readGuestCart(): GuestCartItem[] { try { return JSON.parse(localStorage.getItem(guestCartKey) || '[]') as GuestCartItem[] } catch { return [] } }
-function saveGuestCart(items: GuestCartItem[]) { localStorage.setItem(guestCartKey, JSON.stringify(items)) }
-
-function Field({ label, error, children, hint }: { label: string; error?: string; hint?: string; children: ReactNode }) { return <label className={`field ${error ? 'has-error' : ''}`}><span>{label}</span>{children}{hint && !error ? <small>{hint}</small> : null}{error ? <small className="field-error">{error}</small> : null}</label> }
-function Button({ children, variant = 'primary', type = 'button', loading = false, disabled = false, className = '', onClick }: { children: ReactNode; variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; type?: 'button' | 'submit'; loading?: boolean; disabled?: boolean; className?: string; onClick?: () => void }) { return <button type={type} className={`button button-${variant} ${className}`} disabled={disabled || loading} onClick={onClick}>{loading ? <LoaderCircle size={16} className="spin" /> : null}{children}</button> }
-function Stars({ value, count }: { value: number; count?: number }) { return <span className="rating" aria-label={`${value.toFixed(1)} trên 5 sao`}>{[1, 2, 3, 4, 5].map((star) => <Star key={star} size={14} fill={star <= Math.round(value) ? 'currentColor' : 'none'} />)}{count !== undefined ? <small>({count})</small> : null}</span> }
-function ProductCard({ product }: { product: Product }) { const percent = discountPercent(product); return <article className="product-card"><Link to={`/products/${product.id}`} className="product-card-image">{percent > 0 ? <span className="badge badge-sale">-{percent}%</span> : null}<img src={productImage(product)} alt={product.name} loading="lazy" /><span className="card-quick">Xem chi tiết <ArrowRight size={14} /></span></Link><div className="product-card-body"><div className="eyebrow">{product.brand?.name || 'ELECTRONICS'}</div><Link to={`/products/${product.id}`} className="product-name">{product.name}</Link><div className="price-row"><strong>{money(product.basePrice)}</strong>{percent > 0 ? <del>{money(product.virtualPrice)}</del> : null}</div></div></article> }
-function ProductSkeleton() { return <div className="product-card skeleton-card"><div className="skeleton skeleton-image" /><div className="skeleton skeleton-line" /><div className="skeleton skeleton-short" /></div> }
-function EmptyState({ icon, title, text, action }: { icon?: ReactNode; title: string; text: string; action?: ReactNode }) { return <div className="empty-state">{icon || <ShoppingBag size={28} />}<h3>{title}</h3><p>{text}</p>{action}</div> }
-
-function App() {
-  const queryClient = useQueryClient(); const [user, setUser] = useState<User | null>(() => { try { return JSON.parse(localStorage.getItem('ecommerce-user') || 'null') as User | null } catch { return null } }); const [guestCart, setGuestCart] = useState<GuestCartItem[]>(readGuestCart); const [notice, setNotice] = useState<Notice | null>(null)
-  const cartQuery = useQuery({ queryKey: ['cart'], queryFn: () => api<Cart>('/cart'), enabled: Boolean(user) }); const meQuery = useQuery({ queryKey: ['me'], queryFn: () => api<User>('/users/me'), enabled: Boolean(getAccessToken()) && !user, retry: false })
-  useEffect(() => { if (meQuery.data) { setUser(meQuery.data); localStorage.setItem('ecommerce-user', JSON.stringify(meQuery.data)) } }, [meQuery.data]); useEffect(() => { saveGuestCart(guestCart) }, [guestCart]); useEffect(() => { if (notice) { const timer = window.setTimeout(() => setNotice(null), 4200); return () => window.clearTimeout(timer) } }, [notice])
-  const login = useCallback((nextUser: User, accessToken: string, refreshToken: string) => { setTokens(accessToken, refreshToken); setUser(nextUser); localStorage.setItem('ecommerce-user', JSON.stringify(nextUser)); if (guestCart.length) { void Promise.all(guestCart.map((item) => api('/cart/items', { method: 'POST', body: JSON.stringify({ skuId: item.skuId, quantity: item.quantity }) }))).then(() => { setGuestCart([]); void queryClient.invalidateQueries({ queryKey: ['cart'] }) }) } }, [guestCart, queryClient])
-  const logout = useCallback(() => { const refreshToken = getRefreshToken(); if (refreshToken) void api('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) }, false).catch(() => undefined); clearTokens(); localStorage.removeItem('ecommerce-user'); setUser(null); queryClient.removeQueries({ queryKey: ['cart'] }) }, [queryClient])
-  const addToCart = useCallback(async (sku: Sku, product: Product, quantity = 1) => { if (user) { await api('/cart/items', { method: 'POST', body: JSON.stringify({ skuId: sku.id, quantity }) }); await queryClient.invalidateQueries({ queryKey: ['cart'] }); setNotice({ kind: 'success', text: 'Đã thêm sản phẩm vào giỏ hàng.' }); return } setGuestCart((current) => { const existing = current.find((item) => item.skuId === sku.id); if (existing) return current.map((item) => item.skuId === sku.id ? { ...item, quantity: Math.min(item.quantity + quantity, 99) } : item); return [...current, { skuId: sku.id, quantity, sku, product: { id: product.id, name: product.name, images: product.images } }] }); setNotice({ kind: 'success', text: 'Đã thêm sản phẩm vào giỏ hàng.' }) }, [queryClient, user])
-  const updateCart = useCallback(async (skuId: number, quantity: number) => { if (quantity < 1) return; if (user) { await api(`/cart/items/${skuId}`, { method: 'PATCH', body: JSON.stringify({ quantity }) }); await queryClient.invalidateQueries({ queryKey: ['cart'] }) } else setGuestCart((current) => current.map((item) => item.skuId === skuId ? { ...item, quantity } : item)) }, [queryClient, user])
-  const removeFromCart = useCallback(async (skuId: number) => { if (user) { await api(`/cart/items/${skuId}`, { method: 'DELETE' }); await queryClient.invalidateQueries({ queryKey: ['cart'] }) } else setGuestCart((current) => current.filter((item) => item.skuId !== skuId)) }, [queryClient, user])
-  const refreshCart = useCallback(async () => { if (user) await queryClient.invalidateQueries({ queryKey: ['cart'] }) }, [queryClient, user]); const cartItems = user ? cartQuery.data?.items || [] : guestCart; const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-  const commerce = useMemo<CommerceContextValue>(() => ({ user, cart: cartQuery.data || null, guestCart, addToCart, updateCart, removeFromCart, refreshCart, cartCount }), [addToCart, cartCount, cartQuery.data, guestCart, refreshCart, removeFromCart, updateCart, user])
-  return <AuthContext.Provider value={{ user, login, logout }}><CommerceContext.Provider value={commerce}><StoreLayout notice={notice} clearNotice={() => setNotice(null)}>{meQuery.isLoading ? <PageLoader /> : <AppRoutes />}</StoreLayout></CommerceContext.Provider></AuthContext.Provider>
+function useAuth() {
+  const value = useContext(AuthContext)
+  if (!value) throw new Error('AuthContext missing')
+  return value
+}
+function useCommerce() {
+  const value = useContext(CommerceContext)
+  if (!value) throw new Error('CommerceContext missing')
+  return value
+}
+function readGuestCart(): GuestCartItem[] {
+  try {
+    return JSON.parse(localStorage.getItem(guestCartKey) || '[]') as GuestCartItem[]
+  } catch {
+    return []
+  }
+}
+function saveGuestCart(items: GuestCartItem[]) {
+  localStorage.setItem(guestCartKey, JSON.stringify(items))
 }
 
-function StoreLayout({ children, notice, clearNotice }: { children: ReactNode; notice: Notice | null; clearNotice: () => void }) { const { user, logout } = useAuth(); const { cartCount } = useCommerce(); const location = useLocation(); const navigate = useNavigate(); const [menuOpen, setMenuOpen] = useState(false); const [search, setSearch] = useState(new URLSearchParams(location.search).get('search') || ''); useEffect(() => { setMenuOpen(false) }, [location.pathname]); function submitSearch(event: FormEvent) { event.preventDefault(); navigate(`/products${search.trim() ? `?search=${encodeURIComponent(search.trim())}` : ''}`) } return <div className="app-shell"><header className="site-header"><div className="header-inner"><button className="mobile-menu" aria-label="Mở menu" onClick={() => setMenuOpen((value) => !value)}><Menu size={20} /></button><Link to="/" className="logo"><span className="logo-mark">E</span><span><strong>Élan</strong><small>electronics, simply</small></span></Link><form className="header-search" onSubmit={submitSearch}><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm sản phẩm, thương hiệu..." aria-label="Tìm kiếm sản phẩm" /><kbd>⌘ K</kbd></form><nav className={`main-nav ${menuOpen ? 'open' : ''}`}><NavLink to="/products">Sản phẩm</NavLink><a href="#benefits">Vì sao chọn Élan</a>{user ? <NavLink to="/account/orders">Đơn hàng</NavLink> : <NavLink to="/login">Đăng nhập</NavLink>}</nav><div className="header-actions"><Link to={user ? '/account' : '/login'} className="header-icon" aria-label="Tài khoản"><CircleUserRound size={21} /></Link><Link to="/cart" className="header-icon cart-icon" aria-label={`Giỏ hàng, ${cartCount} sản phẩm`}><ShoppingBag size={21} />{cartCount ? <b>{cartCount > 99 ? '99+' : cartCount}</b> : null}</Link>{user ? <button className="header-logout" onClick={logout}>Thoát</button> : null}</div></div></header>{notice ? <div className={`notice notice-${notice.kind}`} role="status"><span>{notice.text}</span><button onClick={clearNotice} aria-label="Đóng thông báo"><X size={16} /></button></div> : null}<main>{children}</main><footer className="site-footer"><div className="footer-inner"><div><Link to="/" className="logo"><span className="logo-mark">E</span><span><strong>Élan</strong><small>electronics, simply</small></span></Link><p>Thiết bị bạn cần, trải nghiệm bạn muốn.</p></div><div><strong>Mua sắm</strong><Link to="/products">Tất cả sản phẩm</Link><Link to="/products?sortBy=createdAt">Hàng mới về</Link></div><div><strong>Hỗ trợ</strong><a href="mailto:hello@elan.local">Liên hệ</a><Link to="/account/orders">Theo dõi đơn hàng</Link></div><div><strong>An tâm mua sắm</strong><span className="footer-trust"><ShieldCheck size={16} /> Thanh toán bảo mật</span><span className="footer-trust"><Truck size={16} /> Giao hàng rõ ràng</span></div></div><div className="footer-bottom">© 2026 Élan Commerce · Được xây dựng cho trải nghiệm mua sắm nhẹ nhàng.</div></footer></div> }
-function PageLoader() { return <div className="page-loader"><LoaderCircle className="spin" size={32} /><span>Đang tải cửa hàng…</span></div> }
-function ErrorState({ onRetry }: { onRetry?: () => void }) { return <EmptyState title="Không tải được dữ liệu" text="Có lỗi kết nối. Bạn có thể thử lại ngay." action={onRetry ? <Button variant="secondary" onClick={onRetry}>Thử lại</Button> : null} /> }
-function AppRoutes() { return <Routes><Route path="/" element={<HomePage />} /><Route path="/products" element={<ProductsPage />} /><Route path="/products/:id" element={<ProductDetailPage />} /><Route path="/cart" element={<CartPage />} /><Route path="/checkout" element={<CheckoutPage />} /><Route path="/payment/:state" element={<PaymentPage />} /><Route path="/login" element={<AuthPage mode="login" />} /><Route path="/register" element={<AuthPage mode="register" />} /><Route path="/verify-email" element={<AuthPage mode="verify" />} /><Route path="/forgot-password" element={<AuthPage mode="forgot" />} /><Route path="/account" element={<AccountPage />} /><Route path="/account/orders" element={<OrdersPage />} /><Route path="/account/orders/:id" element={<OrderDetailPage />} /><Route path="/account/addresses" element={<AddressesPage />} /><Route path="*" element={<NotFoundPage />} /></Routes> }
+function Field({
+  label,
+  error,
+  children,
+  hint,
+}: {
+  label: string
+  error?: string
+  hint?: string
+  children: ReactNode
+}) {
+  return (
+    <label className={`field ${error ? 'has-error' : ''}`}>
+      <span>{label}</span>
+      {children}
+      {hint && !error ? <small>{hint}</small> : null}
+      {error ? <small className="field-error">{error}</small> : null}
+    </label>
+  )
+}
+function Button({
+  children,
+  variant = 'primary',
+  type = 'button',
+  loading = false,
+  disabled = false,
+  className = '',
+  onClick,
+}: {
+  children: ReactNode
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
+  type?: 'button' | 'submit'
+  loading?: boolean
+  disabled?: boolean
+  className?: string
+  onClick?: () => void
+}) {
+  return (
+    <button
+      type={type}
+      className={`button button-${variant} ${className}`}
+      disabled={disabled || loading}
+      onClick={onClick}
+    >
+      {loading ? <LoaderCircle size={16} className="spin" /> : null}
+      {children}
+    </button>
+  )
+}
+function Stars({ value, count }: { value: number; count?: number }) {
+  return (
+    <span className="rating" aria-label={`${value.toFixed(1)} trên 5 sao`}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star key={star} size={14} fill={star <= Math.round(value) ? 'currentColor' : 'none'} />
+      ))}
+      {count !== undefined ? <small>({count})</small> : null}
+    </span>
+  )
+}
+function ProductCard({ product }: { product: Product }) {
+  const percent = discountPercent(product)
+  return (
+    <article className="product-card">
+      <Link to={`/products/${product.id}`} className="product-card-image">
+        {percent > 0 ? <span className="badge badge-sale">-{percent}%</span> : null}
+        <img src={productImage(product)} alt={product.name} loading="lazy" />
+        <span className="card-quick">
+          Xem chi tiết <ArrowRight size={14} />
+        </span>
+      </Link>
+      <div className="product-card-body">
+        <div className="eyebrow">{product.brand?.name || 'ELECTRONICS'}</div>
+        <Link to={`/products/${product.id}`} className="product-name">
+          {product.name}
+        </Link>
+        <div className="price-row">
+          <strong>{money(product.basePrice)}</strong>
+          {percent > 0 ? <del>{money(product.virtualPrice)}</del> : null}
+        </div>
+      </div>
+    </article>
+  )
+}
+function ProductSkeleton() {
+  return (
+    <div className="product-card skeleton-card">
+      <div className="skeleton skeleton-image" />
+      <div className="skeleton skeleton-line" />
+      <div className="skeleton skeleton-short" />
+    </div>
+  )
+}
+function EmptyState({
+  icon,
+  title,
+  text,
+  action,
+}: {
+  icon?: ReactNode
+  title: string
+  text: string
+  action?: ReactNode
+}) {
+  return (
+    <div className="empty-state">
+      {icon || <ShoppingBag size={28} />}
+      <h3>{title}</h3>
+      <p>{text}</p>
+      {action}
+    </div>
+  )
+}
 
-function HomePage() { const products = useQuery({ queryKey: ['products', 'home'], queryFn: () => api<ProductListResponse>('/products?page=1&limit=8&sortBy=createdAt&sortOrder=desc', false) }); const categories = useQuery({ queryKey: ['categories'], queryFn: () => api<Category[]>('/categories', false) }); return <><section className="hero"><div className="hero-copy"><span className="eyebrow hero-eyebrow">THE EVERYDAY UPGRADE</span><h1>Công nghệ tốt hơn cho những ngày <em>đẹp hơn.</em></h1><p>Chọn những thiết bị được tuyển kỹ, giá minh bạch và giao tới bạn thật gọn gàng.</p><div className="hero-actions"><Link to="/products" className="button button-primary">Khám phá sản phẩm <ArrowRight size={17} /></Link><a href="#benefits" className="text-link">Vì sao Élan? <ChevronRight size={16} /></a></div></div><div className="hero-art"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><div className="hero-device"><img src="https://placehold.co/720x720/1d2433/f4f1eb?text=E" alt="Thiết bị điện tử nổi bật" /></div><span className="floating-note note-top">01 / 04<br /><strong>curated tech</strong></span><span className="floating-note note-bottom">Thiết kế để<br /><strong>dùng mỗi ngày</strong></span></div></section><section className="section category-section"><div className="section-head"><div><span className="eyebrow">SHOP BY MOOD</span><h2>Tìm đúng thứ bạn cần</h2></div><Link to="/products" className="text-link">Xem tất cả <ArrowRight size={16} /></Link></div><div className="category-grid">{(categories.data || []).slice(0, 5).map((category, index) => <Link to={`/products?categoryId=${category.id}`} className={`category-card category-${index % 5}`} key={category.id}><span>0{index + 1}</span><strong>{category.name}</strong><small>Khám phá ngay <ArrowRight size={13} /></small></Link>)}{categories.isLoading ? [1, 2, 3, 4].map((item) => <div className="category-card skeleton" key={item} />) : null}</div></section><section className="section featured-section"><div className="section-head"><div><span className="eyebrow">JUST IN</span><h2>Mới trong cửa hàng</h2></div><Link to="/products?sortBy=createdAt" className="text-link">Xem tất cả <ArrowRight size={16} /></Link></div>{products.isError ? <ErrorState onRetry={() => void products.refetch()} /> : <div className="product-grid">{products.isLoading ? [1, 2, 3, 4].map((item) => <ProductSkeleton key={item} />) : (products.data?.data || []).map((product) => <ProductCard key={product.id} product={product} />)}</div>}</section><section className="benefits" id="benefits"><div className="benefits-inner"><div><ShieldCheck size={22} /><strong>Chọn kỹ, dùng lâu</strong><p>Thông tin rõ ràng, không phức tạp hóa quyết định.</p></div><div><Truck size={22} /><strong>Giao hàng minh bạch</strong><p>Theo dõi từng bước từ lúc đặt tới lúc nhận.</p></div><div><Heart size={22} /><strong>Hỗ trợ thật lòng</strong><p>Cần giúp chọn đúng? Chúng mình luôn ở đây.</p></div></div></section></> }
+function App() {
+  const queryClient = useQueryClient()
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('ecommerce-user') || 'null') as User | null
+    } catch {
+      return null
+    }
+  })
+  const [guestCart, setGuestCart] = useState<GuestCartItem[]>(readGuestCart)
+  const [notice, setNotice] = useState<Notice | null>(null)
+  const cartQuery = useQuery({ queryKey: ['cart'], queryFn: () => api<Cart>('/cart'), enabled: Boolean(user) })
+  const meQuery = useQuery({
+    queryKey: ['me'],
+    queryFn: () => api<User>('/users/me'),
+    enabled: Boolean(getAccessToken()) && !user,
+    retry: false,
+  })
+  useEffect(() => {
+    if (meQuery.data) {
+      setUser(meQuery.data)
+      localStorage.setItem('ecommerce-user', JSON.stringify(meQuery.data))
+    }
+  }, [meQuery.data])
+  useEffect(() => {
+    saveGuestCart(guestCart)
+  }, [guestCart])
+  useEffect(() => {
+    if (notice) {
+      const timer = window.setTimeout(() => setNotice(null), 4200)
+      return () => window.clearTimeout(timer)
+    }
+  }, [notice])
+  const login = useCallback(
+    (nextUser: User, accessToken: string, refreshToken: string) => {
+      setTokens(accessToken, refreshToken)
+      setUser(nextUser)
+      localStorage.setItem('ecommerce-user', JSON.stringify(nextUser))
+      if (guestCart.length) {
+        void Promise.all(
+          guestCart.map((item) =>
+            api('/cart/items', {
+              method: 'POST',
+              body: JSON.stringify({ skuId: item.skuId, quantity: item.quantity }),
+            }),
+          ),
+        ).then(() => {
+          setGuestCart([])
+          void queryClient.invalidateQueries({ queryKey: ['cart'] })
+        })
+      }
+    },
+    [guestCart, queryClient],
+  )
+  const logout = useCallback(() => {
+    const refreshToken = getRefreshToken()
+    if (refreshToken)
+      void api('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) }, false).catch(() => undefined)
+    clearTokens()
+    localStorage.removeItem('ecommerce-user')
+    setUser(null)
+    queryClient.removeQueries({ queryKey: ['cart'] })
+  }, [queryClient])
+  const addToCart = useCallback(
+    async (sku: Sku, product: Product, quantity = 1) => {
+      if (user) {
+        await api('/cart/items', { method: 'POST', body: JSON.stringify({ skuId: sku.id, quantity }) })
+        await queryClient.invalidateQueries({ queryKey: ['cart'] })
+        setNotice({ kind: 'success', text: 'Đã thêm sản phẩm vào giỏ hàng.' })
+        return
+      }
+      setGuestCart((current) => {
+        const existing = current.find((item) => item.skuId === sku.id)
+        if (existing)
+          return current.map((item) =>
+            item.skuId === sku.id ? { ...item, quantity: Math.min(item.quantity + quantity, 99) } : item,
+          )
+        return [
+          ...current,
+          { skuId: sku.id, quantity, sku, product: { id: product.id, name: product.name, images: product.images } },
+        ]
+      })
+      setNotice({ kind: 'success', text: 'Đã thêm sản phẩm vào giỏ hàng.' })
+    },
+    [queryClient, user],
+  )
+  const updateCart = useCallback(
+    async (skuId: number, quantity: number) => {
+      if (quantity < 1) return
+      if (user) {
+        await api(`/cart/items/${skuId}`, { method: 'PATCH', body: JSON.stringify({ quantity }) })
+        await queryClient.invalidateQueries({ queryKey: ['cart'] })
+      } else setGuestCart((current) => current.map((item) => (item.skuId === skuId ? { ...item, quantity } : item)))
+    },
+    [queryClient, user],
+  )
+  const removeFromCart = useCallback(
+    async (skuId: number) => {
+      if (user) {
+        await api(`/cart/items/${skuId}`, { method: 'DELETE' })
+        await queryClient.invalidateQueries({ queryKey: ['cart'] })
+      } else setGuestCart((current) => current.filter((item) => item.skuId !== skuId))
+    },
+    [queryClient, user],
+  )
+  const refreshCart = useCallback(async () => {
+    if (user) await queryClient.invalidateQueries({ queryKey: ['cart'] })
+  }, [queryClient, user])
+  const cartItems = user ? cartQuery.data?.items || [] : guestCart
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+  const commerce = useMemo<CommerceContextValue>(
+    () => ({
+      user,
+      cart: cartQuery.data || null,
+      guestCart,
+      addToCart,
+      updateCart,
+      removeFromCart,
+      refreshCart,
+      cartCount,
+    }),
+    [addToCart, cartCount, cartQuery.data, guestCart, refreshCart, removeFromCart, updateCart, user],
+  )
+  return (
+    <AuthContext.Provider value={{ user, login, logout }}>
+      <CommerceContext.Provider value={commerce}>
+        <StoreLayout notice={notice} clearNotice={() => setNotice(null)}>
+          {meQuery.isLoading ? <PageLoader /> : <AppRoutes />}
+        </StoreLayout>
+      </CommerceContext.Provider>
+    </AuthContext.Provider>
+  )
+}
 
-function ProductsPage() { const [params, setParams] = useSearchParams(); const [filterOpen, setFilterOpen] = useState(false); const search = params.get('search') || ''; const categoryId = params.get('categoryId') || ''; const brandId = params.get('brandId') || ''; const sortBy = params.get('sortBy') || 'createdAt'; const sortOrder = params.get('sortOrder') || 'desc'; const page = Number(params.get('page') || 1); const query = `/products?page=${page}&limit=12${search ? `&search=${encodeURIComponent(search)}` : ''}${categoryId ? `&categoryId=${categoryId}` : ''}${brandId ? `&brandId=${brandId}` : ''}&sortBy=${sortBy}&sortOrder=${sortOrder}`; const products = useQuery({ queryKey: ['products', query], queryFn: () => api<ProductListResponse>(query, false) }); const categories = useQuery({ queryKey: ['categories'], queryFn: () => api<Category[]>('/categories', false) }); const brands = useQuery({ queryKey: ['brands'], queryFn: () => api<Brand[]>('/brands', false) }); const selectedCategory = categories.data?.find((category) => String(category.id) === categoryId)?.name; const selectedBrand = brands.data?.find((brand) => String(brand.id) === brandId)?.name; const setParam = (key: string, value: string) => { const next = new URLSearchParams(params); if (value) next.set(key, value); else next.delete(key); next.delete('page'); setParams(next) }; return <section className="page-section catalog-page"><div className="breadcrumbs"><Link to="/">Trang chủ</Link><ChevronRight size={14} /><span>Sản phẩm</span></div><div className="page-title-row"><div><span className="eyebrow">THE COLLECTION</span><h1>{search ? `Kết quả cho “${search}”` : 'Tất cả sản phẩm'}</h1><p>{products.data?.pagination.total || 0} sản phẩm được tuyển chọn</p></div><button className="filter-toggle" onClick={() => setFilterOpen(true)}>Bộ lọc <ChevronDown size={16} /></button></div><div className="catalog-layout"><aside className={`filter-panel ${filterOpen ? 'open' : ''}`}><div className="filter-mobile-head"><strong>Bộ lọc</strong><button onClick={() => setFilterOpen(false)} aria-label="Đóng bộ lọc"><X size={20} /></button></div><FilterGroup title="Danh mục"><button className={!categoryId ? 'filter-active' : ''} onClick={() => { setParam('categoryId', ''); setFilterOpen(false) }}>Tất cả danh mục</button>{categories.data?.map((category) => <button className={String(category.id) === categoryId ? 'filter-active' : ''} key={category.id} onClick={() => { setParam('categoryId', String(category.id)); setFilterOpen(false) }}>{category.name}</button>)}</FilterGroup><FilterGroup title="Thương hiệu"><button className={!brandId ? 'filter-active' : ''} onClick={() => { setParam('brandId', ''); setFilterOpen(false) }}>Tất cả thương hiệu</button>{brands.data?.map((brand) => <button className={String(brand.id) === brandId ? 'filter-active' : ''} key={brand.id} onClick={() => { setParam('brandId', String(brand.id)); setFilterOpen(false) }}>{brand.name}</button>)}</FilterGroup>{categoryId || brandId || search ? <Button variant="ghost" className="clear-filter" onClick={() => { setParams({}); setFilterOpen(false) }}>Xóa bộ lọc</Button> : null}</aside>{filterOpen ? <button className="filter-scrim" onClick={() => setFilterOpen(false)} aria-label="Đóng bộ lọc" /> : null}<div className="catalog-results"><div className="results-toolbar"><div className="active-filters">{selectedCategory ? <span>{selectedCategory}<button onClick={() => setParam('categoryId', '')}>×</button></span> : null}{selectedBrand ? <span>{selectedBrand}<button onClick={() => setParam('brandId', '')}>×</button></span> : null}</div><label className="sort-select"><span>Sắp xếp</span><select value={`${sortBy}:${sortOrder}`} onChange={(event) => { const [nextSort, nextOrder] = event.target.value.split(':'); const next = new URLSearchParams(params); next.set('sortBy', nextSort); next.set('sortOrder', nextOrder); next.delete('page'); setParams(next) }}><option value="createdAt:desc">Mới nhất</option><option value="price:asc">Giá thấp đến cao</option><option value="price:desc">Giá cao đến thấp</option></select></label></div>{products.isError ? <ErrorState onRetry={() => void products.refetch()} /> : products.isLoading ? <div className="product-grid">{[1, 2, 3, 4, 5, 6].map((item) => <ProductSkeleton key={item} />)}</div> : products.data?.data.length ? <div className="product-grid">{products.data.data.map((product) => <ProductCard key={product.id} product={product} />)}</div> : <EmptyState title="Chưa tìm thấy sản phẩm" text="Thử xóa bớt bộ lọc hoặc tìm một từ khóa khác nhé." action={<Button variant="secondary" onClick={() => setParams({})}>Xóa bộ lọc</Button>} />}{products.data?.pagination.totalPages && products.data.pagination.totalPages > 1 ? <Pagination pagination={products.data.pagination} onChange={(nextPage) => { const next = new URLSearchParams(params); next.set('page', String(nextPage)); setParams(next); window.scrollTo({ top: 0, behavior: 'smooth' }) }} /> : null}</div></div></section> }
-function FilterGroup({ title, children }: { title: string; children: ReactNode }) { return <div className="filter-group"><strong>{title}</strong><div>{children}</div></div> }
-function Pagination({ pagination, onChange }: { pagination: { page: number; totalPages: number }; onChange: (page: number) => void }) { return <div className="pagination"><button disabled={pagination.page <= 1} onClick={() => onChange(pagination.page - 1)} aria-label="Trang trước"><ChevronLeft size={18} /></button><span>Trang {pagination.page} / {pagination.totalPages}</span><button disabled={pagination.page >= pagination.totalPages} onClick={() => onChange(pagination.page + 1)} aria-label="Trang sau"><ChevronRight size={18} /></button></div> }
+function StoreLayout({
+  children,
+  notice,
+  clearNotice,
+}: {
+  children: ReactNode
+  notice: Notice | null
+  clearNotice: () => void
+}) {
+  const { user, logout } = useAuth()
+  const { cartCount } = useCommerce()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [search, setSearch] = useState(new URLSearchParams(location.search).get('search') || '')
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [location.pathname])
+  function submitSearch(event: FormEvent) {
+    event.preventDefault()
+    navigate(`/products${search.trim() ? `?search=${encodeURIComponent(search.trim())}` : ''}`)
+  }
+  return (
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="header-inner">
+          <button className="mobile-menu" aria-label="Mở menu" onClick={() => setMenuOpen((value) => !value)}>
+            <Menu size={20} />
+          </button>
+          <Link to="/" className="logo">
+            <span className="logo-mark">E</span>
+            <span>
+              <strong>Élan</strong>
+              <small>electronics, simply</small>
+            </span>
+          </Link>
+          <form className="header-search" onSubmit={submitSearch}>
+            <Search size={18} />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Tìm sản phẩm, thương hiệu..."
+              aria-label="Tìm kiếm sản phẩm"
+            />
+            <kbd>⌘ K</kbd>
+          </form>
+          <nav className={`main-nav ${menuOpen ? 'open' : ''}`}>
+            <NavLink to="/products">Sản phẩm</NavLink>
+            <a href="#benefits">Vì sao chọn Élan</a>
+            {user ? <NavLink to="/account/orders">Đơn hàng</NavLink> : <NavLink to="/login">Đăng nhập</NavLink>}
+          </nav>
+          <div className="header-actions">
+            <Link to={user ? '/account' : '/login'} className="header-icon" aria-label="Tài khoản">
+              <CircleUserRound size={21} />
+            </Link>
+            <Link to="/cart" className="header-icon cart-icon" aria-label={`Giỏ hàng, ${cartCount} sản phẩm`}>
+              <ShoppingBag size={21} />
+              {cartCount ? <b>{cartCount > 99 ? '99+' : cartCount}</b> : null}
+            </Link>
+            {user ? (
+              <button className="header-logout" onClick={logout}>
+                Thoát
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </header>
+      {notice ? (
+        <div className={`notice notice-${notice.kind}`} role="status">
+          <span>{notice.text}</span>
+          <button onClick={clearNotice} aria-label="Đóng thông báo">
+            <X size={16} />
+          </button>
+        </div>
+      ) : null}
+      <main>{children}</main>
+      <footer className="site-footer">
+        <div className="footer-inner">
+          <div>
+            <Link to="/" className="logo">
+              <span className="logo-mark">E</span>
+              <span>
+                <strong>Élan</strong>
+                <small>electronics, simply</small>
+              </span>
+            </Link>
+            <p>Thiết bị bạn cần, trải nghiệm bạn muốn.</p>
+          </div>
+          <div>
+            <strong>Mua sắm</strong>
+            <Link to="/products">Tất cả sản phẩm</Link>
+            <Link to="/products?sortBy=createdAt">Hàng mới về</Link>
+          </div>
+          <div>
+            <strong>Hỗ trợ</strong>
+            <a href="mailto:hello@elan.local">Liên hệ</a>
+            <Link to="/account/orders">Theo dõi đơn hàng</Link>
+          </div>
+          <div>
+            <strong>An tâm mua sắm</strong>
+            <span className="footer-trust">
+              <ShieldCheck size={16} /> Thanh toán bảo mật
+            </span>
+            <span className="footer-trust">
+              <Truck size={16} /> Giao hàng rõ ràng
+            </span>
+          </div>
+        </div>
+        <div className="footer-bottom">© 2026 Élan Commerce · Được xây dựng cho trải nghiệm mua sắm nhẹ nhàng.</div>
+      </footer>
+    </div>
+  )
+}
+function PageLoader() {
+  return (
+    <div className="page-loader">
+      <LoaderCircle className="spin" size={32} />
+      <span>Đang tải cửa hàng…</span>
+    </div>
+  )
+}
+function ErrorState({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <EmptyState
+      title="Không tải được dữ liệu"
+      text="Có lỗi kết nối. Bạn có thể thử lại ngay."
+      action={
+        onRetry ? (
+          <Button variant="secondary" onClick={onRetry}>
+            Thử lại
+          </Button>
+        ) : null
+      }
+    />
+  )
+}
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/products" element={<ProductsPage />} />
+      <Route path="/products/:id" element={<ProductDetailPage />} />
+      <Route path="/cart" element={<CartPage />} />
+      <Route path="/checkout" element={<CheckoutPage />} />
+      <Route path="/payment/:state" element={<PaymentPage />} />
+      <Route path="/login" element={<AuthPage mode="login" />} />
+      <Route path="/register" element={<AuthPage mode="register" />} />
+      <Route path="/verify-email" element={<AuthPage mode="verify" />} />
+      <Route path="/forgot-password" element={<AuthPage mode="forgot" />} />
+      <Route path="/reset-password" element={<AuthPage mode="reset" />} />
+      <Route path="/account" element={<AccountPage />} />
+      <Route path="/account/orders" element={<OrdersPage />} />
+      <Route path="/account/orders/:id" element={<OrderDetailPage />} />
+      <Route path="/account/addresses" element={<AddressesPage />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  )
+}
 
-function ProductDetailPage() { const { id } = useParams(); const productQuery = useQuery({ queryKey: ['product', id], queryFn: () => api<Product>(`/products/${id}`, false), enabled: Boolean(id) }); const skuQuery = useQuery({ queryKey: ['skus', id], queryFn: () => api<Sku[]>(`/products/${id}/skus`, false), enabled: Boolean(id) }); const reviews = useQuery({ queryKey: ['reviews', id], queryFn: () => api<ReviewResponse>(`/reviews/product/${id}?page=1&limit=5`, false), enabled: Boolean(id) }); const { addToCart } = useCommerce(); const [selected, setSelected] = useState<Record<string, string>>({}); const [quantity, setQuantity] = useState(1); const [imageIndex, setImageIndex] = useState(0); const product = productQuery.data; const skus = skuQuery.data || []; const variants = product?.variants || []; const selectedSku = useMemo(() => skus.find((sku) => variants.every((variant) => selected[variant.name] && sku.value?.[variant.name] === selected[variant.name])) || (variants.length ? undefined : skus[0]), [selected, skus, variants]); const images = product?.images?.length ? product.images : [productImage(product)]; if (productQuery.isLoading) return <PageLoader />; if (productQuery.isError || !product) return <ErrorState onRetry={() => void productQuery.refetch()} />; return <section className="page-section detail-page"><div className="breadcrumbs"><Link to="/">Trang chủ</Link><ChevronRight size={14} /><Link to="/products">Sản phẩm</Link><ChevronRight size={14} /><span>{product.name}</span></div><div className="detail-layout"><div className="gallery"><div className="gallery-main"><img src={images[imageIndex]} alt={product.name} /></div><div className="gallery-thumbs">{images.map((image, index) => <button className={index === imageIndex ? 'active' : ''} onClick={() => setImageIndex(index)} key={image}><img src={image} alt="" /></button>)}</div></div><div className="detail-copy"><div className="eyebrow">{product.brand?.name || 'ÉLAN COLLECTION'}</div><h1>{product.name}</h1><div className="detail-rating"><Stars value={reviews.data?.rating.average || 0} count={reviews.data?.rating.count || 0} /><a href="#reviews">Đọc đánh giá</a></div><div className="detail-price"><strong>{money(selectedSku?.price ?? product.basePrice)}</strong>{discountPercent(product) > 0 ? <del>{money(product.virtualPrice)}</del> : null}</div><p className="detail-intro">Thiết kế tinh gọn, hiệu năng đáng tin cậy cho nhịp sống hàng ngày của bạn.</p>{variants.map((variant) => <VariantPicker key={variant.name} variant={variant} selected={selected[variant.name]} onChange={(value) => setSelected((current) => ({ ...current, [variant.name]: value }))} skus={skus} />)}<div className="stock-line">{selectedSku ? selectedSku.stock > 0 ? <><span className="stock-dot" /> Còn {selectedSku.stock} sản phẩm</> : <span className="danger-text">Tạm hết hàng</span> : variants.length ? 'Chọn đủ phiên bản để xem tồn kho' : 'Đang kiểm tra tồn kho'}</div><div className="buy-row"><div className="quantity"><button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Giảm số lượng"><Minus size={16} /></button><span>{quantity}</span><button onClick={() => setQuantity((value) => Math.min(selectedSku?.stock || 99, value + 1))} aria-label="Tăng số lượng"><Plus size={16} /></button></div><Button className="add-detail" disabled={!selectedSku || selectedSku.stock < 1 || (variants.length > 0 && !variants.every((variant) => selected[variant.name]))} onClick={() => selectedSku && void addToCart(selectedSku, product, quantity)}><ShoppingBag size={17} /> Thêm vào giỏ</Button></div><div className="detail-policies"><span><Truck size={17} /><span><strong>Giao hàng nhanh</strong><small>Toàn quốc từ 2–5 ngày</small></span></span><span><ShieldCheck size={17} /><span><strong>An tâm mua sắm</strong><small>Đổi trả trong 7 ngày</small></span></span></div></div></div><section className="reviews-section" id="reviews"><div className="section-head"><div><span className="eyebrow">CUSTOMER NOTES</span><h2>Người mua nói gì?</h2></div><div className="review-summary"><strong>{(reviews.data?.rating.average || 0).toFixed(1)}</strong><Stars value={reviews.data?.rating.average || 0} count={reviews.data?.rating.count || 0} /></div></div>{reviews.isLoading ? <div className="review-list"><div className="skeleton skeleton-line" /><div className="skeleton skeleton-line" /></div> : reviews.data?.data.length ? <div className="review-list">{reviews.data.data.map((review) => <ReviewCard key={review.id} review={review} />)}</div> : <EmptyState title="Chưa có đánh giá" text="Hãy là người đầu tiên chia sẻ trải nghiệm." />}</section></section> }
-function VariantPicker({ variant, selected, onChange, skus }: { variant: ProductVariant; selected?: string; onChange: (value: string) => void; skus: Sku[] }) { return <div className="variant-picker"><div><strong>{variant.name}</strong><span>{selected || 'Chưa chọn'}</span></div><div className="variant-options">{variant.options.map((option) => { const available = skus.some((sku) => sku.value?.[variant.name] === option && sku.stock > 0); return <button key={option} className={selected === option ? 'selected' : ''} disabled={!available} onClick={() => onChange(option)}>{option}</button> })}</div></div> }
-function ReviewCard({ review }: { review: ReviewResponse['data'][number] }) { return <article className="review-card"><div className="review-avatar">{initials(review.user?.name)}</div><div><div className="review-head"><strong>{review.user?.name || 'Khách hàng'}</strong><span>{date(review.createdAt)}</span></div><Stars value={review.rating} /><p>{review.content}</p>{review.medias?.length ? <div className="review-media">{review.medias.map((media) => <img key={media.id || media.url} src={media.url} alt="Ảnh đánh giá" />)}</div> : null}</div></article> }
+function HomePage() {
+  const products = useQuery({
+    queryKey: ['products', 'home'],
+    queryFn: () => api<ProductListResponse>('/products?page=1&limit=8&sortBy=createdAt&sortOrder=desc', false),
+  })
+  const categories = useQuery({ queryKey: ['categories'], queryFn: () => api<Category[]>('/categories', false) })
+  return (
+    <>
+      <section className="hero">
+        <div className="hero-copy">
+          <span className="eyebrow hero-eyebrow">THE EVERYDAY UPGRADE</span>
+          <h1>
+            Công nghệ tốt hơn cho những ngày <em>đẹp hơn.</em>
+          </h1>
+          <p>Chọn những thiết bị được tuyển kỹ, giá minh bạch và giao tới bạn thật gọn gàng.</p>
+          <div className="hero-actions">
+            <Link to="/products" className="button button-primary">
+              Khám phá sản phẩm <ArrowRight size={17} />
+            </Link>
+            <a href="#benefits" className="text-link">
+              Vì sao Élan? <ChevronRight size={16} />
+            </a>
+          </div>
+        </div>
+        <div className="hero-art">
+          <div className="hero-orbit orbit-one" />
+          <div className="hero-orbit orbit-two" />
+          <div className="hero-device">
+            <img src="https://placehold.co/720x720/1d2433/f4f1eb?text=E" alt="Thiết bị điện tử nổi bật" />
+          </div>
+          <span className="floating-note note-top">
+            01 / 04
+            <br />
+            <strong>curated tech</strong>
+          </span>
+          <span className="floating-note note-bottom">
+            Thiết kế để
+            <br />
+            <strong>dùng mỗi ngày</strong>
+          </span>
+        </div>
+      </section>
+      <section className="section category-section">
+        <div className="section-head">
+          <div>
+            <span className="eyebrow">SHOP BY MOOD</span>
+            <h2>Tìm đúng thứ bạn cần</h2>
+          </div>
+          <Link to="/products" className="text-link">
+            Xem tất cả <ArrowRight size={16} />
+          </Link>
+        </div>
+        <div className="category-grid">
+          {(categories.data || []).slice(0, 5).map((category, index) => (
+            <Link
+              to={`/products?categoryId=${category.id}`}
+              className={`category-card category-${index % 5}`}
+              key={category.id}
+            >
+              <span>0{index + 1}</span>
+              <strong>{category.name}</strong>
+              <small>
+                Khám phá ngay <ArrowRight size={13} />
+              </small>
+            </Link>
+          ))}
+          {categories.isLoading
+            ? [1, 2, 3, 4].map((item) => <div className="category-card skeleton" key={item} />)
+            : null}
+        </div>
+      </section>
+      <section className="section featured-section">
+        <div className="section-head">
+          <div>
+            <span className="eyebrow">JUST IN</span>
+            <h2>Mới trong cửa hàng</h2>
+          </div>
+          <Link to="/products?sortBy=createdAt" className="text-link">
+            Xem tất cả <ArrowRight size={16} />
+          </Link>
+        </div>
+        {products.isError ? (
+          <ErrorState onRetry={() => void products.refetch()} />
+        ) : (
+          <div className="product-grid">
+            {products.isLoading
+              ? [1, 2, 3, 4].map((item) => <ProductSkeleton key={item} />)
+              : (products.data?.data || []).map((product) => <ProductCard key={product.id} product={product} />)}
+          </div>
+        )}
+      </section>
+      <section className="benefits" id="benefits">
+        <div className="benefits-inner">
+          <div>
+            <ShieldCheck size={22} />
+            <strong>Chọn kỹ, dùng lâu</strong>
+            <p>Thông tin rõ ràng, không phức tạp hóa quyết định.</p>
+          </div>
+          <div>
+            <Truck size={22} />
+            <strong>Giao hàng minh bạch</strong>
+            <p>Theo dõi từng bước từ lúc đặt tới lúc nhận.</p>
+          </div>
+          <div>
+            <Heart size={22} />
+            <strong>Hỗ trợ thật lòng</strong>
+            <p>Cần giúp chọn đúng? Chúng mình luôn ở đây.</p>
+          </div>
+        </div>
+      </section>
+    </>
+  )
+}
 
-function CartPage() { const { user, cart, guestCart, updateCart, removeFromCart } = useCommerce(); const navigate = useNavigate(); const items = user ? cart?.items || [] : guestCart; const total = user ? Number(cart?.summary.totalPrice || 0) : guestCart.reduce((sum, item) => sum + Number(item.sku.price) * item.quantity, 0); return <section className="page-section cart-page"><div className="breadcrumbs"><Link to="/">Trang chủ</Link><ChevronRight size={14} /><span>Giỏ hàng</span></div><div className="page-title-row"><div><span className="eyebrow">YOUR SELECTION</span><h1>Giỏ hàng</h1><p>{items.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm</p></div></div>{items.length ? <div className="cart-layout"><div className="cart-lines">{items.map((item) => <CartLine key={item.skuId} item={item} onUpdate={updateCart} onRemove={removeFromCart} />)}</div><OrderSummary subtotal={total} action={<Button className="full-button" onClick={() => navigate(user ? '/checkout' : `/login?redirect=${encodeURIComponent('/checkout')}`)}>Tiến hành thanh toán <ArrowRight size={17} /></Button>} /></div> : <EmptyState icon={<ShoppingBag size={34} />} title="Giỏ hàng đang trống" text="Một vài món đồ tốt đang chờ bạn khám phá." action={<Link to="/products" className="button button-primary">Khám phá sản phẩm</Link>} />}</section> }
-function CartLine({ item, onUpdate, onRemove }: { item: CartItem | GuestCartItem; onUpdate: (id: number, quantity: number) => Promise<void>; onRemove: (id: number) => Promise<void> }) { const product = 'product' in item ? item.product : item.sku?.product; const sku = item.sku; return <article className="cart-line"><img src={productImage(product, sku)} alt={product?.name || 'Sản phẩm'} /><div className="cart-line-copy"><Link to={`/products/${product?.id || ''}`}>{product?.name || `Sản phẩm #${item.skuId}`}</Link><small>{skuLabel(sku)}</small><strong>{money(sku?.price)}</strong></div><div className="cart-line-actions"><div className="quantity"><button onClick={() => void onUpdate(item.skuId, Math.max(1, item.quantity - 1))} aria-label="Giảm số lượng"><Minus size={15} /></button><span>{item.quantity}</span><button onClick={() => void onUpdate(item.skuId, Math.min(sku?.stock || 99, item.quantity + 1))} aria-label="Tăng số lượng"><Plus size={15} /></button></div><button className="remove-button" onClick={() => void onRemove(item.skuId)}><Trash2 size={16} /> Xóa</button></div></article> }
-function OrderSummary({ subtotal, action }: { subtotal: number; action?: ReactNode }) { return <aside className="order-summary"><h2>Tóm tắt đơn hàng</h2><div><span>Tạm tính</span><strong>{money(subtotal)}</strong></div><div><span>Phí giao hàng</span><span className="muted">Tính khi checkout</span></div><hr /><div className="summary-total"><span>Tổng cộng</span><strong>{money(subtotal)}</strong></div>{action}</aside> }
-function RequireAuth({ children }: { children: ReactNode }) { const { user } = useAuth(); const location = useLocation(); if (!user) return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />; return <>{children}</> }
+function ProductsPage() {
+  const [params, setParams] = useSearchParams()
+  const [filterOpen, setFilterOpen] = useState(false)
+  const search = params.get('search') || ''
+  const categoryId = params.get('categoryId') || ''
+  const brandId = params.get('brandId') || ''
+  const sortBy = params.get('sortBy') || 'createdAt'
+  const sortOrder = params.get('sortOrder') || 'desc'
+  const page = Number(params.get('page') || 1)
+  const query = `/products?page=${page}&limit=12${search ? `&search=${encodeURIComponent(search)}` : ''}${categoryId ? `&categoryId=${categoryId}` : ''}${brandId ? `&brandId=${brandId}` : ''}&sortBy=${sortBy}&sortOrder=${sortOrder}`
+  const products = useQuery({ queryKey: ['products', query], queryFn: () => api<ProductListResponse>(query, false) })
+  const categories = useQuery({ queryKey: ['categories'], queryFn: () => api<Category[]>('/categories', false) })
+  const brands = useQuery({ queryKey: ['brands'], queryFn: () => api<Brand[]>('/brands', false) })
+  const selectedCategory = categories.data?.find((category) => String(category.id) === categoryId)?.name
+  const selectedBrand = brands.data?.find((brand) => String(brand.id) === brandId)?.name
+  const setParam = (key: string, value: string) => {
+    const next = new URLSearchParams(params)
+    if (value) next.set(key, value)
+    else next.delete(key)
+    next.delete('page')
+    setParams(next)
+  }
+  return (
+    <section className="page-section catalog-page">
+      <div className="breadcrumbs">
+        <Link to="/">Trang chủ</Link>
+        <ChevronRight size={14} />
+        <span>Sản phẩm</span>
+      </div>
+      <div className="page-title-row">
+        <div>
+          <span className="eyebrow">THE COLLECTION</span>
+          <h1>{search ? `Kết quả cho “${search}”` : 'Tất cả sản phẩm'}</h1>
+          <p>{products.data?.pagination.total || 0} sản phẩm được tuyển chọn</p>
+        </div>
+        <button className="filter-toggle" onClick={() => setFilterOpen(true)}>
+          Bộ lọc <ChevronDown size={16} />
+        </button>
+      </div>
+      <div className="catalog-layout">
+        <aside className={`filter-panel ${filterOpen ? 'open' : ''}`}>
+          <div className="filter-mobile-head">
+            <strong>Bộ lọc</strong>
+            <button onClick={() => setFilterOpen(false)} aria-label="Đóng bộ lọc">
+              <X size={20} />
+            </button>
+          </div>
+          <FilterGroup title="Danh mục">
+            <button
+              className={!categoryId ? 'filter-active' : ''}
+              onClick={() => {
+                setParam('categoryId', '')
+                setFilterOpen(false)
+              }}
+            >
+              Tất cả danh mục
+            </button>
+            {categories.data?.map((category) => (
+              <button
+                className={String(category.id) === categoryId ? 'filter-active' : ''}
+                key={category.id}
+                onClick={() => {
+                  setParam('categoryId', String(category.id))
+                  setFilterOpen(false)
+                }}
+              >
+                {category.name}
+              </button>
+            ))}
+          </FilterGroup>
+          <FilterGroup title="Thương hiệu">
+            <button
+              className={!brandId ? 'filter-active' : ''}
+              onClick={() => {
+                setParam('brandId', '')
+                setFilterOpen(false)
+              }}
+            >
+              Tất cả thương hiệu
+            </button>
+            {brands.data?.map((brand) => (
+              <button
+                className={String(brand.id) === brandId ? 'filter-active' : ''}
+                key={brand.id}
+                onClick={() => {
+                  setParam('brandId', String(brand.id))
+                  setFilterOpen(false)
+                }}
+              >
+                {brand.name}
+              </button>
+            ))}
+          </FilterGroup>
+          {categoryId || brandId || search ? (
+            <Button
+              variant="ghost"
+              className="clear-filter"
+              onClick={() => {
+                setParams({})
+                setFilterOpen(false)
+              }}
+            >
+              Xóa bộ lọc
+            </Button>
+          ) : null}
+        </aside>
+        {filterOpen ? (
+          <button className="filter-scrim" onClick={() => setFilterOpen(false)} aria-label="Đóng bộ lọc" />
+        ) : null}
+        <div className="catalog-results">
+          <div className="results-toolbar">
+            <div className="active-filters">
+              {selectedCategory ? (
+                <span>
+                  {selectedCategory}
+                  <button onClick={() => setParam('categoryId', '')}>×</button>
+                </span>
+              ) : null}
+              {selectedBrand ? (
+                <span>
+                  {selectedBrand}
+                  <button onClick={() => setParam('brandId', '')}>×</button>
+                </span>
+              ) : null}
+            </div>
+            <label className="sort-select">
+              <span>Sắp xếp</span>
+              <select
+                value={`${sortBy}:${sortOrder}`}
+                onChange={(event) => {
+                  const [nextSort, nextOrder] = event.target.value.split(':')
+                  const next = new URLSearchParams(params)
+                  next.set('sortBy', nextSort)
+                  next.set('sortOrder', nextOrder)
+                  next.delete('page')
+                  setParams(next)
+                }}
+              >
+                <option value="createdAt:desc">Mới nhất</option>
+                <option value="price:asc">Giá thấp đến cao</option>
+                <option value="price:desc">Giá cao đến thấp</option>
+              </select>
+            </label>
+          </div>
+          {products.isError ? (
+            <ErrorState onRetry={() => void products.refetch()} />
+          ) : products.isLoading ? (
+            <div className="product-grid">
+              {[1, 2, 3, 4, 5, 6].map((item) => (
+                <ProductSkeleton key={item} />
+              ))}
+            </div>
+          ) : products.data?.data.length ? (
+            <div className="product-grid">
+              {products.data.data.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              title="Chưa tìm thấy sản phẩm"
+              text="Thử xóa bớt bộ lọc hoặc tìm một từ khóa khác nhé."
+              action={
+                <Button variant="secondary" onClick={() => setParams({})}>
+                  Xóa bộ lọc
+                </Button>
+              }
+            />
+          )}
+          {products.data?.pagination.totalPages && products.data.pagination.totalPages > 1 ? (
+            <Pagination
+              pagination={products.data.pagination}
+              onChange={(nextPage) => {
+                const next = new URLSearchParams(params)
+                next.set('page', String(nextPage))
+                setParams(next)
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+            />
+          ) : null}
+        </div>
+      </div>
+    </section>
+  )
+}
+function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="filter-group">
+      <strong>{title}</strong>
+      <div>{children}</div>
+    </div>
+  )
+}
+function Pagination({
+  pagination,
+  onChange,
+}: {
+  pagination: { page: number; totalPages: number }
+  onChange: (page: number) => void
+}) {
+  return (
+    <div className="pagination">
+      <button disabled={pagination.page <= 1} onClick={() => onChange(pagination.page - 1)} aria-label="Trang trước">
+        <ChevronLeft size={18} />
+      </button>
+      <span>
+        Trang {pagination.page} / {pagination.totalPages}
+      </span>
+      <button
+        disabled={pagination.page >= pagination.totalPages}
+        onClick={() => onChange(pagination.page + 1)}
+        aria-label="Trang sau"
+      >
+        <ChevronRight size={18} />
+      </button>
+    </div>
+  )
+}
 
-function CheckoutPage() { return <RequireAuth><CheckoutContent /></RequireAuth> }
-function CheckoutContent() { const { cart, refreshCart } = useCommerce(); const addresses = useQuery({ queryKey: ['addresses'], queryFn: () => api<Address[]>('/addresses') }); const [addressId, setAddressId] = useState<number | ''>(''); const [coupon, setCoupon] = useState(''); const [addingAddress, setAddingAddress] = useState(false); const [orderId, setOrderId] = useState<number | null>(null); const orderMutation = useMutation({ mutationFn: () => { if (!addressId) throw new Error('Vui lòng chọn địa chỉ giao hàng.'); return api<Order>('/orders', { method: 'POST', body: JSON.stringify({ addressId: Number(addressId), ...(coupon.trim() ? { couponCode: coupon.trim() } : {}) }) }) }, onSuccess: (order) => { setOrderId(order.id); void refreshCart() } }); const paymentMutation = useMutation({ mutationFn: (id: number) => api<{ checkoutUrl: string }>('/payments', { method: 'POST', body: JSON.stringify({ orderId: id }) }), onSuccess: (payment) => { if (payment.checkoutUrl) window.location.href = payment.checkoutUrl } }); useEffect(() => { const preferred = addresses.data?.find((address) => address.isDefault) || addresses.data?.[0]; if (preferred) setAddressId(preferred.id) }, [addresses.data]); if (!cart?.items.length && !orderId) return <EmptyState title="Giỏ hàng đang trống" text="Thêm sản phẩm trước khi thanh toán." action={<Link to="/products" className="button button-primary">Quay lại mua sắm</Link>} />; const total = Number(cart?.summary.totalPrice || 0); return <section className="page-section checkout-page"><div className="breadcrumbs"><Link to="/cart">Giỏ hàng</Link><ChevronRight size={14} /><span>Thanh toán</span></div><div className="checkout-layout"><div className="checkout-main"><div className="checkout-heading"><span className="eyebrow">CHECKOUT</span><h1>Hoàn tất đơn hàng</h1><p>Chỉ còn vài bước nữa để món đồ thuộc về bạn.</p></div><section className="checkout-card"><div className="checkout-card-title"><span className="step-number">01</span><div><h2>Địa chỉ giao hàng</h2><p>Chọn nơi chúng mình gửi đơn tới.</p></div><button className="text-link" onClick={() => setAddingAddress((value) => !value)}>{addingAddress ? 'Đóng' : '+ Thêm địa chỉ'}</button></div>{addingAddress ? <AddressForm onCreated={() => { setAddingAddress(false); void addresses.refetch() }} /> : null}{addresses.isError ? <ErrorState onRetry={() => void addresses.refetch()} /> : addresses.data?.length ? <div className="address-list">{addresses.data.map((address) => <label className={`address-option ${addressId === address.id ? 'selected' : ''}`} key={address.id}><input type="radio" name="address" checked={addressId === address.id} onChange={() => setAddressId(address.id)} /><span><strong>{address.name}</strong><small>{address.phoneNumber} · {address.address}</small></span>{address.isDefault ? <em>Mặc định</em> : null}</label>)}</div> : <EmptyState title="Chưa có địa chỉ" text="Thêm một địa chỉ để tiếp tục." />}</section><section className="checkout-card"><div className="checkout-card-title"><span className="step-number">02</span><div><h2>Ưu đãi</h2><p>Mã giảm giá (nếu có).</p></div></div><div className="coupon-row"><input value={coupon} onChange={(event) => setCoupon(event.target.value)} placeholder="Nhập mã giảm giá" /><Button variant="secondary" disabled={!coupon.trim() || orderMutation.isPending}>Áp dụng khi đặt</Button></div></section><section className="checkout-card payment-note"><LockKeyhole size={20} /><div><strong>Thanh toán an toàn qua PayOS</strong><p>Bạn sẽ được chuyển tới cổng thanh toán bảo mật sau khi xác nhận đơn.</p></div></section>{orderMutation.isError ? <div className="inline-alert error">{orderMutation.error instanceof ApiError ? orderMutation.error.message : 'Không thể tạo đơn. Vui lòng kiểm tra lại.'}</div> : null}{orderId ? <div className="inline-alert success">Đơn #{orderId} đã được tạo. Hãy thanh toán để hoàn tất.</div> : null}</div><aside className="checkout-side"><OrderSummary subtotal={total} action={orderId ? <Button className="full-button" loading={paymentMutation.isPending} onClick={() => void paymentMutation.mutateAsync(orderId)}>Thanh toán ngay <ArrowRight size={17} /></Button> : <Button className="full-button" loading={orderMutation.isPending} disabled={!addressId || !cart?.items.length} onClick={() => void orderMutation.mutateAsync()}>Xác nhận đơn hàng <ArrowRight size={17} /></Button>} /></aside></div></section> }
-function AddressForm({ onCreated }: { onCreated: () => void }) { const [values, setValues] = useState({ name: '', phoneNumber: '', address: '', note: '' }); const [error, setError] = useState(''); const mutation = useMutation({ mutationFn: () => api<Address>('/addresses', { method: 'POST', body: JSON.stringify(values) }), onSuccess: onCreated }); return <form className="address-form" onSubmit={(event) => { event.preventDefault(); setError(''); void mutation.mutateAsync().catch((reason: unknown) => setError(reason instanceof ApiError ? reason.message : 'Không thể thêm địa chỉ.')) }}><div className="form-grid"><Field label="Tên người nhận"><input value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })} required placeholder="Nguyễn Văn A" /></Field><Field label="Số điện thoại"><input value={values.phoneNumber} onChange={(event) => setValues({ ...values, phoneNumber: event.target.value })} required inputMode="tel" placeholder="0912 345 678" /></Field></div><Field label="Địa chỉ"><input value={values.address} onChange={(event) => setValues({ ...values, address: event.target.value })} required placeholder="Số nhà, đường, quận/huyện, tỉnh/thành" /></Field><Field label="Ghi chú (không bắt buộc)"><input value={values.note} onChange={(event) => setValues({ ...values, note: event.target.value })} placeholder="Giao giờ hành chính..." /></Field>{error ? <div className="inline-alert error">{error}</div> : null}<Button type="submit" loading={mutation.isPending}>Lưu địa chỉ</Button></form> }
+function ProductDetailPage() {
+  const { id } = useParams()
+  const productQuery = useQuery({
+    queryKey: ['product', id],
+    queryFn: () => api<Product>(`/products/${id}`, false),
+    enabled: Boolean(id),
+  })
+  const skuQuery = useQuery({
+    queryKey: ['skus', id],
+    queryFn: () => api<Sku[]>(`/products/${id}/skus`, false),
+    enabled: Boolean(id),
+  })
+  const reviews = useQuery({
+    queryKey: ['reviews', id],
+    queryFn: () => api<ReviewResponse>(`/reviews/product/${id}?page=1&limit=5`, false),
+    enabled: Boolean(id),
+  })
+  const { addToCart } = useCommerce()
+  const [selected, setSelected] = useState<Record<string, string>>({})
+  const [quantity, setQuantity] = useState(1)
+  const [imageIndex, setImageIndex] = useState(0)
+  const product = productQuery.data
+  const skus = skuQuery.data || []
+  const variants = product?.variants || []
+  const selectedSku = useMemo(
+    () =>
+      skus.find((sku) =>
+        variants.every((variant) => selected[variant.name] && sku.value?.[variant.name] === selected[variant.name]),
+      ) || (variants.length ? undefined : skus[0]),
+    [selected, skus, variants],
+  )
+  const images = product?.images?.length ? product.images : [productImage(product)]
+  if (productQuery.isLoading) return <PageLoader />
+  if (productQuery.isError || !product) return <ErrorState onRetry={() => void productQuery.refetch()} />
+  return (
+    <section className="page-section detail-page">
+      <div className="breadcrumbs">
+        <Link to="/">Trang chủ</Link>
+        <ChevronRight size={14} />
+        <Link to="/products">Sản phẩm</Link>
+        <ChevronRight size={14} />
+        <span>{product.name}</span>
+      </div>
+      <div className="detail-layout">
+        <div className="gallery">
+          <div className="gallery-main">
+            <img src={images[imageIndex]} alt={product.name} />
+          </div>
+          <div className="gallery-thumbs">
+            {images.map((image, index) => (
+              <button className={index === imageIndex ? 'active' : ''} onClick={() => setImageIndex(index)} key={image}>
+                <img src={image} alt="" />
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="detail-copy">
+          <div className="eyebrow">{product.brand?.name || 'ÉLAN COLLECTION'}</div>
+          <h1>{product.name}</h1>
+          <div className="detail-rating">
+            <Stars value={reviews.data?.rating.average || 0} count={reviews.data?.rating.count || 0} />
+            <a href="#reviews">Đọc đánh giá</a>
+          </div>
+          <div className="detail-price">
+            <strong>{money(selectedSku?.price ?? product.basePrice)}</strong>
+            {discountPercent(product) > 0 ? <del>{money(product.virtualPrice)}</del> : null}
+          </div>
+          <p className="detail-intro">Thiết kế tinh gọn, hiệu năng đáng tin cậy cho nhịp sống hàng ngày của bạn.</p>
+          {variants.map((variant) => (
+            <VariantPicker
+              key={variant.name}
+              variant={variant}
+              selected={selected[variant.name]}
+              onChange={(value) => setSelected((current) => ({ ...current, [variant.name]: value }))}
+              skus={skus}
+            />
+          ))}
+          <div className="stock-line">
+            {selectedSku ? (
+              selectedSku.stock > 0 ? (
+                <>
+                  <span className="stock-dot" /> Còn {selectedSku.stock} sản phẩm
+                </>
+              ) : (
+                <span className="danger-text">Tạm hết hàng</span>
+              )
+            ) : variants.length ? (
+              'Chọn đủ phiên bản để xem tồn kho'
+            ) : (
+              'Đang kiểm tra tồn kho'
+            )}
+          </div>
+          <div className="buy-row">
+            <div className="quantity">
+              <button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Giảm số lượng">
+                <Minus size={16} />
+              </button>
+              <span>{quantity}</span>
+              <button
+                onClick={() => setQuantity((value) => Math.min(selectedSku?.stock || 99, value + 1))}
+                aria-label="Tăng số lượng"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+            <Button
+              className="add-detail"
+              disabled={
+                !selectedSku ||
+                selectedSku.stock < 1 ||
+                (variants.length > 0 && !variants.every((variant) => selected[variant.name]))
+              }
+              onClick={() => selectedSku && void addToCart(selectedSku, product, quantity)}
+            >
+              <ShoppingBag size={17} /> Thêm vào giỏ
+            </Button>
+          </div>
+          <div className="detail-policies">
+            <span>
+              <Truck size={17} />
+              <span>
+                <strong>Giao hàng nhanh</strong>
+                <small>Toàn quốc từ 2–5 ngày</small>
+              </span>
+            </span>
+            <span>
+              <ShieldCheck size={17} />
+              <span>
+                <strong>An tâm mua sắm</strong>
+                <small>Đổi trả trong 7 ngày</small>
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+      <section className="reviews-section" id="reviews">
+        <div className="section-head">
+          <div>
+            <span className="eyebrow">CUSTOMER NOTES</span>
+            <h2>Người mua nói gì?</h2>
+          </div>
+          <div className="review-summary">
+            <strong>{(reviews.data?.rating.average || 0).toFixed(1)}</strong>
+            <Stars value={reviews.data?.rating.average || 0} count={reviews.data?.rating.count || 0} />
+          </div>
+        </div>
+        {reviews.isLoading ? (
+          <div className="review-list">
+            <div className="skeleton skeleton-line" />
+            <div className="skeleton skeleton-line" />
+          </div>
+        ) : reviews.data?.data.length ? (
+          <div className="review-list">
+            {reviews.data.data.map((review) => (
+              <ReviewCard key={review.id} review={review} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="Chưa có đánh giá" text="Hãy là người đầu tiên chia sẻ trải nghiệm." />
+        )}
+      </section>
+    </section>
+  )
+}
+function VariantPicker({
+  variant,
+  selected,
+  onChange,
+  skus,
+}: {
+  variant: ProductVariant
+  selected?: string
+  onChange: (value: string) => void
+  skus: Sku[]
+}) {
+  return (
+    <div className="variant-picker">
+      <div>
+        <strong>{variant.name}</strong>
+        <span>{selected || 'Chưa chọn'}</span>
+      </div>
+      <div className="variant-options">
+        {variant.options.map((option) => {
+          const available = skus.some((sku) => sku.value?.[variant.name] === option && sku.stock > 0)
+          return (
+            <button
+              key={option}
+              className={selected === option ? 'selected' : ''}
+              disabled={!available}
+              onClick={() => onChange(option)}
+            >
+              {option}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+function ReviewCard({ review }: { review: ReviewResponse['data'][number] }) {
+  return (
+    <article className="review-card">
+      <div className="review-avatar">{initials(review.user?.name)}</div>
+      <div>
+        <div className="review-head">
+          <strong>{review.user?.name || 'Khách hàng'}</strong>
+          <span>{date(review.createdAt)}</span>
+        </div>
+        <Stars value={review.rating} />
+        <p>{review.content}</p>
+        {review.medias?.length ? (
+          <div className="review-media">
+            {review.medias.map((media) => (
+              <img key={media.id || media.url} src={media.url} alt="Ảnh đánh giá" />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </article>
+  )
+}
 
-type AuthMode = 'login' | 'register' | 'verify' | 'forgot'
-function AuthPage({ mode }: { mode: AuthMode }) { const { user, login } = useAuth(); const navigate = useNavigate(); const [params] = useSearchParams(); const redirect = params.get('redirect') || '/'; const [currentMode, setCurrentMode] = useState(mode); const [values, setValues] = useState({ name: '', phoneNumber: '', email: '', password: '', confirmPassword: '', code: '' }); const [error, setError] = useState(''); const [message, setMessage] = useState(''); const mutation = useMutation({ mutationFn: async () => { if (currentMode === 'login') return api<{ requiresTwoFactor: boolean; accessToken?: string; refreshToken?: string; twoFactorToken?: string; user?: User }>('/auth/login', { method: 'POST', body: JSON.stringify({ email: values.email, password: values.password }) }, false); if (currentMode === 'register') return api('/auth/register', { method: 'POST', body: JSON.stringify({ email: values.email, password: values.password, confirmPassword: values.confirmPassword, name: values.name, phoneNumber: values.phoneNumber }) }, false); if (currentMode === 'verify') return api('/auth/verify-email', { method: 'POST', body: JSON.stringify({ email: values.email, code: values.code }) }, false); return api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: values.email }) }, false) }, onSuccess: (result) => { if (currentMode === 'login') { const data = result as { requiresTwoFactor: boolean; accessToken?: string; refreshToken?: string; user?: User }; if (data.requiresTwoFactor) { setError('Tài khoản yêu cầu 2FA. Vui lòng hoàn thiện bước xác thực TOTP ở phiên bản tiếp theo.'); return } if (!data.accessToken || !data.refreshToken || !data.user) { setError('Đăng nhập chưa trả về đủ thông tin phiên.'); return } login(data.user, data.accessToken, data.refreshToken); navigate(redirect, { replace: true }) } else if (currentMode === 'register') { setMessage('Đăng ký thành công. Kiểm tra email để lấy mã xác thực.'); setCurrentMode('verify') } else if (currentMode === 'verify') { setMessage('Email đã được xác thực. Bạn có thể đăng nhập.'); setCurrentMode('login') } else setMessage('Nếu email tồn tại, mã khôi phục sẽ được gửi tới bạn.') }, onError: (reason: unknown) => setError(reason instanceof ApiError ? reason.message : 'Có lỗi xảy ra. Vui lòng thử lại.') }); if (user) return <Navigate to="/" replace />; const title = currentMode === 'login' ? 'Chào mừng bạn trở lại' : currentMode === 'register' ? 'Tạo tài khoản Élan' : currentMode === 'verify' ? 'Xác thực email' : 'Lấy lại mật khẩu'; const submit = (event: FormEvent) => { event.preventDefault(); setError(''); void mutation.mutateAsync() }; return <section className="auth-page"><div className="auth-panel"><div className="auth-art"><Link to="/" className="logo logo-light"><span className="logo-mark">E</span><span><strong>Élan</strong><small>electronics, simply</small></span></Link><div><span className="eyebrow">A SMALLER WAY TO SHOP</span><h1>Chọn ít hơn.<br /><em>Chọn đúng hơn.</em></h1><p>Một cửa hàng điện tử được tuyển chọn cho những điều bạn thực sự muốn dùng mỗi ngày.</p></div><span className="auth-art-note">Made for everyday rituals.</span></div><div className="auth-form-panel"><div className="auth-form-head"><span className="eyebrow">YOUR ACCOUNT</span><h1>{title}</h1><p>{currentMode === 'login' ? 'Đăng nhập để theo dõi đơn hàng và checkout nhanh hơn.' : currentMode === 'register' ? 'Tạo tài khoản miễn phí để bắt đầu mua sắm.' : currentMode === 'verify' ? `Mã xác thực đã được gửi tới ${values.email || 'email của bạn'}.` : 'Nhập email để nhận hướng dẫn khôi phục.'}</p></div>{message ? <div className="inline-alert success">{message}</div> : null}{error ? <div className="inline-alert error">{error}</div> : null}<form onSubmit={submit} className="auth-form"><div className="auth-fields">{currentMode === 'register' ? <><Field label="Họ và tên"><input value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })} required autoComplete="name" /></Field><Field label="Số điện thoại"><input value={values.phoneNumber} onChange={(event) => setValues({ ...values, phoneNumber: event.target.value })} required inputMode="tel" /></Field></> : null}<Field label="Email"><input type="email" value={values.email} onChange={(event) => setValues({ ...values, email: event.target.value })} required autoComplete="email" /></Field>{currentMode === 'verify' ? <Field label="Mã xác thực 6 số"><input value={values.code} onChange={(event) => setValues({ ...values, code: event.target.value })} required inputMode="numeric" maxLength={6} /></Field> : null}{currentMode === 'login' || currentMode === 'register' ? <Field label="Mật khẩu"><input type="password" value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value })} required minLength={6} autoComplete={currentMode === 'login' ? 'current-password' : 'new-password'} /></Field> : null}{currentMode === 'register' ? <Field label="Nhập lại mật khẩu"><input type="password" value={values.confirmPassword} onChange={(event) => setValues({ ...values, confirmPassword: event.target.value })} required minLength={6} autoComplete="new-password" /></Field> : null}</div><Button type="submit" className="full-button" loading={mutation.isPending}>{currentMode === 'login' ? 'Đăng nhập' : currentMode === 'register' ? 'Tạo tài khoản' : currentMode === 'verify' ? 'Xác thực email' : 'Gửi mã khôi phục'} <ArrowRight size={17} /></Button></form><div className="auth-links">{currentMode === 'login' ? <><Link to="/register">Tạo tài khoản mới</Link><Link to="/forgot-password">Quên mật khẩu?</Link></> : <button className="text-link" onClick={() => setCurrentMode('login')}>Quay lại đăng nhập</button>}{currentMode === 'verify' ? <button className="text-link" onClick={() => { setError(''); void api('/auth/resend-verification-code', { method: 'POST', body: JSON.stringify({ email: values.email }) }, false).then(() => setMessage('Đã gửi lại mã xác thực.')).catch((reason: unknown) => setError(reason instanceof ApiError ? reason.message : 'Không thể gửi lại mã.')) }}>Gửi lại mã</button> : null}</div></div></div></section> }
+function CartPage() {
+  const { user, cart, guestCart, updateCart, removeFromCart } = useCommerce()
+  const navigate = useNavigate()
+  const items = user ? cart?.items || [] : guestCart
+  const total = user
+    ? Number(cart?.summary.totalPrice || 0)
+    : guestCart.reduce((sum, item) => sum + Number(item.sku.price) * item.quantity, 0)
+  return (
+    <section className="page-section cart-page">
+      <div className="breadcrumbs">
+        <Link to="/">Trang chủ</Link>
+        <ChevronRight size={14} />
+        <span>Giỏ hàng</span>
+      </div>
+      <div className="page-title-row">
+        <div>
+          <span className="eyebrow">YOUR SELECTION</span>
+          <h1>Giỏ hàng</h1>
+          <p>{items.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm</p>
+        </div>
+      </div>
+      {items.length ? (
+        <div className="cart-layout">
+          <div className="cart-lines">
+            {items.map((item) => (
+              <CartLine key={item.skuId} item={item} onUpdate={updateCart} onRemove={removeFromCart} />
+            ))}
+          </div>
+          <OrderSummary
+            subtotal={total}
+            action={
+              <Button
+                className="full-button"
+                onClick={() => navigate(user ? '/checkout' : `/login?redirect=${encodeURIComponent('/checkout')}`)}
+              >
+                Tiến hành thanh toán <ArrowRight size={17} />
+              </Button>
+            }
+          />
+        </div>
+      ) : (
+        <EmptyState
+          icon={<ShoppingBag size={34} />}
+          title="Giỏ hàng đang trống"
+          text="Một vài món đồ tốt đang chờ bạn khám phá."
+          action={
+            <Link to="/products" className="button button-primary">
+              Khám phá sản phẩm
+            </Link>
+          }
+        />
+      )}
+    </section>
+  )
+}
+function CartLine({
+  item,
+  onUpdate,
+  onRemove,
+}: {
+  item: CartItem | GuestCartItem
+  onUpdate: (id: number, quantity: number) => Promise<void>
+  onRemove: (id: number) => Promise<void>
+}) {
+  const product = 'product' in item ? item.product : item.sku?.product
+  const sku = item.sku
+  return (
+    <article className="cart-line">
+      <img src={productImage(product, sku)} alt={product?.name || 'Sản phẩm'} />
+      <div className="cart-line-copy">
+        <Link to={`/products/${product?.id || ''}`}>{product?.name || `Sản phẩm #${item.skuId}`}</Link>
+        <small>{skuLabel(sku)}</small>
+        <strong>{money(sku?.price)}</strong>
+      </div>
+      <div className="cart-line-actions">
+        <div className="quantity">
+          <button onClick={() => void onUpdate(item.skuId, Math.max(1, item.quantity - 1))} aria-label="Giảm số lượng">
+            <Minus size={15} />
+          </button>
+          <span>{item.quantity}</span>
+          <button
+            onClick={() => void onUpdate(item.skuId, Math.min(sku?.stock || 99, item.quantity + 1))}
+            aria-label="Tăng số lượng"
+          >
+            <Plus size={15} />
+          </button>
+        </div>
+        <button className="remove-button" onClick={() => void onRemove(item.skuId)}>
+          <Trash2 size={16} /> Xóa
+        </button>
+      </div>
+    </article>
+  )
+}
+function OrderSummary({ subtotal, action }: { subtotal: number; action?: ReactNode }) {
+  return (
+    <aside className="order-summary">
+      <h2>Tóm tắt đơn hàng</h2>
+      <div>
+        <span>Tạm tính</span>
+        <strong>{money(subtotal)}</strong>
+      </div>
+      <div>
+        <span>Phí giao hàng</span>
+        <span className="muted">Tính khi checkout</span>
+      </div>
+      <hr />
+      <div className="summary-total">
+        <span>Tổng cộng</span>
+        <strong>{money(subtotal)}</strong>
+      </div>
+      {action}
+    </aside>
+  )
+}
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  const location = useLocation()
+  if (!user)
+    return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />
+  return <>{children}</>
+}
 
-function AccountPage() { const { user } = useAuth(); if (!user) return <RequireAuth><AccountPage /></RequireAuth>; return <section className="page-section account-page"><div className="account-welcome"><div className="profile-avatar">{initials(user.name)}</div><div><span className="eyebrow">YOUR SPACE</span><h1>Chào {user.name.split(' ').slice(-1)[0]}.</h1><p>Quản lý đơn hàng, địa chỉ và thông tin tài khoản.</p></div></div><div className="account-grid"><AccountCard to="/account/orders" icon={<Package size={22} />} title="Đơn hàng của tôi" text="Theo dõi trạng thái và lịch sử mua sắm." /><AccountCard to="/account/addresses" icon={<Truck size={22} />} title="Địa chỉ giao hàng" text="Lưu nơi nhận hàng yêu thích của bạn." /><AccountCard to="/account" icon={<UserRound size={22} />} title="Thông tin cá nhân" text="Cập nhật tên và số điện thoại." /></div></section> }
-function AccountCard({ to, icon, title, text }: { to: string; icon: ReactNode; title: string; text: string }) { return <Link to={to} className="account-card">{icon}<div><strong>{title}</strong><p>{text}</p></div><ArrowRight size={17} /></Link> }
-function OrdersPage() { const { user } = useAuth(); const orders = useQuery({ queryKey: ['orders'], queryFn: () => api<{ data: Order[] }>('/orders?page=1&limit=20'), enabled: Boolean(user) }); if (!user) return <RequireAuth><OrdersPage /></RequireAuth>; return <section className="page-section account-section"><AccountNav /><div className="section-head"><div><span className="eyebrow">ORDER HISTORY</span><h1>Đơn hàng của tôi</h1></div></div>{orders.isError ? <ErrorState onRetry={() => void orders.refetch()} /> : orders.isLoading ? <PageLoader /> : orders.data?.data.length ? <div className="order-list">{orders.data.data.map((order) => <Link to={`/account/orders/${order.id}`} className="order-card" key={order.id}><div><span className="order-id">Đơn hàng #{order.id}</span><small>{date(order.createdAt)} · {order.items.length} sản phẩm</small></div><div className="order-card-right"><span className={`status status-${order.status.toLowerCase()}`}>{statusLabel(order.status)}</span><strong>{money(order.total)}</strong><ChevronRight size={17} /></div></Link>)}</div> : <EmptyState title="Bạn chưa có đơn hàng" text="Những món đồ đầu tiên đang chờ bạn." action={<Link to="/products" className="button button-primary">Khám phá sản phẩm</Link>} />}</section> }
-function AccountNav() { return <nav className="account-nav"><NavLink to="/account/orders">Đơn hàng</NavLink><NavLink to="/account/addresses">Địa chỉ</NavLink><NavLink to="/account">Tài khoản</NavLink></nav> }
-function statusLabel(status: string) { const labels: Record<string, string> = { PENDING_PAYMENT: 'Chờ thanh toán', PENDING_PICKUP: 'Đang chuẩn bị', PENDING_DELIVERY: 'Đang giao', DELIVERED: 'Đã giao', CANCELLED: 'Đã hủy', RETURNED: 'Đã trả hàng' }; return labels[status] || status }
-function OrderDetailPage() { const { id } = useParams(); const { user } = useAuth(); const query = useQuery({ queryKey: ['order', id], queryFn: () => api<Order>(`/orders/${id}`), enabled: Boolean(user && id) }); const cancel = useMutation({ mutationFn: () => api<Order>(`/orders/${id}/cancel`, { method: 'PATCH' }), onSuccess: () => void query.refetch() }); if (!user) return <RequireAuth><OrderDetailPage /></RequireAuth>; if (query.isLoading) return <PageLoader />; if (query.isError || !query.data) return <ErrorState onRetry={() => void query.refetch()} />; const order = query.data; return <section className="page-section account-section"><div className="breadcrumbs"><Link to="/account/orders">Đơn hàng</Link><ChevronRight size={14} /><span>#{order.id}</span></div><div className="order-detail-head"><div><span className="eyebrow">ORDER DETAIL</span><h1>Đơn hàng #{order.id}</h1><p>Đặt ngày {date(order.createdAt)}</p></div><span className={`status status-${order.status.toLowerCase()}`}>{statusLabel(order.status)}</span></div><div className="order-detail-layout"><div><div className="order-timeline"><span className="timeline-active" /><div><strong>Đơn hàng đã được ghi nhận</strong><p>Chúng mình sẽ cập nhật bạn ở mỗi bước tiếp theo.</p></div></div><div className="order-items">{order.items.map((item) => <div className="order-item" key={item.id}><img src={item.image || 'https://placehold.co/120x120/f4f1eb/1d2433?text=E'} alt={item.productName} /><div><strong>{item.productName}</strong><small>{skuLabel({ value: item.skuValue || undefined })} · SL {item.quantity}</small></div><b>{money(Number(item.skuPrice) * item.quantity)}</b></div>)}</div>{order.status === 'PENDING_PAYMENT' ? <Button variant="danger" loading={cancel.isPending} onClick={() => void cancel.mutateAsync()}>Hủy đơn hàng</Button> : null}</div><aside className="order-summary"><h2>Tóm tắt</h2><div><span>Tạm tính</span><strong>{money(order.subtotal)}</strong></div><div><span>Giảm giá</span><strong className="success-text">-{money(order.discount)}</strong></div><hr /><div className="summary-total"><span>Tổng cộng</span><strong>{money(order.total)}</strong></div>{order.receiver ? <div className="receiver"><small>Giao tới</small><strong>{order.receiver.name}</strong><span>{order.receiver.phoneNumber}</span><span>{order.receiver.address}</span></div> : null}</aside></div></section> }
-function AddressesPage() { const { user } = useAuth(); const query = useQuery({ queryKey: ['addresses'], queryFn: () => api<Address[]>('/addresses'), enabled: Boolean(user) }); const [adding, setAdding] = useState(false); if (!user) return <RequireAuth><AddressesPage /></RequireAuth>; const remove = async (id: number) => { await api(`/addresses/${id}`, { method: 'DELETE' }); await query.refetch() }; return <section className="page-section account-section"><AccountNav /><div className="section-head"><div><span className="eyebrow">DELIVERY</span><h1>Địa chỉ giao hàng</h1></div><Button onClick={() => setAdding((value) => !value)}>{adding ? 'Đóng' : '+ Thêm địa chỉ'}</Button></div>{adding ? <div className="account-form-card"><AddressForm onCreated={() => { setAdding(false); void query.refetch() }} /></div> : null}{query.isLoading ? <PageLoader /> : <div className="saved-addresses">{query.data?.map((address) => <article className="saved-address" key={address.id}><div><div className="address-title"><strong>{address.name}</strong>{address.isDefault ? <span>Mặc định</span> : null}</div><p>{address.phoneNumber}</p><p>{address.address}</p></div><button className="remove-button" onClick={() => void remove(address.id)}><Trash2 size={16} /> Xóa</button></article>)}</div>}</section> }
-function PaymentPage() { const { state } = useParams(); const success = state === 'success'; return <section className="page-section result-page"><div className={`result-icon ${success ? 'success' : 'cancel'}`}>{success ? <ShieldCheck size={36} /> : <X size={36} />}</div><span className="eyebrow">PAYMENT {success ? 'COMPLETE' : 'CANCELLED'}</span><h1>{success ? 'Cảm ơn bạn đã mua sắm.' : 'Thanh toán chưa hoàn tất.'}</h1><p>{success ? 'PayOS đã đưa bạn quay lại cửa hàng. Trạng thái đơn sẽ được xác nhận theo webhook.' : 'Bạn có thể quay lại checkout để thử lại bất cứ lúc nào.'}</p><div className="result-actions"><Link to={success ? '/account/orders' : '/checkout'} className="button button-primary">{success ? 'Xem đơn hàng' : 'Quay lại checkout'} <ArrowRight size={17} /></Link><Link to="/products" className="text-link">Tiếp tục mua sắm</Link></div></section> }
-function NotFoundPage() { return <section className="page-section result-page"><div className="result-icon cancel"><Search size={34} /></div><span className="eyebrow">404</span><h1>Trang này đang đi lạc.</h1><p>Hãy quay lại cửa hàng để tiếp tục khám phá.</p><Link to="/products" className="button button-primary">Tới sản phẩm <ArrowRight size={17} /></Link></section> }
+function CheckoutPage() {
+  return (
+    <RequireAuth>
+      <CheckoutContent />
+    </RequireAuth>
+  )
+}
+function CheckoutContent() {
+  const { cart, refreshCart } = useCommerce()
+  const addresses = useQuery({ queryKey: ['addresses'], queryFn: () => api<Address[]>('/addresses') })
+  const [addressId, setAddressId] = useState<number | ''>('')
+  const [coupon, setCoupon] = useState('')
+  const [addingAddress, setAddingAddress] = useState(false)
+  const [orderId, setOrderId] = useState<number | null>(null)
+  const orderMutation = useMutation({
+    mutationFn: () => {
+      if (!addressId) throw new Error('Vui lòng chọn địa chỉ giao hàng.')
+      return api<Order>('/orders', {
+        method: 'POST',
+        body: JSON.stringify({ addressId: Number(addressId), ...(coupon.trim() ? { couponCode: coupon.trim() } : {}) }),
+      })
+    },
+    onSuccess: (order) => {
+      setOrderId(order.id)
+      void refreshCart()
+    },
+  })
+  const paymentMutation = useMutation({
+    mutationFn: (id: number) =>
+      api<{ checkoutUrl: string }>('/payments', { method: 'POST', body: JSON.stringify({ orderId: id }) }),
+    onSuccess: (payment) => {
+      if (payment.checkoutUrl) window.location.href = payment.checkoutUrl
+    },
+  })
+  useEffect(() => {
+    const preferred = addresses.data?.find((address) => address.isDefault) || addresses.data?.[0]
+    if (preferred) setAddressId(preferred.id)
+  }, [addresses.data])
+  if (!cart?.items.length && !orderId)
+    return (
+      <EmptyState
+        title="Giỏ hàng đang trống"
+        text="Thêm sản phẩm trước khi thanh toán."
+        action={
+          <Link to="/products" className="button button-primary">
+            Quay lại mua sắm
+          </Link>
+        }
+      />
+    )
+  const total = Number(cart?.summary.totalPrice || 0)
+  return (
+    <section className="page-section checkout-page">
+      <div className="breadcrumbs">
+        <Link to="/cart">Giỏ hàng</Link>
+        <ChevronRight size={14} />
+        <span>Thanh toán</span>
+      </div>
+      <div className="checkout-layout">
+        <div className="checkout-main">
+          <div className="checkout-heading">
+            <span className="eyebrow">CHECKOUT</span>
+            <h1>Hoàn tất đơn hàng</h1>
+            <p>Chỉ còn vài bước nữa để món đồ thuộc về bạn.</p>
+          </div>
+          <section className="checkout-card">
+            <div className="checkout-card-title">
+              <span className="step-number">01</span>
+              <div>
+                <h2>Địa chỉ giao hàng</h2>
+                <p>Chọn nơi chúng mình gửi đơn tới.</p>
+              </div>
+              <button className="text-link" onClick={() => setAddingAddress((value) => !value)}>
+                {addingAddress ? 'Đóng' : '+ Thêm địa chỉ'}
+              </button>
+            </div>
+            {addingAddress ? (
+              <AddressForm
+                onCreated={() => {
+                  setAddingAddress(false)
+                  void addresses.refetch()
+                }}
+              />
+            ) : null}
+            {addresses.isError ? (
+              <ErrorState onRetry={() => void addresses.refetch()} />
+            ) : addresses.data?.length ? (
+              <div className="address-list">
+                {addresses.data.map((address) => (
+                  <label className={`address-option ${addressId === address.id ? 'selected' : ''}`} key={address.id}>
+                    <input
+                      type="radio"
+                      name="address"
+                      checked={addressId === address.id}
+                      onChange={() => setAddressId(address.id)}
+                    />
+                    <span>
+                      <strong>{address.name}</strong>
+                      <small>
+                        {address.phoneNumber} · {address.address}
+                      </small>
+                    </span>
+                    {address.isDefault ? <em>Mặc định</em> : null}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="Chưa có địa chỉ" text="Thêm một địa chỉ để tiếp tục." />
+            )}
+          </section>
+          <section className="checkout-card">
+            <div className="checkout-card-title">
+              <span className="step-number">02</span>
+              <div>
+                <h2>Ưu đãi</h2>
+                <p>Mã giảm giá (nếu có).</p>
+              </div>
+            </div>
+            <div className="coupon-row">
+              <input
+                value={coupon}
+                onChange={(event) => setCoupon(event.target.value)}
+                placeholder="Nhập mã giảm giá"
+              />
+              <Button variant="secondary" disabled={!coupon.trim() || orderMutation.isPending}>
+                Áp dụng khi đặt
+              </Button>
+            </div>
+          </section>
+          <section className="checkout-card payment-note">
+            <LockKeyhole size={20} />
+            <div>
+              <strong>Thanh toán an toàn qua PayOS</strong>
+              <p>Bạn sẽ được chuyển tới cổng thanh toán bảo mật sau khi xác nhận đơn.</p>
+            </div>
+          </section>
+          {orderMutation.isError ? (
+            <div className="inline-alert error">
+              {orderMutation.error instanceof ApiError
+                ? orderMutation.error.message
+                : 'Không thể tạo đơn. Vui lòng kiểm tra lại.'}
+            </div>
+          ) : null}
+          {orderId ? (
+            <div className="inline-alert success">Đơn #{orderId} đã được tạo. Hãy thanh toán để hoàn tất.</div>
+          ) : null}
+        </div>
+        <aside className="checkout-side">
+          <OrderSummary
+            subtotal={total}
+            action={
+              orderId ? (
+                <Button
+                  className="full-button"
+                  loading={paymentMutation.isPending}
+                  onClick={() => void paymentMutation.mutateAsync(orderId)}
+                >
+                  Thanh toán ngay <ArrowRight size={17} />
+                </Button>
+              ) : (
+                <Button
+                  className="full-button"
+                  loading={orderMutation.isPending}
+                  disabled={!addressId || !cart?.items.length}
+                  onClick={() => void orderMutation.mutateAsync()}
+                >
+                  Xác nhận đơn hàng <ArrowRight size={17} />
+                </Button>
+              )
+            }
+          />
+        </aside>
+      </div>
+    </section>
+  )
+}
+function AddressForm({ onCreated }: { onCreated: () => void }) {
+  const [values, setValues] = useState({ name: '', phoneNumber: '', address: '', note: '' })
+  const [error, setError] = useState('')
+  const mutation = useMutation({
+    mutationFn: () => api<Address>('/addresses', { method: 'POST', body: JSON.stringify(values) }),
+    onSuccess: onCreated,
+  })
+  return (
+    <form
+      className="address-form"
+      onSubmit={(event) => {
+        event.preventDefault()
+        setError('')
+        void mutation
+          .mutateAsync()
+          .catch((reason: unknown) => setError(reason instanceof ApiError ? reason.message : 'Không thể thêm địa chỉ.'))
+      }}
+    >
+      <div className="form-grid">
+        <Field label="Tên người nhận">
+          <input
+            value={values.name}
+            onChange={(event) => setValues({ ...values, name: event.target.value })}
+            required
+            placeholder="Nguyễn Văn A"
+          />
+        </Field>
+        <Field label="Số điện thoại">
+          <input
+            value={values.phoneNumber}
+            onChange={(event) => setValues({ ...values, phoneNumber: event.target.value })}
+            required
+            inputMode="tel"
+            placeholder="0912 345 678"
+          />
+        </Field>
+      </div>
+      <Field label="Địa chỉ">
+        <input
+          value={values.address}
+          onChange={(event) => setValues({ ...values, address: event.target.value })}
+          required
+          placeholder="Số nhà, đường, quận/huyện, tỉnh/thành"
+        />
+      </Field>
+      <Field label="Ghi chú (không bắt buộc)">
+        <input
+          value={values.note}
+          onChange={(event) => setValues({ ...values, note: event.target.value })}
+          placeholder="Giao giờ hành chính..."
+        />
+      </Field>
+      {error ? <div className="inline-alert error">{error}</div> : null}
+      <Button type="submit" loading={mutation.isPending}>
+        Lưu địa chỉ
+      </Button>
+    </form>
+  )
+}
+
+type AuthMode = 'login' | 'register' | 'verify' | 'forgot' | 'reset' | 'twoFactor'
+function AuthPage({ mode }: { mode: AuthMode }) {
+  const { user, login } = useAuth()
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const redirect = params.get('redirect') || '/'
+  const [currentMode, setCurrentMode] = useState(mode)
+  const [values, setValues] = useState({
+    name: '',
+    phoneNumber: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    code: '',
+  })
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  const twoFactorToken = sessionStorage.getItem('twoFactorToken') || ''
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (currentMode === 'login')
+        return api<{
+          requiresTwoFactor: boolean
+          accessToken?: string
+          refreshToken?: string
+          twoFactorToken?: string
+          user?: User
+        }>(
+          '/auth/login',
+          { method: 'POST', body: JSON.stringify({ email: values.email, password: values.password }) },
+          false,
+        )
+      if (currentMode === 'register')
+        return api(
+          '/auth/register',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              email: values.email,
+              password: values.password,
+              confirmPassword: values.confirmPassword,
+              name: values.name,
+              phoneNumber: values.phoneNumber,
+            }),
+          },
+          false,
+        )
+      if (currentMode === 'verify')
+        return api(
+          '/auth/verify-email',
+          { method: 'POST', body: JSON.stringify({ email: values.email, code: values.code }) },
+          false,
+        )
+      if (currentMode === 'twoFactor')
+        return api<{ requiresTwoFactor: boolean; accessToken?: string; refreshToken?: string; user?: User }>(
+          '/auth/2fa/verify-login',
+          { method: 'POST', body: JSON.stringify({ twoFactorToken, code: values.code }) },
+          false,
+        )
+      if (currentMode === 'reset')
+        return api(
+          '/auth/reset-password',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              email: values.email,
+              code: values.code,
+              password: values.password,
+              confirmPassword: values.confirmPassword,
+            }),
+          },
+          false,
+        )
+      return api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: values.email }) }, false)
+    },
+    onSuccess: (result) => {
+      if (currentMode === 'login' || currentMode === 'twoFactor') {
+        const data = result as { requiresTwoFactor: boolean; accessToken?: string; refreshToken?: string; user?: User }
+        if (data.requiresTwoFactor) {
+          sessionStorage.setItem('twoFactorToken', (result as { twoFactorToken?: string }).twoFactorToken || '')
+          setCurrentMode('twoFactor')
+          setMessage('Nhập mã OTP 6 số từ ứng dụng xác thực.')
+          return
+        }
+        if (!data.accessToken || !data.refreshToken || !data.user) {
+          setError('Đăng nhập chưa trả về đủ thông tin phiên.')
+          return
+        }
+        login(data.user, data.accessToken, data.refreshToken)
+        sessionStorage.removeItem('twoFactorToken')
+        navigate(redirect, { replace: true })
+      } else if (currentMode === 'register') {
+        setMessage('Đăng ký thành công. Kiểm tra email để lấy mã xác thực.')
+        setCurrentMode('verify')
+      } else if (currentMode === 'verify') {
+        setMessage('Email đã được xác thực. Bạn có thể đăng nhập.')
+        setCurrentMode('login')
+      } else if (currentMode === 'forgot') {
+        setMessage('Nếu email tồn tại, mã khôi phục sẽ được gửi tới bạn.')
+        setCurrentMode('reset')
+      } else if (currentMode === 'reset') {
+        setMessage('Mật khẩu đã được cập nhật. Bạn có thể đăng nhập.')
+        setCurrentMode('login')
+      }
+    },
+    onError: (reason: unknown) =>
+      setError(reason instanceof ApiError ? reason.message : 'Có lỗi xảy ra. Vui lòng thử lại.'),
+  })
+  if (user) return <Navigate to="/" replace />
+  const title =
+    currentMode === 'login'
+      ? 'Chào mừng bạn trở lại'
+      : currentMode === 'register'
+        ? 'Tạo tài khoản Élan'
+        : currentMode === 'verify'
+          ? 'Xác thực email'
+          : currentMode === 'twoFactor'
+            ? 'Xác thực hai bước'
+            : currentMode === 'reset'
+              ? 'Đặt lại mật khẩu'
+              : 'Lấy lại mật khẩu'
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    setError('')
+    void mutation.mutateAsync()
+  }
+  return (
+    <section className="auth-page">
+      <div className="auth-panel">
+        <div className="auth-art">
+          <Link to="/" className="logo logo-light">
+            <span className="logo-mark">E</span>
+            <span>
+              <strong>Élan</strong>
+              <small>electronics, simply</small>
+            </span>
+          </Link>
+          <div>
+            <span className="eyebrow">A SMALLER WAY TO SHOP</span>
+            <h1>
+              Chọn ít hơn.
+              <br />
+              <em>Chọn đúng hơn.</em>
+            </h1>
+            <p>Một cửa hàng điện tử được tuyển chọn cho những điều bạn thực sự muốn dùng mỗi ngày.</p>
+          </div>
+          <span className="auth-art-note">Made for everyday rituals.</span>
+        </div>
+        <div className="auth-form-panel">
+          <div className="auth-form-head">
+            <span className="eyebrow">YOUR ACCOUNT</span>
+            <h1>{title}</h1>
+            <p>
+              {currentMode === 'login'
+                ? 'Đăng nhập để theo dõi đơn hàng và checkout nhanh hơn.'
+                : currentMode === 'register'
+                  ? 'Tạo tài khoản miễn phí để bắt đầu mua sắm.'
+                  : currentMode === 'verify'
+                    ? `Mã xác thực đã được gửi tới ${values.email || 'email của bạn'}.`
+                    : currentMode === 'twoFactor'
+                      ? 'Nhập mã OTP từ ứng dụng xác thực để tiếp tục.'
+                      : currentMode === 'reset'
+                        ? 'Nhập mã trong email và mật khẩu mới của bạn.'
+                        : 'Nhập email để nhận hướng dẫn khôi phục.'}
+            </p>
+          </div>
+          {message ? <div className="inline-alert success">{message}</div> : null}
+          {error ? <div className="inline-alert error">{error}</div> : null}
+          <form onSubmit={submit} className="auth-form">
+            <div className="auth-fields">
+              {currentMode === 'register' ? (
+                <>
+                  <Field label="Họ và tên">
+                    <input
+                      value={values.name}
+                      onChange={(event) => setValues({ ...values, name: event.target.value })}
+                      required
+                      autoComplete="name"
+                    />
+                  </Field>
+                  <Field label="Số điện thoại">
+                    <input
+                      value={values.phoneNumber}
+                      onChange={(event) => setValues({ ...values, phoneNumber: event.target.value })}
+                      required
+                      inputMode="tel"
+                    />
+                  </Field>
+                </>
+              ) : null}
+              <Field label="Email">
+                <input
+                  type="email"
+                  value={values.email}
+                  onChange={(event) => setValues({ ...values, email: event.target.value })}
+                  required
+                  autoComplete="email"
+                />
+              </Field>
+              {currentMode === 'verify' || currentMode === 'twoFactor' || currentMode === 'reset' ? (
+                <Field label={currentMode === 'twoFactor' ? 'Mã OTP 6 số' : 'Mã xác thực 6 số'}>
+                  <input
+                    value={values.code}
+                    onChange={(event) => setValues({ ...values, code: event.target.value })}
+                    required
+                    inputMode="numeric"
+                    maxLength={6}
+                  />
+                </Field>
+              ) : null}
+              {currentMode === 'login' || currentMode === 'register' || currentMode === 'reset' ? (
+                <Field label="Mật khẩu">
+                  <input
+                    type="password"
+                    value={values.password}
+                    onChange={(event) => setValues({ ...values, password: event.target.value })}
+                    required
+                    minLength={6}
+                    autoComplete={currentMode === 'login' ? 'current-password' : 'new-password'}
+                  />
+                </Field>
+              ) : null}
+              {currentMode === 'register' || currentMode === 'reset' ? (
+                <Field label="Nhập lại mật khẩu">
+                  <input
+                    type="password"
+                    value={values.confirmPassword}
+                    onChange={(event) => setValues({ ...values, confirmPassword: event.target.value })}
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
+                  />
+                </Field>
+              ) : null}
+            </div>
+            <Button type="submit" className="full-button" loading={mutation.isPending}>
+              {currentMode === 'login'
+                ? 'Đăng nhập'
+                : currentMode === 'register'
+                  ? 'Tạo tài khoản'
+                  : currentMode === 'verify'
+                    ? 'Xác thực email'
+                    : currentMode === 'twoFactor'
+                      ? 'Xác nhận OTP'
+                      : currentMode === 'reset'
+                        ? 'Đặt lại mật khẩu'
+                        : 'Gửi mã khôi phục'}{' '}
+              <ArrowRight size={17} />
+            </Button>
+          </form>
+          <div className="auth-links">
+            {currentMode === 'login' ? (
+              <>
+                <Link to="/register">Tạo tài khoản mới</Link>
+                <Link to="/forgot-password">Quên mật khẩu?</Link>
+              </>
+            ) : (
+              <button className="text-link" onClick={() => setCurrentMode('login')}>
+                Quay lại đăng nhập
+              </button>
+            )}
+            {currentMode === 'verify' ? (
+              <button
+                className="text-link"
+                onClick={() => {
+                  setError('')
+                  void api(
+                    '/auth/resend-verification-code',
+                    { method: 'POST', body: JSON.stringify({ email: values.email }) },
+                    false,
+                  )
+                    .then(() => setMessage('Đã gửi lại mã xác thực.'))
+                    .catch((reason: unknown) =>
+                      setError(reason instanceof ApiError ? reason.message : 'Không thể gửi lại mã.'),
+                    )
+                }}
+              >
+                Gửi lại mã
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function AccountPage() {
+  const { user } = useAuth()
+  if (!user)
+    return (
+      <RequireAuth>
+        <AccountPage />
+      </RequireAuth>
+    )
+  return (
+    <section className="page-section account-page">
+      <div className="account-welcome">
+        <div className="profile-avatar">{initials(user.name)}</div>
+        <div>
+          <span className="eyebrow">YOUR SPACE</span>
+          <h1>Chào {user.name.split(' ').slice(-1)[0]}.</h1>
+          <p>Quản lý đơn hàng, địa chỉ và thông tin tài khoản.</p>
+        </div>
+      </div>
+      <div className="account-grid">
+        <AccountCard
+          to="/account/orders"
+          icon={<Package size={22} />}
+          title="Đơn hàng của tôi"
+          text="Theo dõi trạng thái và lịch sử mua sắm."
+        />
+        <AccountCard
+          to="/account/addresses"
+          icon={<Truck size={22} />}
+          title="Địa chỉ giao hàng"
+          text="Lưu nơi nhận hàng yêu thích của bạn."
+        />
+        <AccountCard
+          to="/account"
+          icon={<UserRound size={22} />}
+          title="Thông tin cá nhân"
+          text="Cập nhật tên và số điện thoại."
+        />
+      </div>
+      <ProfileForm />
+    </section>
+  )
+}
+function AccountCard({ to, icon, title, text }: { to: string; icon: ReactNode; title: string; text: string }) {
+  return (
+    <Link to={to} className="account-card">
+      {icon}
+      <div>
+        <strong>{title}</strong>
+        <p>{text}</p>
+      </div>
+      <ArrowRight size={17} />
+    </Link>
+  )
+}
+function ProfileForm() {
+  const { user, login } = useAuth()
+  const [name, setName] = useState(user?.name || '')
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '')
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const mutation = useMutation({
+    mutationFn: () => api<User>('/users/me', { method: 'PATCH', body: JSON.stringify({ name, phoneNumber }) }),
+    onSuccess: (updated) => {
+      if (user) login(updated, getAccessToken() || '', getRefreshToken() || '')
+      setMessage('Thông tin cá nhân đã được cập nhật.')
+      setError('')
+    },
+    onError: (reason: unknown) => {
+      setError(reason instanceof ApiError ? reason.message : 'Không thể cập nhật thông tin.')
+      setMessage('')
+    },
+  })
+  return (
+    <div className="account-form-card profile-form-card">
+      <div className="section-head">
+        <div>
+          <span className="eyebrow">PROFILE</span>
+          <h2>Thông tin cá nhân</h2>
+        </div>
+      </div>
+      <form
+        className="profile-form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void mutation.mutateAsync()
+        }}
+      >
+        <div className="form-grid">
+          <Field label="Họ và tên">
+            <input value={name} onChange={(event) => setName(event.target.value)} required />
+          </Field>
+          <Field label="Số điện thoại">
+            <input
+              value={phoneNumber}
+              onChange={(event) => setPhoneNumber(event.target.value)}
+              required
+              inputMode="tel"
+            />
+          </Field>
+        </div>
+        {message ? <div className="inline-alert success">{message}</div> : null}
+        {error ? <div className="inline-alert error">{error}</div> : null}
+        <Button type="submit" loading={mutation.isPending}>
+          Lưu thay đổi
+        </Button>
+      </form>
+    </div>
+  )
+}
+function OrdersPage() {
+  const { user } = useAuth()
+  const orders = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => api<{ data: Order[] }>('/orders?page=1&limit=20'),
+    enabled: Boolean(user),
+  })
+  if (!user)
+    return (
+      <RequireAuth>
+        <OrdersPage />
+      </RequireAuth>
+    )
+  return (
+    <section className="page-section account-section">
+      <AccountNav />
+      <div className="section-head">
+        <div>
+          <span className="eyebrow">ORDER HISTORY</span>
+          <h1>Đơn hàng của tôi</h1>
+        </div>
+      </div>
+      {orders.isError ? (
+        <ErrorState onRetry={() => void orders.refetch()} />
+      ) : orders.isLoading ? (
+        <PageLoader />
+      ) : orders.data?.data.length ? (
+        <div className="order-list">
+          {orders.data.data.map((order) => (
+            <Link to={`/account/orders/${order.id}`} className="order-card" key={order.id}>
+              <div>
+                <span className="order-id">Đơn hàng #{order.id}</span>
+                <small>
+                  {date(order.createdAt)} · {order.items.length} sản phẩm
+                </small>
+              </div>
+              <div className="order-card-right">
+                <span className={`status status-${order.status.toLowerCase()}`}>{statusLabel(order.status)}</span>
+                <strong>{money(order.total)}</strong>
+                <ChevronRight size={17} />
+              </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title="Bạn chưa có đơn hàng"
+          text="Những món đồ đầu tiên đang chờ bạn."
+          action={
+            <Link to="/products" className="button button-primary">
+              Khám phá sản phẩm
+            </Link>
+          }
+        />
+      )}
+    </section>
+  )
+}
+function AccountNav() {
+  return (
+    <nav className="account-nav">
+      <NavLink to="/account/orders">Đơn hàng</NavLink>
+      <NavLink to="/account/addresses">Địa chỉ</NavLink>
+      <NavLink to="/account">Tài khoản</NavLink>
+    </nav>
+  )
+}
+function statusLabel(status: string) {
+  const labels: Record<string, string> = {
+    PENDING_PAYMENT: 'Chờ thanh toán',
+    PENDING_PICKUP: 'Đang chuẩn bị',
+    PENDING_DELIVERY: 'Đang giao',
+    DELIVERED: 'Đã giao',
+    CANCELLED: 'Đã hủy',
+    RETURNED: 'Đã trả hàng',
+  }
+  return labels[status] || status
+}
+function OrderDetailPage() {
+  const { id } = useParams()
+  const { user } = useAuth()
+  const query = useQuery({
+    queryKey: ['order', id],
+    queryFn: () => api<Order>(`/orders/${id}`),
+    enabled: Boolean(user && id),
+  })
+  const cancel = useMutation({
+    mutationFn: () => api<Order>(`/orders/${id}/cancel`, { method: 'PATCH' }),
+    onSuccess: () => void query.refetch(),
+  })
+  if (!user)
+    return (
+      <RequireAuth>
+        <OrderDetailPage />
+      </RequireAuth>
+    )
+  if (query.isLoading) return <PageLoader />
+  if (query.isError || !query.data) return <ErrorState onRetry={() => void query.refetch()} />
+  const order = query.data
+  return (
+    <section className="page-section account-section">
+      <div className="breadcrumbs">
+        <Link to="/account/orders">Đơn hàng</Link>
+        <ChevronRight size={14} />
+        <span>#{order.id}</span>
+      </div>
+      <div className="order-detail-head">
+        <div>
+          <span className="eyebrow">ORDER DETAIL</span>
+          <h1>Đơn hàng #{order.id}</h1>
+          <p>Đặt ngày {date(order.createdAt)}</p>
+        </div>
+        <span className={`status status-${order.status.toLowerCase()}`}>{statusLabel(order.status)}</span>
+      </div>
+      <div className="order-detail-layout">
+        <div>
+          <div className="order-timeline">
+            <span className="timeline-active" />
+            <div>
+              <strong>Đơn hàng đã được ghi nhận</strong>
+              <p>Chúng mình sẽ cập nhật bạn ở mỗi bước tiếp theo.</p>
+            </div>
+          </div>
+          <div className="order-items">
+            {order.items.map((item) => (
+              <div className="order-item" key={item.id}>
+                <img src={item.image || 'https://placehold.co/120x120/f4f1eb/1d2433?text=E'} alt={item.productName} />
+                <div>
+                  <strong>{item.productName}</strong>
+                  <small>
+                    {skuLabel({ value: item.skuValue || undefined })} · SL {item.quantity}
+                  </small>
+                </div>
+                <b>{money(Number(item.skuPrice) * item.quantity)}</b>
+              </div>
+            ))}
+          </div>
+          {order.status === 'DELIVERED' ? (
+            <div className="review-forms">
+              <h3>Chia sẻ trải nghiệm</h3>
+              {order.items
+                .filter((item) => item.productId)
+                .map((item) => (
+                  <ReviewForm
+                    key={item.id}
+                    orderId={order.id}
+                    productId={item.productId!}
+                    productName={item.productName}
+                  />
+                ))}
+            </div>
+          ) : null}
+          {order.status === 'PENDING_PAYMENT' ? (
+            <Button variant="danger" loading={cancel.isPending} onClick={() => void cancel.mutateAsync()}>
+              Hủy đơn hàng
+            </Button>
+          ) : null}
+        </div>
+        <aside className="order-summary">
+          <h2>Tóm tắt</h2>
+          <div>
+            <span>Tạm tính</span>
+            <strong>{money(order.subtotal)}</strong>
+          </div>
+          <div>
+            <span>Giảm giá</span>
+            <strong className="success-text">-{money(order.discount)}</strong>
+          </div>
+          <hr />
+          <div className="summary-total">
+            <span>Tổng cộng</span>
+            <strong>{money(order.total)}</strong>
+          </div>
+          {order.receiver ? (
+            <div className="receiver">
+              <small>Giao tới</small>
+              <strong>{order.receiver.name}</strong>
+              <span>{order.receiver.phoneNumber}</span>
+              <span>{order.receiver.address}</span>
+            </div>
+          ) : null}
+        </aside>
+      </div>
+    </section>
+  )
+}
+function ReviewForm({ orderId, productId, productName }: { orderId: number; productId: number; productName: string }) {
+  const [rating, setRating] = useState(5)
+  const [content, setContent] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const mutation = useMutation({
+    mutationFn: () =>
+      api('/reviews', {
+        method: 'POST',
+        body: JSON.stringify({ orderId, productId, rating, content: content.trim() }),
+      }),
+    onSuccess: () => setSubmitted(true),
+  })
+  if (submitted) return <div className="inline-alert success">Cảm ơn bạn đã đánh giá {productName}.</div>
+  return (
+    <form
+      className="review-form"
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (content.trim()) void mutation.mutateAsync()
+      }}
+    >
+      <strong>{productName}</strong>
+      <div className="review-rating-input" aria-label="Chọn số sao">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            key={value}
+            type="button"
+            className={value <= rating ? 'active' : ''}
+            onClick={() => setRating(value)}
+            aria-label={`${value} sao`}
+          >
+            <Star size={18} fill="currentColor" />
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={content}
+        onChange={(event) => setContent(event.target.value)}
+        minLength={1}
+        maxLength={2000}
+        required
+        placeholder="Điều bạn thích ở sản phẩm này?"
+      />
+      {mutation.isError ? (
+        <div className="inline-alert error">
+          {mutation.error instanceof ApiError ? mutation.error.message : 'Không thể gửi đánh giá.'}
+        </div>
+      ) : null}
+      <Button type="submit" loading={mutation.isPending}>
+        Gửi đánh giá
+      </Button>
+    </form>
+  )
+}
+function AddressesPage() {
+  const { user } = useAuth()
+  const query = useQuery({
+    queryKey: ['addresses'],
+    queryFn: () => api<Address[]>('/addresses'),
+    enabled: Boolean(user),
+  })
+  const [adding, setAdding] = useState(false)
+  if (!user)
+    return (
+      <RequireAuth>
+        <AddressesPage />
+      </RequireAuth>
+    )
+  const remove = async (id: number) => {
+    await api(`/addresses/${id}`, { method: 'DELETE' })
+    await query.refetch()
+  }
+  return (
+    <section className="page-section account-section">
+      <AccountNav />
+      <div className="section-head">
+        <div>
+          <span className="eyebrow">DELIVERY</span>
+          <h1>Địa chỉ giao hàng</h1>
+        </div>
+        <Button onClick={() => setAdding((value) => !value)}>{adding ? 'Đóng' : '+ Thêm địa chỉ'}</Button>
+      </div>
+      {adding ? (
+        <div className="account-form-card">
+          <AddressForm
+            onCreated={() => {
+              setAdding(false)
+              void query.refetch()
+            }}
+          />
+        </div>
+      ) : null}
+      {query.isLoading ? (
+        <PageLoader />
+      ) : (
+        <div className="saved-addresses">
+          {query.data?.map((address) => (
+            <article className="saved-address" key={address.id}>
+              <div>
+                <div className="address-title">
+                  <strong>{address.name}</strong>
+                  {address.isDefault ? <span>Mặc định</span> : null}
+                </div>
+                <p>{address.phoneNumber}</p>
+                <p>{address.address}</p>
+              </div>
+              <button className="remove-button" onClick={() => void remove(address.id)}>
+                <Trash2 size={16} /> Xóa
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+function PaymentPage() {
+  const { state } = useParams()
+  const success = state === 'success'
+  return (
+    <section className="page-section result-page">
+      <div className={`result-icon ${success ? 'success' : 'cancel'}`}>
+        {success ? <ShieldCheck size={36} /> : <X size={36} />}
+      </div>
+      <span className="eyebrow">PAYMENT {success ? 'COMPLETE' : 'CANCELLED'}</span>
+      <h1>{success ? 'Cảm ơn bạn đã mua sắm.' : 'Thanh toán chưa hoàn tất.'}</h1>
+      <p>
+        {success
+          ? 'PayOS đã đưa bạn quay lại cửa hàng. Trạng thái đơn sẽ được xác nhận theo webhook.'
+          : 'Bạn có thể quay lại checkout để thử lại bất cứ lúc nào.'}
+      </p>
+      <div className="result-actions">
+        <Link to={success ? '/account/orders' : '/checkout'} className="button button-primary">
+          {success ? 'Xem đơn hàng' : 'Quay lại checkout'} <ArrowRight size={17} />
+        </Link>
+        <Link to="/products" className="text-link">
+          Tiếp tục mua sắm
+        </Link>
+      </div>
+    </section>
+  )
+}
+function NotFoundPage() {
+  return (
+    <section className="page-section result-page">
+      <div className="result-icon cancel">
+        <Search size={34} />
+      </div>
+      <span className="eyebrow">404</span>
+      <h1>Trang này đang đi lạc.</h1>
+      <p>Hãy quay lại cửa hàng để tiếp tục khám phá.</p>
+      <Link to="/products" className="button button-primary">
+        Tới sản phẩm <ArrowRight size={17} />
+      </Link>
+    </section>
+  )
+}
 export default App

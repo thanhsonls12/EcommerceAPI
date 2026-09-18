@@ -16,8 +16,12 @@ export class ApiError extends Error {
 
 export const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/$/, '')
 
-export function getAccessToken() { return localStorage.getItem('accessToken') }
-export function getRefreshToken() { return localStorage.getItem('refreshToken') }
+export function getAccessToken() {
+  return localStorage.getItem('accessToken')
+}
+export function getRefreshToken() {
+  return localStorage.getItem('refreshToken')
+}
 export function setTokens(accessToken: string, refreshToken?: string) {
   localStorage.setItem('accessToken', accessToken)
   if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
@@ -26,12 +30,20 @@ export function clearTokens() {
   localStorage.removeItem('accessToken')
   localStorage.removeItem('refreshToken')
 }
-export function hasAccessToken() { return Boolean(getAccessToken()) }
+export function hasAccessToken() {
+  return Boolean(getAccessToken())
+}
 
 function collectMessages(value: unknown, acc: string[] = []): string[] {
   if (!value) return acc
-  if (typeof value === 'string') { if (value.trim()) acc.push(value.trim()); return acc }
-  if (Array.isArray(value)) { value.forEach((item) => collectMessages(item, acc)); return acc }
+  if (typeof value === 'string') {
+    if (value.trim()) acc.push(value.trim())
+    return acc
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectMessages(item, acc))
+    return acc
+  }
   if (typeof value === 'object') {
     const object = value as Record<string, unknown>
     if ('message' in object) collectMessages(object.message, acc)
@@ -80,15 +92,22 @@ async function refreshSession() {
   if (!refreshToken) return false
   if (!refreshPromise) {
     refreshPromise = fetch(`${API_URL}/auth/refresh-token`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }),
-    }).then(async (response) => {
-      if (!response.ok) return false
-      const payload = (await response.json()) as ApiEnvelope<{ accessToken: string; refreshToken: string }>
-      const data = payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
-      if (!data?.accessToken) return false
-      setTokens(data.accessToken, data.refreshToken)
-      return true
-    }).catch(() => false).finally(() => { refreshPromise = null })
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    })
+      .then(async (response) => {
+        if (!response.ok) return false
+        const payload = (await response.json()) as ApiEnvelope<{ accessToken: string; refreshToken: string }>
+        const data = payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
+        if (!data?.accessToken) return false
+        setTokens(data.accessToken, data.refreshToken)
+        return true
+      })
+      .catch(() => false)
+      .finally(() => {
+        refreshPromise = null
+      })
   }
   return refreshPromise
 }
@@ -103,11 +122,16 @@ export async function api<T>(path: string, options: RequestInit | boolean = {}, 
     if (token) headers.set('Authorization', `Bearer ${token}`)
   }
   let response: Response
-  try { response = await fetch(`${API_URL}${path}`, { ...requestOptions, headers }) }
-  catch { throw new ApiError(messageFor(null, 0), 0) }
+  try {
+    response = await fetch(`${API_URL}${path}`, { ...requestOptions, headers })
+  } catch {
+    throw new ApiError(messageFor(null, 0), 0)
+  }
   const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | Record<string, unknown> | null
-  if (response.status === 401 && requestAuth && retry && (await refreshSession())) return api<T>(path, requestOptions, true, false)
-  if (!response.ok) throw new ApiError(messageFor(payload, response.status), response.status, extractFieldErrors(payload))
+  if (response.status === 401 && requestAuth && retry && (await refreshSession()))
+    return api<T>(path, requestOptions, true, false)
+  if (!response.ok)
+    throw new ApiError(messageFor(payload, response.status), response.status, extractFieldErrors(payload))
   if (payload && typeof payload === 'object' && 'data' in payload) return (payload as ApiEnvelope<T>).data
   return payload as T
 }

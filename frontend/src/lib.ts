@@ -36,5 +36,11 @@ export function listFrom<T>(value: unknown): T[] {
 }
 
 export function initials(value?: string) {
-  return (value || 'E').trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
+  return (value || 'E')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
 }

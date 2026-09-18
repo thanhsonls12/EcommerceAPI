@@ -28,7 +28,13 @@ export type Product = {
   createdAt?: string
 }
 
-export type Sku = { id: number; value?: Record<string, string>; price: string | number; stock: number; image?: string | null }
+export type Sku = {
+  id: number
+  value?: Record<string, string>
+  price: string | number
+  stock: number
+  image?: string | null
+}
 
 export type CartItem = {
   id?: number
@@ -47,7 +53,14 @@ export type GuestCartItem = {
   product: Pick<Product, 'id' | 'name' | 'images'>
 }
 
-export type Address = { id: number; name: string; phoneNumber: string; address: string; note?: string | null; isDefault: boolean }
+export type Address = {
+  id: number
+  name: string
+  phoneNumber: string
+  address: string
+  note?: string | null
+  isDefault: boolean
+}
 
 export type OrderItem = {
   id: number
