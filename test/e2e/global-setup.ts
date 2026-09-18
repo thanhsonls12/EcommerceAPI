@@ -70,6 +70,7 @@ async function ensureSchema() {
         env: {
           ...process.env,
           DATABASE_URL: databaseUrl,
+          DIRECT_URL: databaseUrl,
         },
         encoding: 'utf8',
       },
@@ -83,6 +84,7 @@ async function ensureSchema() {
 
 export default async function globalSetup() {
   process.env.DATABASE_URL = databaseUrl
+  process.env.DIRECT_URL = databaseUrl
   process.env.REDIS_URL = process.env.E2E_REDIS_URL ?? 'redis://127.0.0.1:6380'
 
   await waitForPostgres()

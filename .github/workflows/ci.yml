@@ -9,6 +9,7 @@ on:
 env:
   NODE_ENV: test
   DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/ecommerce_ci?schema=public
+  DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/ecommerce_ci?schema=public
   REDIS_URL: redis://127.0.0.1:6379
   ACCESS_TOKEN_SECRET: ci-access-token-secret-000000000000000000000000
   ACCESS_TOKEN_EXPIRES_IN: 15m
@@ -89,6 +90,7 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/ecommerce_ci?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/ecommerce_ci?schema=public
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -140,6 +142,7 @@ jobs:
       E2E_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5434/ecommerce_e2e?schema=public
       E2E_REDIS_URL: redis://127.0.0.1:6380
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5434/ecommerce_e2e?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5434/ecommerce_e2e?schema=public
       REDIS_URL: redis://127.0.0.1:6380
     steps:
       - name: Checkout repository
