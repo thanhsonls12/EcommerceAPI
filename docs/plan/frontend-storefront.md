@@ -64,7 +64,7 @@ Phong cách “modern retail editorial”: nền trắng ấm, chữ than đậm
 | Border | `border`, `border-strong`, `focus-ring` |
 | Layout | spacing theo thang 4 px, radius, shadow, breakpoint, z-index, duration |
 
-Mọi màu, khoảng cách, radius, shadow và thời gian chuyển động được khai báo một lần trong `tokens.css`. Khi triển khai, ưu tiên CSS variables và CSS Modules để giữ dependency nhỏ; chưa cần thêm Tailwind cho codebase mini hiện tại.
+Mọi màu, khoảng cách, radius, shadow và thời gian chuyển động được khai báo một lần trong lớp token của `frontend/src/style.css`. Component behavior nằm trong TSX; chưa cần thêm Tailwind cho codebase mini hiện tại.
 
 ## 4. Kiến trúc thông tin và route
 
@@ -162,9 +162,8 @@ frontend/src/
   services/
     api-client.ts
     query-keys.ts
-  styles/
-    tokens.css
-    globals.css
+  style.css         # design tokens + global layout styles
+  review.css        # review form styles
   types/
 ```
 
@@ -176,7 +175,7 @@ Nguyên tắc ranh giới:
 - Chỉ thêm Zustand nếu giỏ khách chưa đăng nhập cần đồng bộ phức tạp; không thêm store toàn cục từ đầu.
 - Kiểu response được khai báo theo DTO backend hoặc sinh từ OpenAPI khi contract đã ổn định.
 
-Dependency tối thiểu đề xuất: `react-router-dom`, `@tanstack/react-query`, `react-hook-form`, `zod`, `@hookform/resolvers`, `lucide-react`. Dùng CSS Modules và CSS variables hiện có của trình duyệt.
+Dependency đã dùng: `react-router-dom`, `@tanstack/react-query`, `react-hook-form`, `zod`, `@hookform/resolvers`, `lucide-react`; quality gates dùng ESLint flat config và Prettier. Visual tokens nằm trong CSS variables tập trung.
 
 ## 8. Component và contract UI
 
@@ -297,4 +296,4 @@ Definition of Done cho mỗi màn hình:
 
 ## 14. Thứ tự bắt đầu đề xuất
 
-Thực hiện chặng 0 rồi dựng một vertical slice hoàn chỉnh: `/products` → `/products/:id` → thêm một SKU vào `/cart`. Slice này kiểm chứng design system, router, query layer, response product và responsive trước khi nhân rộng sang auth/checkout. Sau khi slice đạt tiêu chí nghiệm thu mới tháo dần `App.tsx` và `style.css` cũ, tránh viết lại toàn bộ trong một lần.
+Vertical slice `/products` → `/products/:id` → thêm một SKU vào `/cart` đã được dựng cùng auth, checkout và account. `App.tsx` hiện chỉ giữ provider/router; page, feature, layout và component dùng chung nằm ở các module riêng để tiếp tục mở rộng mà không dồn logic vào một file.
