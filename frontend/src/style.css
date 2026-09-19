@@ -1201,6 +1201,14 @@ a:focus-visible {
   color: var(--primary);
   font-size: 20px;
 }
+.summary-discount strong {
+  color: var(--success);
+}
+.coupon-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-subtle);
+}
 .muted {
   color: var(--text-muted);
 }
@@ -1366,6 +1374,8 @@ a:focus-visible {
   padding: 11px 13px;
   border-radius: var(--radius-sm);
   font-size: 12px;
+  background: rgba(29, 36, 51, 0.05);
+  color: var(--text);
 }
 .inline-alert.error {
   background: var(--danger-soft);

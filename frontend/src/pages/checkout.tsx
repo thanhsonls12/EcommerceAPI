@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { ArrowRight, ChevronRight, LockKeyhole } from 'lucide-react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { api, ApiError } from '../api'
+import { money } from '../lib'
 import { useAuth, useCommerce } from '../app-context'
 import { Button, EmptyState, ErrorState, Field } from '../components/ui'
 import { OrderSummary } from '../components/commerce'
@@ -88,7 +89,11 @@ function CheckoutContent() {
         }
       />
     )
-  const total = orderId ? Number(pendingOrder.data?.total || 0) : Number(cart?.summary.totalPrice || 0)
+  const order = orderId ? pendingOrder.data : null
+  const cartTotal = Number(cart?.summary.totalPrice || 0)
+  const summarySubtotal = order ? Number(order.subtotal || 0) : cartTotal
+  const summaryDiscount = order ? Number(order.discount || 0) : 0
+  const summaryTotal = order ? Number(order.total || 0) : cartTotal
   return (
     <section className="page-section checkout-page">
       <div className="breadcrumbs">
@@ -159,13 +164,22 @@ function CheckoutContent() {
             <div className="coupon-row">
               <input
                 value={coupon}
-                onChange={(event) => setCoupon(event.target.value)}
+                onChange={(event) => setCoupon(event.target.value.toUpperCase())}
                 placeholder="Nhập mã giảm giá"
+                disabled={Boolean(orderId)}
               />
-              <Button variant="secondary" disabled={!coupon.trim() || orderMutation.isPending}>
-                Áp dụng khi đặt
-              </Button>
             </div>
+            {order ? (
+              summaryDiscount > 0 ? (
+                <div className="inline-alert success">
+                  Đã áp dụng mã giảm giá, tiết kiệm {money(summaryDiscount)}.
+                </div>
+              ) : coupon.trim() ? (
+                <div className="inline-alert">Mã "{coupon.trim()}" không mang lại giảm giá cho đơn này.</div>
+              ) : null
+            ) : (
+              <p className="coupon-hint">Mã sẽ được kiểm tra và áp dụng khi bạn xác nhận đơn hàng.</p>
+            )}
           </section>
           <section className="checkout-card payment-note">
             <LockKeyhole size={20} />
@@ -189,7 +203,9 @@ function CheckoutContent() {
         </div>
         <aside className="checkout-side">
           <OrderSummary
-            subtotal={total}
+            subtotal={summarySubtotal}
+            discount={summaryDiscount}
+            total={summaryTotal}
             action={
               orderId ? (
                 <Button

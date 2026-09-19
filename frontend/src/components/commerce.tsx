@@ -129,7 +129,17 @@ export function CartLine({
   )
 }
 
-export function OrderSummary({ subtotal, action }: { subtotal: number; action?: ReactNode }) {
+export function OrderSummary({
+  subtotal,
+  discount = 0,
+  total = subtotal,
+  action,
+}: {
+  subtotal: number
+  discount?: number
+  total?: number
+  action?: ReactNode
+}) {
   return (
     <aside className="order-summary">
       <h2>Tóm tắt đơn hàng</h2>
@@ -137,6 +147,12 @@ export function OrderSummary({ subtotal, action }: { subtotal: number; action?: 
         <span>Tạm tính</span>
         <strong>{money(subtotal)}</strong>
       </div>
+      {discount > 0 ? (
+        <div className="summary-discount">
+          <span>Giảm giá</span>
+          <strong>-{money(discount)}</strong>
+        </div>
+      ) : null}
       <div>
         <span>Phí giao hàng</span>
         <span className="muted">Tính khi checkout</span>
@@ -144,7 +160,7 @@ export function OrderSummary({ subtotal, action }: { subtotal: number; action?: 
       <hr />
       <div className="summary-total">
         <span>Tổng cộng</span>
-        <strong>{money(subtotal)}</strong>
+        <strong>{money(total)}</strong>
       </div>
       {action}
     </aside>
