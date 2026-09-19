@@ -138,15 +138,8 @@ function AdjustModal({ sku, onClose, onSaved }: { sku: LowStockSku; onClose: () 
             <option value="ADJUSTMENT">Điều chỉnh (ADJUSTMENT)</option>
           </select>
         </Field>
-        <Field
-          label={type === 'RESTOCK' ? 'Số lượng nhập thêm (> 0)' : 'Số lượng thay đổi (âm để giảm, không được 0)'}
-        >
-          <input
-            type="number"
-            value={quantity}
-            onChange={(event) => setQuantity(event.target.value)}
-            required
-          />
+        <Field label={type === 'RESTOCK' ? 'Số lượng nhập thêm (> 0)' : 'Số lượng thay đổi (âm để giảm, không được 0)'}>
+          <input type="number" value={quantity} onChange={(event) => setQuantity(event.target.value)} required />
         </Field>
         <Field label="Ghi chú (không bắt buộc)">
           <input value={note} onChange={(event) => setNote(event.target.value)} />

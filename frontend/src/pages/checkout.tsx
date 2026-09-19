@@ -171,9 +171,7 @@ function CheckoutContent() {
             </div>
             {order ? (
               summaryDiscount > 0 ? (
-                <div className="inline-alert success">
-                  Đã áp dụng mã giảm giá, tiết kiệm {money(summaryDiscount)}.
-                </div>
+                <div className="inline-alert success">Đã áp dụng mã giảm giá, tiết kiệm {money(summaryDiscount)}.</div>
               ) : coupon.trim() ? (
                 <div className="inline-alert">Mã "{coupon.trim()}" không mang lại giảm giá cho đơn này.</div>
               ) : null

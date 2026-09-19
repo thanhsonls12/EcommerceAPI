@@ -183,8 +183,7 @@ function ProductFormModal({
         brandId: Number(form.brandId),
         categoryIds: form.categoryIds,
       }
-      if (product)
-        return api(`/products/${product.id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+      if (product) return api(`/products/${product.id}`, { method: 'PATCH', body: JSON.stringify(payload) })
       return api('/products', { method: 'POST', body: JSON.stringify(payload) })
     },
     onSuccess: onSaved,
@@ -325,12 +324,7 @@ function ProductImages({ product }: { product: Product }) {
             </button>
           </div>
         ))}
-        <button
-          type="button"
-          className="admin-image-add"
-          disabled={uploading}
-          onClick={() => fileRef.current?.click()}
-        >
+        <button type="button" className="admin-image-add" disabled={uploading} onClick={() => fileRef.current?.click()}>
           <ImagePlus size={18} />
           <small>{uploading ? 'Đang tải...' : 'Thêm ảnh'}</small>
         </button>
