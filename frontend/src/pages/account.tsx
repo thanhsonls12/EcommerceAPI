@@ -257,7 +257,11 @@ export function OrderDetailPage() {
           <div className="order-items">
             {order.items.map((item) => (
               <div className="order-item" key={item.id}>
-                <img src={item.image || 'https://placehold.co/120x120/f4f1eb/1d2433?text=E'} alt={item.productName} />
+                <img
+                  src={item.image || 'https://placehold.co/120x120/f4f1eb/1d2433?text=E'}
+                  alt={item.productName}
+                  className="w-16 h-16 rounded-xl object-contain bg-slate-50 border border-slate-100 p-1.5 shrink-0"
+                />
                 <div>
                   <strong>{item.productName}</strong>
                   <small>

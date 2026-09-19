@@ -207,7 +207,7 @@ export function AdminBrands() {
                 <tr key={brand.id}>
                   <td>
                     {brand.logo ? (
-                      <img className="admin-logo" src={brand.logo} alt={brand.name} />
+                      <img className="admin-logo w-10 h-10 object-contain rounded-md border border-slate-200 bg-white p-1 shrink-0" src={brand.logo} alt={brand.name} />
                     ) : (
                       <span className="admin-muted">—</span>
                     )}
@@ -294,7 +294,7 @@ function BrandFormModal({
         <Field label="URL logo">
           <input value={logo} onChange={(event) => setLogo(event.target.value)} placeholder="https://..." required />
         </Field>
-        {logo ? <img className="admin-logo-preview" src={logo} alt="preview" /> : null}
+        {logo ? <img className="admin-logo-preview max-h-20 max-w-xs object-contain rounded-md border border-slate-200 bg-white p-2 mx-auto my-2" src={logo} alt="preview" /> : null}
         {error ? <div className="inline-alert error">{error}</div> : null}
         <div className="admin-form-actions">
           <Button variant="secondary" onClick={onClose}>

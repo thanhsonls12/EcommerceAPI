@@ -14,7 +14,7 @@ export function AdminHeader({ title, subtitle, action }: { title: string; subtit
 }
 
 export function AdminCard({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`admin-card ${className}`}>{children}</div>
+  return <div className={`admin-card overflow-x-auto ${className}`}>{children}</div>
 }
 
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {

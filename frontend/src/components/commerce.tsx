@@ -148,17 +148,17 @@ export function CartLine({
           <button
             onClick={() => void onUpdate(item.skuId, Math.max(1, item.quantity - 1))}
             aria-label="Giảm số lượng"
-            className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition-colors"
+            className="w-9 h-9 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-slate-50 active:bg-slate-100 transition-colors"
           >
-            <Minus size={14} />
+            <Minus size={15} />
           </button>
-          <span className="w-8 text-center text-xs font-bold text-slate-800">{item.quantity}</span>
+          <span className="w-9 text-center text-xs font-bold text-slate-800">{item.quantity}</span>
           <button
             onClick={() => void onUpdate(item.skuId, Math.min(sku?.stock || 99, item.quantity + 1))}
             aria-label="Tăng số lượng"
-            className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition-colors"
+            className="w-9 h-9 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-slate-50 active:bg-slate-100 transition-colors"
           >
-            <Plus size={14} />
+            <Plus size={15} />
           </button>
         </div>
         <button
