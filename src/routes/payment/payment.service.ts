@@ -72,6 +72,23 @@ export class PaymentService {
     }
   }
 
+  async findStatus(userId: number, paymentId: number) {
+    const payment = await this.paymentRepository.findByIdAndUserId(paymentId, userId)
+    if (!payment || !payment.order) {
+      throw new NotFoundException(MESSAGE.PAYMENT.PAYMENT_NOT_FOUND)
+    }
+
+    return {
+      id: payment.id,
+      status: payment.status,
+      amount: payment.amount,
+      gateway: payment.gateway,
+      reference: payment.reference,
+      orderId: payment.order.id,
+      orderStatus: payment.order.status,
+    }
+  }
+
   async handleWebhook(payload: unknown) {
     const webhook = await this.paymentGateway.verifyWebhook(payload)
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common'
+import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
 import { CreatePaymentBodyDTO } from './payment.dto'
 import { PaymentService } from './payment.service'
@@ -25,6 +25,13 @@ export class PaymentController {
   @Post()
   create(@ActiveUser('userId') userId: number, @Body() body: CreatePaymentBodyDTO) {
     return this.paymentService.create(userId, body)
+  }
+
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get current user payment status' })
+  @Get(':id/status')
+  findStatus(@ActiveUser('userId') userId: number, @Param('id', ParseIntPipe) id: number) {
+    return this.paymentService.findStatus(userId, id)
   }
 
   @ApiOperation({ summary: 'Handle payment gateway webhook' })

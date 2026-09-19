@@ -31,7 +31,16 @@ function CheckoutContent() {
   const [addressId, setAddressId] = useState<number | ''>('')
   const [coupon, setCoupon] = useState('')
   const [addingAddress, setAddingAddress] = useState(false)
-  const [orderId, setOrderId] = useState<number | null>(null)
+  const [orderId, setOrderId] = useState<number | null>(() => {
+    const stored = Number(localStorage.getItem('ecommerce-pending-order-id'))
+    return Number.isSafeInteger(stored) && stored > 0 ? stored : null
+  })
+  const pendingOrder = useQuery({
+    queryKey: ['order', orderId],
+    queryFn: () => api<Order>(`/orders/${orderId}`),
+    enabled: Boolean(orderId),
+    retry: false,
+  })
   const orderMutation = useMutation({
     mutationFn: () => {
       if (!addressId) throw new Error('Vui lòng chọn địa chỉ giao hàng.')
@@ -42,6 +51,7 @@ function CheckoutContent() {
     },
     onSuccess: (order) => {
       setOrderId(order.id)
+      localStorage.setItem('ecommerce-pending-order-id', String(order.id))
       void refreshCart()
     },
   })
@@ -58,6 +68,14 @@ function CheckoutContent() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (preferred) setAddressId(preferred.id)
   }, [addresses.data])
+  useEffect(() => {
+    if (!orderId) return
+    if (pendingOrder.isError || (pendingOrder.data && pendingOrder.data.status !== 'PENDING_PAYMENT')) {
+      localStorage.removeItem('ecommerce-pending-order-id')
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOrderId(null)
+    }
+  }, [orderId, pendingOrder.data, pendingOrder.isError])
   if (!cart?.items.length && !orderId)
     return (
       <EmptyState
@@ -70,7 +88,7 @@ function CheckoutContent() {
         }
       />
     )
-  const total = Number(cart?.summary.totalPrice || 0)
+  const total = orderId ? Number(pendingOrder.data?.total || 0) : Number(cart?.summary.totalPrice || 0)
   return (
     <section className="page-section checkout-page">
       <div className="breadcrumbs">
@@ -164,7 +182,9 @@ function CheckoutContent() {
             </div>
           ) : null}
           {orderId ? (
-            <div className="inline-alert success">Đơn #{orderId} đã được tạo. Hãy thanh toán để hoàn tất.</div>
+            <div className="inline-alert success">
+              Đơn #{orderId} đang chờ thanh toán. Bạn có thể tiếp tục thanh toán kể cả sau khi tải lại trang.
+            </div>
           ) : null}
         </div>
         <aside className="checkout-side">

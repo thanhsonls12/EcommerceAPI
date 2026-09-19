@@ -209,6 +209,14 @@ export function OrderDetailPage() {
     mutationFn: () => api<Order>(`/orders/${id}/cancel`, { method: 'PATCH' }),
     onSuccess: () => void query.refetch(),
   })
+  const payment = useMutation({
+    mutationFn: () =>
+      api<{ checkoutUrl: string }>('/payments', { method: 'POST', body: JSON.stringify({ orderId: Number(id) }) }),
+    onSuccess: (result) => {
+      localStorage.setItem('ecommerce-pending-order-id', String(id))
+      if (result.checkoutUrl) window.location.href = result.checkoutUrl
+    },
+  })
   if (!user)
     return (
       <RequireAuth>
@@ -272,9 +280,14 @@ export function OrderDetailPage() {
             </div>
           ) : null}
           {order.status === 'PENDING_PAYMENT' ? (
-            <Button variant="danger" loading={cancel.isPending} onClick={() => void cancel.mutateAsync()}>
-              Hủy đơn hàng
-            </Button>
+            <div className="checkout-actions">
+              <Button loading={payment.isPending} onClick={() => void payment.mutateAsync()}>
+                Thanh toán ngay
+              </Button>
+              <Button variant="danger" loading={cancel.isPending} onClick={() => void cancel.mutateAsync()}>
+                Hủy đơn hàng
+              </Button>
+            </div>
           ) : null}
         </div>
         <aside className="order-summary">

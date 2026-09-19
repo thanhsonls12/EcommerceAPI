@@ -23,6 +23,31 @@ export class PaymentRepository {
     })
   }
 
+  findByIdAndUserId(paymentId: number, userId: number) {
+    return this.prisma.payment.findFirst({
+      where: {
+        id: paymentId,
+        order: {
+          userId,
+          deletedAt: null,
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+        amount: true,
+        gateway: true,
+        reference: true,
+        order: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+      },
+    })
+  }
+
   create(tx: Prisma.TransactionClient, amount: Prisma.Decimal) {
     return tx.payment.create({
       data: {

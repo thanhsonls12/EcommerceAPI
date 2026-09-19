@@ -84,6 +84,16 @@ export type Order = {
   createdAt?: string
 }
 
+export type PaymentStatus = {
+  id: number
+  status: 'PENDING' | 'SUCCESS' | 'FAILED'
+  amount: string | number
+  gateway?: string | null
+  reference?: string | null
+  orderId: number
+  orderStatus: string
+}
+
 export type Review = {
   id: number
   rating: number

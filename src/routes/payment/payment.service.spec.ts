@@ -18,6 +18,7 @@ describe('PaymentService', () => {
   type PaymentRepositoryMock = {
     transaction: jest.Mock
     findOrderForPayment: jest.Mock
+    findByIdAndUserId: jest.Mock
     create: jest.Mock
     attachPayment: jest.Mock
     updateGatewayInfo: jest.Mock
@@ -59,6 +60,7 @@ describe('PaymentService', () => {
     repository = {
       transaction: jest.fn((cb) => cb(tx)),
       findOrderForPayment: jest.fn(),
+      findByIdAndUserId: jest.fn(),
       create: jest.fn(),
       attachPayment: jest.fn(),
       updateGatewayInfo: jest.fn(),
@@ -191,6 +193,41 @@ describe('PaymentService', () => {
       repository.attachPayment.mockResolvedValue({ count: 0 })
 
       await expect(service.create(userId, body)).rejects.toThrow(ConflictException)
+    })
+  })
+
+  describe('findStatus', () => {
+    it('returns payment and order status for the owning user', async () => {
+      repository.findByIdAndUserId.mockResolvedValue({
+        id: 99,
+        status: PaymentStatus.PENDING,
+        amount: new Prisma.Decimal(100),
+        gateway: 'PAYOS',
+        reference: '99',
+        order: {
+          id: 10,
+          status: OrderStatus.PENDING_PAYMENT,
+        },
+      })
+
+      const result = await service.findStatus(1, 99)
+
+      expect(repository.findByIdAndUserId).toHaveBeenCalledWith(99, 1)
+      expect(result).toEqual({
+        id: 99,
+        status: PaymentStatus.PENDING,
+        amount: new Prisma.Decimal(100),
+        gateway: 'PAYOS',
+        reference: '99',
+        orderId: 10,
+        orderStatus: OrderStatus.PENDING_PAYMENT,
+      })
+    })
+
+    it('throws NotFoundException when payment does not belong to the user', async () => {
+      repository.findByIdAndUserId.mockResolvedValue(null)
+
+      await expect(service.findStatus(2, 99)).rejects.toThrow(NotFoundException)
     })
   })
 
