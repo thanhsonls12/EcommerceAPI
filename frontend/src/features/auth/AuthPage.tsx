@@ -264,9 +264,9 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
                 <Link to="/forgot-password">Quên mật khẩu?</Link>
               </>
             ) : (
-              <button className="text-link" onClick={() => setCurrentMode('login')}>
+              <Link to="/login" className="text-link">
                 Quay lại đăng nhập
-              </button>
+              </Link>
             )}
             {currentMode === 'verify' ? (
               <button

@@ -190,11 +190,11 @@ function AppRoutes() {
       <Route path="/cart" element={<CartPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/payment/:state" element={<PaymentPage />} />
-      <Route path="/login" element={<AuthPage mode="login" />} />
-      <Route path="/register" element={<AuthPage mode="register" />} />
-      <Route path="/verify-email" element={<AuthPage mode="verify" />} />
-      <Route path="/forgot-password" element={<AuthPage mode="forgot" />} />
-      <Route path="/reset-password" element={<AuthPage mode="reset" />} />
+      <Route path="/login" element={<AuthPage key="login" mode="login" />} />
+      <Route path="/register" element={<AuthPage key="register" mode="register" />} />
+      <Route path="/verify-email" element={<AuthPage key="verify" mode="verify" />} />
+      <Route path="/forgot-password" element={<AuthPage key="forgot" mode="forgot" />} />
+      <Route path="/reset-password" element={<AuthPage key="reset" mode="reset" />} />
       <Route path="/account" element={<AccountPage />} />
       <Route path="/account/orders" element={<OrdersPage />} />
       <Route path="/account/orders/:id" element={<OrderDetailPage />} />
