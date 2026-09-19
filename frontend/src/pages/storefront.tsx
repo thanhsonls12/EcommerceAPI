@@ -49,7 +49,7 @@ export function HomePage() {
               Khám phá sản phẩm <ArrowRight size={17} />
             </Link>
             <a href="#benefits" className="text-link text-slate-600 hover:text-blue-600 font-semibold px-2 py-1">
-              Vì sao chọn Élan? <ChevronRight size={16} />
+              Vì sao chọn Ecommerce? <ChevronRight size={16} />
             </a>
           </div>
         </div>
@@ -57,7 +57,7 @@ export function HomePage() {
           <div className="hero-orbit orbit-one" />
           <div className="hero-orbit orbit-two" />
           <div className="hero-device relative z-10 shadow-2xl">
-            <img src="https://placehold.co/720x720/0f172a/eff6ff?text=Élan+Tech" alt="Thiết bị điện tử nổi bật" />
+            <img src="https://placehold.co/720x720/0f172a/eff6ff?text=Ecommerce" alt="Thiết bị điện tử nổi bật" />
           </div>
           <span className="floating-note note-top backdrop-blur-md bg-white/90 shadow-lg border border-slate-100">
             01 / 04
@@ -507,7 +507,7 @@ export function ProductDetailPage() {
         <div className="detail-copy space-y-6">
           <div>
             <div className="eyebrow text-blue-600 font-bold tracking-wider mb-2">
-              {product.brand?.name || 'ÉLAN COLLECTION'}
+              {product.brand?.name || 'ECOMMERCE COLLECTION'}
             </div>
             <h1 className="text-2xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
               {product.name}

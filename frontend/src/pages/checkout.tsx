@@ -200,7 +200,7 @@ function CheckoutContent() {
               <input
                 value={coupon}
                 onChange={(event) => setCoupon(event.target.value.toUpperCase())}
-                placeholder="Nhập mã (VD: ELANVIP)"
+                placeholder="Nhập mã (VD: ECOMVIP)"
                 disabled={Boolean(orderId)}
                 className="flex-1 uppercase font-semibold tracking-wider text-sm rounded-xl border border-slate-200 px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:border-blue-500 transition-colors"
               />

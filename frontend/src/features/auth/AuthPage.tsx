@@ -120,7 +120,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
     currentMode === 'login'
       ? 'Chào mừng bạn trở lại'
       : currentMode === 'register'
-        ? 'Tạo tài khoản Élan'
+        ? 'Tạo tài khoản Ecommerce'
         : currentMode === 'verify'
           ? 'Xác thực email'
           : currentMode === 'twoFactor'
@@ -140,7 +140,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
           <Link to="/" className="logo logo-light">
             <span className="logo-mark">E</span>
             <span>
-              <strong>Élan</strong>
+              <strong>Ecommerce</strong>
               <small>electronics, simply</small>
             </span>
           </Link>

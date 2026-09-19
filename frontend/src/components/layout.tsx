@@ -70,7 +70,7 @@ export function StoreLayout({
           <Link to="/" className="logo group">
             <span className="logo-mark">E</span>
             <span>
-              <strong className="tracking-tight group-hover:text-blue-600 transition-colors">Élan</strong>
+              <strong className="tracking-tight group-hover:text-blue-600 transition-colors">Ecommerce</strong>
               <small>electronics, simply</small>
             </span>
           </Link>
@@ -87,7 +87,7 @@ export function StoreLayout({
           </form>
           <nav className={`main-nav ${menuOpen ? 'open' : ''}`}>
             <NavLink to="/products">Sản phẩm</NavLink>
-            <a href="#benefits">Vì sao chọn Élan</a>
+            <a href="#benefits">Vì sao chọn Ecommerce</a>
             {user ? <NavLink to="/account/orders">Đơn hàng</NavLink> : <NavLink to="/login">Đăng nhập</NavLink>}
           </nav>
           <div className="header-actions">
@@ -159,7 +159,7 @@ export function StoreLayout({
             <Link to="/" className="logo text-white">
               <span className="logo-mark">E</span>
               <span>
-                <strong className="text-white text-lg">Élan</strong>
+                <strong className="text-white text-lg">Ecommerce</strong>
                 <small className="text-slate-400">electronics, simply</small>
               </span>
             </Link>
@@ -190,7 +190,7 @@ export function StoreLayout({
           </div>
         </div>
         <div className="footer-bottom text-slate-400 text-xs py-6 border-t border-slate-800/80 text-center">
-          © 2026 Élan Commerce · Được xây dựng với tiêu chuẩn hiện đại cho trải nghiệm mua sắm mượt mà.
+          © 2026 Ecommerce · Được xây dựng với tiêu chuẩn hiện đại cho trải nghiệm mua sắm mượt mà.
         </div>
       </footer>
     </div>

@@ -36,7 +36,7 @@ export function AdminLayout() {
           <div className="admin-brand">
             <span className="logo-mark">E</span>
             <div>
-              <strong>Élan Admin</strong>
+              <strong>Ecommerce Admin</strong>
               <small>{user?.role?.name || 'STAFF'}</small>
             </div>
           </div>
