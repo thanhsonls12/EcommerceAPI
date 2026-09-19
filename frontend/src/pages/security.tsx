@@ -5,8 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { api, ApiError } from '../api'
-import { useAuth } from '../app-context'
 import { RequireAuth } from './checkout'
+import { AccountNav } from './account'
 import { Button, Field } from '../components/ui'
 
 const passwordSchema = z
@@ -22,23 +22,17 @@ const passwordSchema = z
 type PasswordValues = z.infer<typeof passwordSchema>
 
 export function SecurityPage() {
-  const { user } = useAuth()
-  if (!user)
-    return (
-      <RequireAuth>
-        <SecurityPage />
-      </RequireAuth>
-    )
+  return (
+    <RequireAuth>
+      <SecurityContent />
+    </RequireAuth>
+  )
+}
+
+function SecurityContent() {
   return (
     <section className="page-section account-section">
-      <div className="account-nav">
-        <a href="/account/orders">Đơn hàng</a>
-        <a href="/account/addresses">Địa chỉ</a>
-        <a href="/account">Tài khoản</a>
-        <a className="active" href="/account/security">
-          Bảo mật
-        </a>
-      </div>
+      <AccountNav />
       <div className="section-head">
         <div>
           <span className="eyebrow">SECURITY</span>

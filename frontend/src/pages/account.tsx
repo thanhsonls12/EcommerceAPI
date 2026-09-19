@@ -10,13 +10,15 @@ import { Button, EmptyState, ErrorState, Field, PageLoader } from '../components
 import type { Address, Order, User } from '../types'
 
 export function AccountPage() {
+  return (
+    <RequireAuth>
+      <AccountContent />
+    </RequireAuth>
+  )
+}
+function AccountContent() {
   const { user } = useAuth()
-  if (!user)
-    return (
-      <RequireAuth>
-        <AccountPage />
-      </RequireAuth>
-    )
+  if (!user) return null
   return (
     <section className="page-section account-page">
       <div className="account-welcome">
@@ -176,12 +178,14 @@ export function OrdersPage() {
     </section>
   )
 }
-function AccountNav() {
+export function AccountNav() {
   return (
     <nav className="account-nav">
       <NavLink to="/account/orders">Đơn hàng</NavLink>
       <NavLink to="/account/addresses">Địa chỉ</NavLink>
-      <NavLink to="/account">Tài khoản</NavLink>
+      <NavLink to="/account" end>
+        Tài khoản
+      </NavLink>
       <NavLink to="/account/security">Bảo mật</NavLink>
     </nav>
   )
