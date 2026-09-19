@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Route, Routes } from 'react-router-dom'
-import { api, clearTokens, getAccessToken, getRefreshToken, setTokens } from './api'
+import { api, clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT, setTokens } from './api'
 import { AuthContext, CommerceContext, readGuestCart, saveGuestCart } from './app-context'
 import type { CommerceContextValue, Notice } from './app-context'
 import { StoreLayout } from './components/layout'
@@ -29,7 +29,7 @@ function App() {
   const meQuery = useQuery({
     queryKey: ['me'],
     queryFn: () => api<User>('/users/me'),
-    enabled: Boolean(getAccessToken()) && !user,
+    enabled: Boolean(getAccessToken()),
     retry: false,
   })
   useEffect(() => {
@@ -40,6 +40,15 @@ function App() {
       localStorage.setItem('ecommerce-user', JSON.stringify(meQuery.data))
     }
   }, [meQuery.data])
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setUser(null)
+      queryClient.removeQueries({ queryKey: ['me'] })
+      queryClient.removeQueries({ queryKey: ['cart'] })
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+  }, [queryClient])
   useEffect(() => {
     saveGuestCart(guestCart)
   }, [guestCart])

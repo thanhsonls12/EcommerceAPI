@@ -15,6 +15,7 @@ export class ApiError extends Error {
 }
 
 export const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/$/, '')
+export const SESSION_EXPIRED_EVENT = 'ecommerce:session-expired'
 
 export function getAccessToken() {
   return localStorage.getItem('accessToken')
@@ -87,9 +88,18 @@ function messageFor(payload: unknown, status: number) {
 }
 
 let refreshPromise: Promise<boolean> | null = null
+function invalidateSession() {
+  clearTokens()
+  localStorage.removeItem('ecommerce-user')
+  window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+}
+
 async function refreshSession() {
   const refreshToken = getRefreshToken()
-  if (!refreshToken) return false
+  if (!refreshToken) {
+    invalidateSession()
+    return false
+  }
   if (!refreshPromise) {
     refreshPromise = fetch(`${API_URL}/auth/refresh-token`, {
       method: 'POST',
@@ -97,10 +107,16 @@ async function refreshSession() {
       body: JSON.stringify({ refreshToken }),
     })
       .then(async (response) => {
-        if (!response.ok) return false
+        if (!response.ok) {
+          invalidateSession()
+          return false
+        }
         const payload = (await response.json()) as ApiEnvelope<{ accessToken: string; refreshToken: string }>
         const data = payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
-        if (!data?.accessToken) return false
+        if (!data?.accessToken) {
+          invalidateSession()
+          return false
+        }
         setTokens(data.accessToken, data.refreshToken)
         return true
       })
