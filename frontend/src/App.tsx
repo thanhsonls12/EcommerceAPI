@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Route, Routes } from 'react-router-dom'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import { api, clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT, setTokens } from './api'
 import { AuthContext, CommerceContext, readGuestCart, saveGuestCart } from './app-context'
 import type { CommerceContextValue, Notice } from './app-context'
@@ -12,10 +12,19 @@ import { AccountPage, AddressesPage, OrderDetailPage, OrdersPage } from './pages
 import { HomePage, ProductDetailPage, ProductsPage, CartPage } from './pages/storefront'
 import { NotFoundPage, PaymentPage } from './pages/misc'
 import { SecurityPage } from './pages/security'
+import { AdminLayout } from './pages/admin/AdminLayout'
+import { AdminDashboard } from './pages/admin/Dashboard'
+import { AdminProducts } from './pages/admin/Products'
+import { AdminCategories, AdminBrands } from './pages/admin/Taxonomy'
+import { AdminPromotions } from './pages/admin/Promotions'
+import { AdminInventory } from './pages/admin/Inventory'
+import { AdminUsers } from './pages/admin/Users'
 import type { Cart, CartMergeResult, GuestCartItem, Product, Sku, User } from './types'
 
 function App() {
   const queryClient = useQueryClient()
+  const location = useLocation()
+  const isAdminArea = location.pathname.startsWith('/admin')
   const [user, setUser] = useState<User | null>(() => {
     try {
       return JSON.parse(localStorage.getItem('ecommerce-user') || 'null') as User | null
@@ -156,12 +165,17 @@ function App() {
     }),
     [addToCart, cartCount, cartQuery.data, guestCart, refreshCart, removeFromCart, updateCart, user],
   )
+  const routes = meQuery.isLoading ? <PageLoader /> : <AppRoutes />
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
       <CommerceContext.Provider value={commerce}>
-        <StoreLayout notice={notice} clearNotice={() => setNotice(null)}>
-          {meQuery.isLoading ? <PageLoader /> : <AppRoutes />}
-        </StoreLayout>
+        {isAdminArea ? (
+          routes
+        ) : (
+          <StoreLayout notice={notice} clearNotice={() => setNotice(null)}>
+            {routes}
+          </StoreLayout>
+        )}
       </CommerceContext.Provider>
     </AuthContext.Provider>
   )
@@ -186,6 +200,15 @@ function AppRoutes() {
       <Route path="/account/orders/:id" element={<OrderDetailPage />} />
       <Route path="/account/addresses" element={<AddressesPage />} />
       <Route path="/account/security" element={<SecurityPage />} />
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<AdminDashboard />} />
+        <Route path="products" element={<AdminProducts />} />
+        <Route path="categories" element={<AdminCategories />} />
+        <Route path="brands" element={<AdminBrands />} />
+        <Route path="promotions" element={<AdminPromotions />} />
+        <Route path="inventory" element={<AdminInventory />} />
+        <Route path="users" element={<AdminUsers />} />
+      </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )

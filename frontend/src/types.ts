@@ -1,3 +1,5 @@
+export type Role = { id: number; name: string }
+
 export type User = {
   id: number
   name: string
@@ -5,6 +7,8 @@ export type User = {
   phoneNumber?: string
   avatar?: string | null
   status?: string
+  roleId?: number
+  role?: Role | null
 }
 
 export type ProductMedia = { id?: number; url: string; type?: string }
@@ -119,3 +123,56 @@ export type Review = {
 export type Pagination = { page: number; limit: number; total: number; totalPages: number }
 export type ProductListResponse = { data: Product[]; pagination: Pagination }
 export type ReviewResponse = { data: Review[]; rating: { average: number; count: number }; pagination: Pagination }
+
+export type Promotion = {
+  id: number
+  code: string
+  name: string
+  description?: string | null
+  type: 'FIXED' | 'PERCENT'
+  value: string | number
+  minOrderValue?: string | number | null
+  maxDiscount?: string | number | null
+  usageLimit?: number | null
+  usedCount: number
+  startsAt: string
+  expiresAt: string
+  isActive: boolean
+}
+
+export type AdminUser = {
+  id: number
+  email: string
+  name: string
+  phoneNumber?: string | null
+  avatar?: string | null
+  status: string
+  roleId: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type AdminUserListResponse = { data: AdminUser[]; pagination: Pagination }
+
+export type LowStockSku = {
+  id: number
+  value?: Record<string, string> | null
+  stock: number
+  price: string | number
+  product?: { id: number; name: string } | null
+}
+
+export type InventoryTransaction = {
+  id: number
+  type: string
+  quantity: number
+  stockBefore: number
+  stockAfter: number
+  referenceType?: string | null
+  referenceId?: number | null
+  note?: string | null
+  createdAt: string
+  createdBy?: { id: number; name: string; email: string } | null
+}
+
+export type InventoryHistoryResponse = { data: InventoryTransaction[]; pagination: Pagination }

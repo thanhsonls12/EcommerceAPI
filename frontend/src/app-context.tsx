@@ -32,6 +32,10 @@ export function useCommerce() {
   if (!value) throw new Error('CommerceContext missing')
   return value
 }
+export function isStaffUser(user: User | null) {
+  const roleName = user?.role?.name?.toUpperCase()
+  return roleName === 'ADMIN' || roleName === 'SELLER'
+}
 export function readGuestCart(): GuestCartItem[] {
   try {
     return JSON.parse(localStorage.getItem(guestCartKey) || '[]') as GuestCartItem[]

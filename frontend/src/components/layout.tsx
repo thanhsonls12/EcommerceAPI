@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { CircleUserRound, Menu, Search, ShieldCheck, ShoppingBag, Truck, X } from 'lucide-react'
+import { CircleUserRound, LayoutDashboard, Menu, Search, ShieldCheck, ShoppingBag, Truck, X } from 'lucide-react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth, useCommerce } from '../app-context'
+import { isStaffUser, useAuth, useCommerce } from '../app-context'
 import type { Notice } from '../app-context'
 
 export function StoreLayout({
@@ -59,6 +59,11 @@ export function StoreLayout({
             {user ? <NavLink to="/account/orders">Đơn hàng</NavLink> : <NavLink to="/login">Đăng nhập</NavLink>}
           </nav>
           <div className="header-actions">
+            {isStaffUser(user) ? (
+              <Link to="/admin" className="header-icon" aria-label="Trang quản trị" title="Quản trị">
+                <LayoutDashboard size={21} />
+              </Link>
+            ) : null}
             <Link to={user ? '/account' : '/login'} className="header-icon" aria-label="Tài khoản">
               <CircleUserRound size={21} />
             </Link>
