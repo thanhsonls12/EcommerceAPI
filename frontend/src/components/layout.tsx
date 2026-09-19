@@ -16,6 +16,7 @@ import {
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { isStaffUser, useAuth, useCommerce } from '../app-context'
 import type { Notice } from '../app-context'
+import { BrandLogo } from './BrandLogo'
 
 export function StoreLayout({
   children,
@@ -67,8 +68,8 @@ export function StoreLayout({
           >
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <Link to="/" className="logo group">
-            <span className="logo-mark">E</span>
+          <Link to="/" className="logo group flex items-center gap-3">
+            <BrandLogo size={36} />
             <span>
               <strong className="tracking-tight group-hover:text-blue-600 transition-colors">Ecommerce</strong>
               <small>electronics, simply</small>
@@ -156,8 +157,8 @@ export function StoreLayout({
       <footer className="site-footer bg-slate-900 text-white mt-20 border-t border-slate-800">
         <div className="footer-inner">
           <div className="space-y-3">
-            <Link to="/" className="logo text-white">
-              <span className="logo-mark">E</span>
+            <Link to="/" className="logo text-white flex items-center gap-3">
+              <BrandLogo size={36} />
               <span>
                 <strong className="text-white text-lg">Ecommerce</strong>
                 <small className="text-slate-400">electronics, simply</small>

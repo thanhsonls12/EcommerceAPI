@@ -4,6 +4,7 @@ import { Boxes, LayoutDashboard, Package, Percent, Tag, Users, Warehouse } from 
 import { hasAccessToken } from '../../api'
 import { isStaffUser, useAuth } from '../../app-context'
 import { PageLoader } from '../../components/ui'
+import { BrandLogo } from '../../components/BrandLogo'
 
 export function RequireAdmin({ children }: { children: ReactNode }) {
   const { user } = useAuth()
@@ -33,8 +34,8 @@ export function AdminLayout() {
     <RequireAdmin>
       <div className="admin-shell">
         <aside className="admin-sidebar">
-          <div className="admin-brand">
-            <span className="logo-mark">E</span>
+          <div className="admin-brand flex items-center gap-3">
+            <BrandLogo size={36} />
             <div>
               <strong>Ecommerce Admin</strong>
               <small>{user?.role?.name || 'STAFF'}</small>

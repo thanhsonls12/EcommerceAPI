@@ -5,6 +5,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError, api } from '../../api'
 import { useAuth } from '../../app-context'
 import { Button, Field } from '../../components/ui'
+import { BrandLogo } from '../../components/BrandLogo'
 import type { User } from '../../types'
 
 type AuthMode = 'login' | 'register' | 'verify' | 'forgot' | 'reset' | 'twoFactor'
@@ -137,8 +138,8 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
     <section className="auth-page">
       <div className="auth-panel">
         <div className="auth-art">
-          <Link to="/" className="logo logo-light">
-            <span className="logo-mark">E</span>
+          <Link to="/" className="logo logo-light flex items-center gap-3">
+            <BrandLogo size={36} />
             <span>
               <strong>Ecommerce</strong>
               <small>electronics, simply</small>
