@@ -85,7 +85,6 @@ export function AdminProducts() {
                       />
                       <span className="font-medium text-slate-900">{product.name}</span>
                     </div>
-
                   </td>
                   <td>{product.brand?.name || '—'}</td>
                   <td>{money(product.basePrice)}</td>
