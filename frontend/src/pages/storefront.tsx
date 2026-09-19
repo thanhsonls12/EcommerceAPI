@@ -139,14 +139,33 @@ export function ProductsPage() {
   const [params, setParams] = useSearchParams()
   const [filterOpen, setFilterOpen] = useState(false)
   const search = params.get('search') || ''
-  const categoryId = params.get('categoryId') || ''
-  const brandId = params.get('brandId') || ''
-  const minPrice = params.get('minPrice') || ''
-  const maxPrice = params.get('maxPrice') || ''
-  const sortBy = params.get('sortBy') || 'createdAt'
-  const sortOrder = params.get('sortOrder') || 'desc'
-  const page = Number(params.get('page') || 1)
-  const query = `/products?page=${page}&limit=12${search ? `&search=${encodeURIComponent(search)}` : ''}${categoryId ? `&categoryId=${categoryId}` : ''}${brandId ? `&brandId=${brandId}` : ''}${minPrice ? `&minPrice=${minPrice}` : ''}${maxPrice ? `&maxPrice=${maxPrice}` : ''}&sortBy=${sortBy}&sortOrder=${sortOrder}`
+  const positiveIntParam = (key: string) => {
+    const raw = params.get(key)
+    if (!raw) return ''
+    const value = Number(raw)
+    return Number.isSafeInteger(value) && value > 0 ? String(value) : ''
+  }
+  const nonNegativeNumberParam = (key: string) => {
+    const raw = params.get(key)
+    if (!raw) return ''
+    const value = Number(raw)
+    return Number.isFinite(value) && value >= 0 ? String(value) : ''
+  }
+  const categoryId = positiveIntParam('categoryId')
+  const brandId = positiveIntParam('brandId')
+  const minPrice = nonNegativeNumberParam('minPrice')
+  const maxPrice = nonNegativeNumberParam('maxPrice')
+  const sortBy = params.get('sortBy') === 'price' ? 'price' : 'createdAt'
+  const sortOrder = params.get('sortOrder') === 'asc' ? 'asc' : 'desc'
+  const parsedPage = Number(params.get('page') || 1)
+  const page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1
+  const apiParams = new URLSearchParams({ page: String(page), limit: '12', sortBy, sortOrder })
+  if (search) apiParams.set('search', search)
+  if (categoryId) apiParams.set('categoryId', categoryId)
+  if (brandId) apiParams.set('brandId', brandId)
+  if (minPrice) apiParams.set('minPrice', minPrice)
+  if (maxPrice) apiParams.set('maxPrice', maxPrice)
+  const query = `/products?${apiParams.toString()}`
   const products = useQuery({ queryKey: ['products', query], queryFn: () => api<ProductListResponse>(query, false) })
   const categories = useQuery({ queryKey: ['categories'], queryFn: () => api<Category[]>('/categories', false) })
   const brands = useQuery({ queryKey: ['brands'], queryFn: () => api<Brand[]>('/brands', false) })
