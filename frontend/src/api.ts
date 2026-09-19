@@ -17,6 +17,16 @@ export class ApiError extends Error {
 export const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/$/, '')
 export const SESSION_EXPIRED_EVENT = 'ecommerce:session-expired'
 
+export function isApiEnvelope<T>(payload: unknown): payload is ApiEnvelope<T> {
+  return (
+    payload !== null &&
+    typeof payload === 'object' &&
+    'data' in payload &&
+    'statusCode' in payload &&
+    typeof (payload as { statusCode?: unknown }).statusCode === 'number'
+  )
+}
+
 export function getAccessToken() {
   return localStorage.getItem('accessToken')
 }
@@ -112,7 +122,7 @@ async function refreshSession() {
           return false
         }
         const payload = (await response.json()) as ApiEnvelope<{ accessToken: string; refreshToken: string }>
-        const data = payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
+        const data = isApiEnvelope<{ accessToken: string; refreshToken: string }>(payload) ? payload.data : payload
         if (!data?.accessToken) {
           invalidateSession()
           return false
@@ -149,6 +159,6 @@ export async function api<T>(path: string, options: RequestInit | boolean = {}, 
     return api<T>(path, requestOptions, true, false)
   if (!response.ok)
     throw new ApiError(messageFor(payload, response.status), response.status, extractFieldErrors(payload))
-  if (payload && typeof payload === 'object' && 'data' in payload) return (payload as ApiEnvelope<T>).data
+  if (isApiEnvelope<T>(payload)) return payload.data
   return payload as T
 }
