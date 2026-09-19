@@ -74,6 +74,17 @@ export class ProductRepository {
       include: {
         brand: true,
         medias: true,
+        productTranslations: {
+          where: {
+            languageId: 'vi',
+            deletedAt: null,
+          },
+          select: {
+            languageId: true,
+            description: true,
+          },
+          take: 1,
+        },
         categories: {
           where: {
             deletedAt: null,

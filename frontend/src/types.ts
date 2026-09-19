@@ -22,6 +22,9 @@ export type Product = {
   virtualPrice: string | number
   images?: string[]
   medias?: ProductMedia[]
+  highlights?: string[] | null
+  specifications?: Record<string, string> | null
+  productTranslations?: Array<{ languageId: string; description: string }>
   variants?: ProductVariant[] | null
   brand?: Brand | null
   categories?: Category[]

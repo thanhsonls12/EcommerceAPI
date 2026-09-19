@@ -8,6 +8,8 @@ const ProductVariantSchema = z
   })
   .strict()
 
+const ProductSpecificationsSchema = z.record(z.string().trim().min(1).max(100), z.string().trim().min(1).max(500))
+
 const CreateProductBodySchema = z
   .object({
     name: z.string().min(1).max(500),
@@ -21,6 +23,10 @@ const CreateProductBodySchema = z
     categoryIds: z.array(z.number().int().positive()).min(1),
 
     variants: z.array(ProductVariantSchema).min(1).optional(),
+
+    highlights: z.array(z.string().trim().min(1).max(300)).max(12).optional(),
+
+    specifications: ProductSpecificationsSchema.optional(),
   })
   .strict()
 

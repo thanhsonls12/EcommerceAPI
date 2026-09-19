@@ -467,7 +467,6 @@ async function main() {
 
   let seededProducts = 0
   let seededSkus = 0
-  const seededProductRecords: Array<{ id: number; name: string }> = []
 
   const buildSeedVariantData = (name: string, categoryId: number, basePrice: number) => {
     if (categoryId === phones.id) {
@@ -538,14 +537,120 @@ async function main() {
     }
   }
 
+  const buildCatalogDetails = (name: string, brandId: number, categoryId: number) => {
+    const brandName =
+      brandId === apple.id
+        ? 'Apple'
+        : brandId === samsung.id
+          ? 'Samsung'
+          : brandId === logitech.id
+            ? 'Logitech'
+            : 'Sony'
+    const imageLabel = encodeURIComponent(name)
+    const images = [
+      `https://placehold.co/1200x1200/f4f1eb/1d2433?text=${imageLabel}`,
+      `https://placehold.co/1200x1200/e9eefb/2b4f9e?text=${encodeURIComponent(`${name} Detail`)}`,
+      `https://placehold.co/1200x1200/1d2433/f8f7f3?text=${encodeURIComponent(`${name} Lifestyle`)}`,
+    ]
+
+    if (categoryId === phones.id) {
+      return {
+        images,
+        descriptionVi: `${name} là mẫu điện thoại ${brandName} trong dữ liệu demo của Élan, hướng tới trải nghiệm hằng ngày cân bằng giữa thiết kế, hiệu năng và khả năng lưu trữ.`,
+        descriptionEn: `${name} is a ${brandName} smartphone in the Élan demo catalog, designed to showcase a balanced everyday mobile experience.`,
+        highlights: [
+          'Thiết kế cao cấp, phù hợp sử dụng hằng ngày',
+          'Nhiều tùy chọn màu sắc và dung lượng lưu trữ',
+          'Tối ưu cho liên lạc, giải trí và công việc di động',
+          'Dữ liệu tồn kho được quản lý riêng theo từng SKU',
+        ],
+        specifications: {
+          'Thương hiệu': brandName,
+          'Danh mục': 'Điện thoại',
+          'Tùy chọn lưu trữ': '256GB / 512GB',
+          'Tùy chọn màu': 'Black / White',
+          'Tình trạng': 'Mới - dữ liệu demo',
+          'Bảo hành': '12 tháng (demo)',
+        },
+      }
+    }
+
+    if (categoryId === laptops.id) {
+      return {
+        images,
+        descriptionVi: `${name} là mẫu laptop ${brandName} trong catalog demo, phù hợp cho học tập, công việc và các tác vụ đa nhiệm với nhiều cấu hình bộ nhớ và lưu trữ.`,
+        descriptionEn: `${name} is a ${brandName} laptop in the demo catalog, presented for study, work and multitasking use cases.`,
+        highlights: [
+          'Thiết kế gọn gàng cho học tập và công việc',
+          'Có nhiều cấu hình RAM và dung lượng lưu trữ',
+          'Phù hợp tác vụ văn phòng và đa nhiệm hằng ngày',
+          'Giá và tồn kho được quản lý theo từng cấu hình SKU',
+        ],
+        specifications: {
+          'Thương hiệu': brandName,
+          'Danh mục': 'Laptop',
+          'Bộ nhớ': '16GB / 32GB',
+          'Lưu trữ': '512GB / 1TB',
+          'Tình trạng': 'Mới - dữ liệu demo',
+          'Bảo hành': '12 tháng (demo)',
+        },
+      }
+    }
+
+    if (categoryId === accessories.id) {
+      return {
+        images,
+        descriptionVi: `${name} là phụ kiện ${brandName} trong catalog demo, được xây dựng để minh họa đầy đủ lựa chọn phiên bản, tồn kho và trải nghiệm mua phụ kiện trên storefront.`,
+        descriptionEn: `${name} is a ${brandName} accessory used to demonstrate variants, inventory and accessory shopping flows.`,
+        highlights: [
+          'Thiết kế hướng tới sử dụng lâu dài',
+          'Nhiều tùy chọn phiên bản phù hợp nhu cầu cá nhân',
+          'Tồn kho độc lập theo từng SKU',
+          'Phù hợp setup làm việc và học tập hiện đại',
+        ],
+        specifications: {
+          'Thương hiệu': brandName,
+          'Danh mục': 'Phụ kiện',
+          'Kết nối': 'Không dây / đa thiết bị (demo)',
+          'Màu sắc': name.includes('MX Keys') ? 'Graphite / Pale Grey' : 'Graphite / Pale Grey / Black / White',
+          'Tình trạng': 'Mới - dữ liệu demo',
+          'Bảo hành': '12 tháng (demo)',
+        },
+      }
+    }
+
+    return {
+      images,
+      descriptionVi: `${name} là thiết bị âm thanh ${brandName} trong catalog demo, phục vụ trải nghiệm nghe nhạc và làm việc với nhiều tùy chọn màu sắc.`,
+      descriptionEn: `${name} is a ${brandName} audio device in the demo catalog, presented for music and everyday productivity scenarios.`,
+      highlights: [
+        'Thiết kế tối giản, phù hợp sử dụng hằng ngày',
+        'Nhiều tùy chọn màu sắc',
+        'Phù hợp nghe nhạc, gọi thoại và làm việc',
+        'Tồn kho và giá bán được quản lý theo SKU',
+      ],
+      specifications: {
+        'Thương hiệu': brandName,
+        'Danh mục': 'Âm thanh',
+        'Kết nối': 'Không dây (demo)',
+        'Màu sắc': 'Black / Silver / Blue / White',
+        'Tình trạng': 'Mới - dữ liệu demo',
+        'Bảo hành': '12 tháng (demo)',
+      },
+    }
+  }
+
   for (const [name, basePrice, virtualPrice, brandId, categoryId] of productSeeds) {
     const existingProduct = await prisma.product.findFirst({ where: { name } })
     const variantData = buildSeedVariantData(name, categoryId, basePrice)
+    const catalogDetails = buildCatalogDetails(name, brandId, categoryId)
     const data = {
       basePrice,
       virtualPrice,
       brandId,
-      images: [`https://placehold.co/800x800?text=${encodeURIComponent(name)}`],
+      images: catalogDetails.images,
+      highlights: catalogDetails.highlights,
+      specifications: catalogDetails.specifications,
       variants: variantData.variants,
       deletedAt: null,
       deletedById: null,
@@ -569,14 +674,12 @@ async function main() {
           },
         })
 
-    seededProductRecords.push({ id: product.id, name: product.name })
-
     for (const languageId of ['vi', 'en'] as const) {
       await prisma.productTranslation.upsert({
         where: { productId_languageId: { productId: product.id, languageId } },
         update: {
           name: product.name,
-          description: `${product.name} demo product for ecommerce testing`,
+          description: languageId === 'vi' ? catalogDetails.descriptionVi : catalogDetails.descriptionEn,
           deletedAt: null,
           updatedById: adminUser.id,
         },
@@ -584,7 +687,7 @@ async function main() {
           productId: product.id,
           languageId,
           name: product.name,
-          description: `${product.name} demo product for ecommerce testing`,
+          description: languageId === 'vi' ? catalogDetails.descriptionVi : catalogDetails.descriptionEn,
           createdById: adminUser.id,
         },
       })
@@ -593,7 +696,7 @@ async function main() {
     const currentSkus = await prisma.sku.findMany({ where: { productId: product.id }, orderBy: { id: 'asc' } })
     for (const [skuIndex, skuSeed] of variantData.skus.entries()) {
       const existingSku = currentSkus[skuIndex]
-      const image = `https://placehold.co/800x800?text=${encodeURIComponent(`${name} ${Object.values(skuSeed.value).join(' ')}`)}`
+      const image = `https://placehold.co/1000x1000/f4f1eb/1d2433?text=${encodeURIComponent(`${name} ${Object.values(skuSeed.value).join(' ')}`)}`
       const sku = existingSku
         ? await prisma.sku.update({
             where: { id: existingSku.id },
@@ -648,16 +751,14 @@ async function main() {
       seededSkus += 1
     }
 
-    seededProducts += 1
-  }
-
-  const mediaProductIds = seededProductRecords.slice(0, 8)
-  for (const product of mediaProductIds) {
-    const url = `https://placehold.co/1200x800?text=${encodeURIComponent(product.name)}`
-    const exists = await prisma.productMedia.findFirst({ where: { productId: product.id, url } })
-    if (!exists) {
-      await prisma.productMedia.create({ data: { productId: product.id, url, type: 'IMAGE' } })
+    for (const url of catalogDetails.images) {
+      const mediaExists = await prisma.productMedia.findFirst({ where: { productId: product.id, url } })
+      if (!mediaExists) {
+        await prisma.productMedia.create({ data: { productId: product.id, url, type: 'IMAGE' } })
+      }
     }
+
+    seededProducts += 1
   }
 
   const now = new Date()

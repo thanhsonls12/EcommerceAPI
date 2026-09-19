@@ -427,7 +427,12 @@ export function ProductDetailPage() {
       ) || (variants.length ? undefined : skus[0]),
     [selected, skus, variants],
   )
-  const images = product?.images?.length ? product.images : [productImage(product)]
+  const images = useMemo(() => {
+    if (!product) return []
+    const candidates = [...(product.images || []), ...(product.medias || []).map((media) => media.url)]
+    const unique = [...new Set(candidates.filter(Boolean))]
+    return unique.length ? unique : [productImage(product)]
+  }, [product])
   if (productQuery.isLoading) return <PageLoader />
   if (productQuery.isError || !product) return <ErrorState onRetry={() => void productQuery.refetch()} />
   return (
@@ -463,7 +468,10 @@ export function ProductDetailPage() {
             <strong>{money(selectedSku?.price ?? product.basePrice)}</strong>
             {discountPercent(product) > 0 ? <del>{money(product.virtualPrice)}</del> : null}
           </div>
-          <p className="detail-intro">Thiết kế tinh gọn, hiệu năng đáng tin cậy cho nhịp sống hàng ngày của bạn.</p>
+          <p className="detail-intro">
+            {product.productTranslations?.[0]?.description ||
+              'Thiết kế tinh gọn, hiệu năng đáng tin cậy cho nhịp sống hàng ngày của bạn.'}
+          </p>
           {variants.map((variant) => (
             <VariantPicker
               key={variant.name}
@@ -531,6 +539,38 @@ export function ProductDetailPage() {
           </div>
         </div>
       </div>
+      {product.highlights?.length || (product.specifications && Object.keys(product.specifications).length) ? (
+        <section className="product-information">
+          {product.highlights?.length ? (
+            <div className="product-highlights">
+              <span className="eyebrow">HIGHLIGHTS</span>
+              <h2>Điểm nổi bật</h2>
+              <div className="highlight-grid">
+                {product.highlights.map((highlight) => (
+                  <div key={highlight}>
+                    <span className="highlight-dot" />
+                    <p>{highlight}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {product.specifications && Object.keys(product.specifications).length ? (
+            <div className="product-specifications">
+              <span className="eyebrow">SPECIFICATIONS</span>
+              <h2>Thông số sản phẩm</h2>
+              <dl>
+                {Object.entries(product.specifications).map(([label, value]) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
       <section className="reviews-section" id="reviews">
         <div className="section-head">
           <div>

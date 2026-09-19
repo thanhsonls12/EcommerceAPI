@@ -82,7 +82,7 @@ export class ProductService {
 
   private buildProductListCacheKey(version: string, query: GetProductsQueryDTO) {
     return [
-      `product:list:search-v2:v${version}`,
+      `product:list:catalog-v3:v${version}`,
       `page=${query.page}`,
       `limit=${query.limit}`,
       `brand=${query.brandId ?? 'all'}`,
@@ -249,7 +249,7 @@ export class ProductService {
 
   async findById(id: number) {
     const version = await this.getProductDetailCacheVersion()
-    const cacheKey = `product:detail:v${version}:${id}`
+    const cacheKey = `product:detail:catalog-v2:v${version}:${id}`
     const cachedProduct = await this.cacheService.get(cacheKey)
     if (cachedProduct) {
       return cachedProduct
@@ -297,8 +297,22 @@ export class ProductService {
       basePrice: body.basePrice,
       virtualPrice: body.virtualPrice,
       images: [],
+      ...(body.highlights !== undefined && {
+        highlights: body.highlights,
+      }),
+      ...(body.specifications !== undefined && {
+        specifications: body.specifications,
+      }),
       ...(body.variants !== undefined && {
         variants: body.variants,
+      }),
+
+      ...(body.highlights !== undefined && {
+        highlights: body.highlights,
+      }),
+
+      ...(body.specifications !== undefined && {
+        specifications: body.specifications,
       }),
       brand: {
         connect: {

@@ -137,8 +137,8 @@ model UserTranslation {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  @@index([deletedAt])
   @@unique([userId, languageId])
+  @@index([deletedAt])
 }
 
 model VerificationCode {
@@ -237,6 +237,10 @@ model Product {
   brandId             Int
   brand               Brand                    @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   images              String[]
+  /// [String]
+  highlights          Json?
+  /// [Specifications]
+  specifications      Json?
   categories          Category[]
   /// [Variants]
   variants            Json?
@@ -297,9 +301,9 @@ model ProductTranslation {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
+  @@unique([productId, languageId])
   @@index([deletedAt])
   @@index([productId])
-  @@unique([productId, languageId])
 }
 
 model Category {
@@ -347,8 +351,8 @@ model CategoryTranslation {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  @@index([deletedAt])
   @@unique([categoryId, languageId])
+  @@index([deletedAt])
 }
 
 model Sku {
@@ -419,8 +423,8 @@ model BrandTranslation {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  @@index([deletedAt])
   @@unique([brandId, languageId])
+  @@index([deletedAt])
 }
 
 model CartItem {
