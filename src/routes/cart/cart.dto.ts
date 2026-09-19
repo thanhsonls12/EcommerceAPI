@@ -17,3 +17,16 @@ const UpdateCartItemBodySchema = z
 export class AddCartItemBodyDTO extends createZodDto(AddCartItemBodySchema) {}
 
 export class UpdateCartItemBodyDTO extends createZodDto(UpdateCartItemBodySchema) {}
+
+const MergeCartBodySchema = z
+  .object({
+    items: z
+      .array(AddCartItemBodySchema)
+      .max(100)
+      .refine((items) => new Set(items.map((item) => item.skuId)).size === items.length, {
+        message: 'Duplicate SKU ids are not allowed',
+      }),
+  })
+  .strict()
+
+export class MergeCartBodyDTO extends createZodDto(MergeCartBodySchema) {}

@@ -12,7 +12,7 @@ import { AccountPage, AddressesPage, OrderDetailPage, OrdersPage } from './pages
 import { HomePage, ProductDetailPage, ProductsPage, CartPage } from './pages/storefront'
 import { NotFoundPage, PaymentPage } from './pages/misc'
 import { SecurityPage } from './pages/security'
-import type { Cart, GuestCartItem, Product, Sku, User } from './types'
+import type { Cart, CartMergeResult, GuestCartItem, Product, Sku, User } from './types'
 
 function App() {
   const queryClient = useQueryClient()
@@ -63,18 +63,27 @@ function App() {
       setTokens(accessToken, refreshToken)
       setUser(nextUser)
       localStorage.setItem('ecommerce-user', JSON.stringify(nextUser))
-      if (guestCart.length)
-        void Promise.all(
-          guestCart.map((item) =>
-            api('/cart/items', {
-              method: 'POST',
-              body: JSON.stringify({ skuId: item.skuId, quantity: item.quantity }),
-            }),
-          ),
-        ).then(() => {
-          setGuestCart([])
-          void queryClient.invalidateQueries({ queryKey: ['cart'] })
+      if (guestCart.length) {
+        void api<CartMergeResult>('/cart/merge', {
+          method: 'POST',
+          body: JSON.stringify({ items: guestCart.map(({ skuId, quantity }) => ({ skuId, quantity })) }),
         })
+          .then((result) => {
+            setGuestCart([])
+            queryClient.setQueryData(['cart'], result.cart)
+            const unavailable = result.adjustments.filter((item) => item.reason === 'UNAVAILABLE').length
+            const limited = result.adjustments.filter((item) => item.reason === 'STOCK_LIMIT').length
+            if (unavailable || limited) {
+              setNotice({
+                kind: 'info',
+                text: `Giỏ hàng đã được đồng bộ${unavailable ? `; ${unavailable} sản phẩm không còn khả dụng` : ''}${limited ? `; ${limited} sản phẩm được điều chỉnh theo tồn kho` : ''}.`,
+              })
+            }
+          })
+          .catch(() => {
+            setNotice({ kind: 'error', text: 'Chưa thể đồng bộ giỏ hàng khách. Giỏ cũ vẫn được giữ để thử lại.' })
+          })
+      }
     },
     [guestCart, queryClient],
   )

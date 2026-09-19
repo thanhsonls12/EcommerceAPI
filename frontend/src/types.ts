@@ -53,6 +53,16 @@ export type GuestCartItem = {
   product: Pick<Product, 'id' | 'name' | 'images'>
 }
 
+export type CartMergeResult = {
+  cart: Cart
+  adjustments: Array<{
+    skuId: number
+    requested: number
+    merged: number
+    reason?: 'UNAVAILABLE' | 'STOCK_LIMIT'
+  }>
+}
+
 export type Address = {
   id: number
   name: string

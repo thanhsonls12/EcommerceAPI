@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common'
 import { CartService } from './cart.service'
 import { ActiveUser } from '@/shared/decorators/active-user.decorator'
-import { AddCartItemBodyDTO, UpdateCartItemBodyDTO } from './cart.dto'
+import { AddCartItemBodyDTO, MergeCartBodyDTO, UpdateCartItemBodyDTO } from './cart.dto'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 
 @ApiTags('Cart')
@@ -20,6 +20,12 @@ export class CartController {
   @Post('items')
   addItem(@ActiveUser('userId') userId: number, @Body() body: AddCartItemBodyDTO) {
     return this.cartService.addItem(userId, body)
+  }
+
+  @ApiOperation({ summary: 'Merge a guest cart into the current user cart' })
+  @Post('merge')
+  merge(@ActiveUser('userId') userId: number, @Body() body: MergeCartBodyDTO) {
+    return this.cartService.merge(userId, body)
   }
 
   @ApiOperation({ summary: 'Update cart item quantity' })

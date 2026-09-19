@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { CartRepository } from './cart.repository'
 import { SKURepository } from '../product/sku.repository'
-import { AddCartItemBodyDTO, UpdateCartItemBodyDTO } from './cart.dto'
+import { AddCartItemBodyDTO, MergeCartBodyDTO, UpdateCartItemBodyDTO } from './cart.dto'
 import { Prisma } from '../../../generated/prisma/client'
 import { MESSAGE } from '@/shared/constants/message.constant'
 
@@ -51,6 +51,56 @@ export class CartService {
     }
 
     return this.cartRepository.upsertItem(userId, body.skuId, body.quantity)
+  }
+
+  async merge(userId: number, body: MergeCartBodyDTO) {
+    if (body.items.length === 0) {
+      return {
+        cart: await this.findMyCart(userId),
+        adjustments: [],
+      }
+    }
+
+    const adjustments = await this.cartRepository.transaction(async (tx) => {
+      const skuIds = body.items.map((item) => item.skuId)
+      const [skus, existingItems] = await Promise.all([
+        this.cartRepository.findSkusForMerge(tx, skuIds),
+        this.cartRepository.findItemsForMerge(tx, userId, skuIds),
+      ])
+      const skuById = new Map(skus.map((sku) => [sku.id, sku]))
+      const existingBySkuId = new Map(existingItems.map((item) => [item.skuId, item.quantity]))
+      const results: Array<{
+        skuId: number
+        requested: number
+        merged: number
+        reason?: 'UNAVAILABLE' | 'STOCK_LIMIT'
+      }> = []
+
+      for (const item of body.items) {
+        const sku = skuById.get(item.skuId)
+        if (!sku || sku.stock <= 0) {
+          results.push({ skuId: item.skuId, requested: item.quantity, merged: 0, reason: 'UNAVAILABLE' })
+          continue
+        }
+
+        const desired = Math.max(existingBySkuId.get(item.skuId) ?? 0, item.quantity)
+        const merged = Math.min(desired, sku.stock)
+        await this.cartRepository.setItemQuantity(tx, userId, item.skuId, merged)
+        results.push({
+          skuId: item.skuId,
+          requested: item.quantity,
+          merged,
+          ...(merged < desired ? { reason: 'STOCK_LIMIT' as const } : {}),
+        })
+      }
+
+      return results
+    })
+
+    return {
+      cart: await this.findMyCart(userId),
+      adjustments,
+    }
   }
 
   async updateItem(userId: number, skuId: number, body: UpdateCartItemBodyDTO) {
