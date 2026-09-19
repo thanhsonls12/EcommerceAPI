@@ -96,110 +96,161 @@ function CheckoutContent() {
   const summaryTotal = order ? Number(order.total || 0) : cartTotal
   return (
     <section className="page-section checkout-page">
-      <div className="breadcrumbs">
+      <div className="breadcrumbs mb-8">
         <Link to="/cart">Giỏ hàng</Link>
         <ChevronRight size={14} />
         <span>Thanh toán</span>
       </div>
-      <div className="checkout-layout">
-        <div className="checkout-main">
+      <div className="checkout-layout grid lg:grid-cols-[1fr_360px] gap-8 items-start">
+        <div className="checkout-main space-y-6">
           <div className="checkout-heading">
-            <span className="eyebrow">CHECKOUT</span>
-            <h1>Hoàn tất đơn hàng</h1>
-            <p>Chỉ còn vài bước nữa để món đồ thuộc về bạn.</p>
+            <span className="eyebrow text-blue-600 font-bold tracking-wider">CHECKOUT</span>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mt-1">Hoàn tất đơn hàng</h1>
+            <p className="text-slate-500 text-sm mt-1">Chỉ còn vài bước nữa để món đồ thuộc về bạn.</p>
           </div>
-          <section className="checkout-card">
-            <div className="checkout-card-title">
-              <span className="step-number">01</span>
-              <div>
-                <h2>Địa chỉ giao hàng</h2>
-                <p>Chọn nơi chúng mình gửi đơn tới.</p>
+
+          <section className="checkout-card rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
+            <div className="checkout-card-title flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <span className="step-number w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-extrabold text-xs flex items-center justify-center">
+                  01
+                </span>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">Địa chỉ giao hàng</h2>
+                  <p className="text-xs text-slate-500">Chọn nơi chúng mình gửi đơn tới.</p>
+                </div>
               </div>
-              <button className="text-link" onClick={() => setAddingAddress((value) => !value)}>
-                {addingAddress ? 'Đóng' : '+ Thêm địa chỉ'}
+              <button
+                type="button"
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline px-2 py-1 rounded-md"
+                onClick={() => setAddingAddress((value) => !value)}
+              >
+                {addingAddress ? 'Đóng' : '+ Thêm địa chỉ mới'}
               </button>
             </div>
+
             {addingAddress ? (
-              <AddressForm
-                onCreated={() => {
-                  setAddingAddress(false)
-                  void addresses.refetch()
-                }}
-              />
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 mb-3">
+                <AddressForm
+                  onCreated={() => {
+                    setAddingAddress(false)
+                    void addresses.refetch()
+                  }}
+                />
+              </div>
             ) : null}
+
             {addresses.isError ? (
               <ErrorState onRetry={() => void addresses.refetch()} />
             ) : addresses.data?.length ? (
-              <div className="address-list">
-                {addresses.data.map((address) => (
-                  <label className={`address-option ${addressId === address.id ? 'selected' : ''}`} key={address.id}>
-                    <input
-                      type="radio"
-                      name="address"
-                      checked={addressId === address.id}
-                      onChange={() => setAddressId(address.id)}
-                    />
-                    <span>
-                      <strong>{address.name}</strong>
-                      <small>
-                        {address.phoneNumber} · {address.address}
-                      </small>
-                    </span>
-                    {address.isDefault ? <em>Mặc định</em> : null}
-                  </label>
-                ))}
+              <div className="address-list space-y-3">
+                {addresses.data.map((address) => {
+                  const isSelected = addressId === address.id
+                  return (
+                    <label
+                      className={`address-option flex items-start gap-3.5 p-4 rounded-xl border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-blue-600 bg-blue-50/60 ring-2 ring-blue-600/20 shadow-xs'
+                          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                      }`}
+                      key={address.id}
+                    >
+                      <input
+                        type="radio"
+                        name="address"
+                        className="mt-1 text-blue-600 focus:ring-blue-500 accent-blue-600"
+                        checked={isSelected}
+                        onChange={() => setAddressId(address.id)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <strong className="text-sm font-bold text-slate-900">{address.name}</strong>
+                          <span className="text-xs text-slate-500">({address.phoneNumber})</span>
+                          {address.isDefault ? (
+                            <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">
+                              Mặc định
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">{address.address}</p>
+                        {address.note ? (
+                          <p className="text-[11px] text-slate-400 mt-0.5 italic">Ghi chú: {address.note}</p>
+                        ) : null}
+                      </div>
+                    </label>
+                  )
+                })}
               </div>
             ) : (
-              <EmptyState title="Chưa có địa chỉ" text="Thêm một địa chỉ để tiếp tục." />
+              <EmptyState title="Chưa có địa chỉ" text="Thêm một địa chỉ để tiếp tục đặt hàng." />
             )}
           </section>
-          <section className="checkout-card">
-            <div className="checkout-card-title">
-              <span className="step-number">02</span>
+
+          <section className="checkout-card rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+            <div className="checkout-card-title flex items-center gap-3 pb-3 border-b border-slate-100">
+              <span className="step-number w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-extrabold text-xs flex items-center justify-center">
+                02
+              </span>
               <div>
-                <h2>Ưu đãi</h2>
-                <p>Mã giảm giá (nếu có).</p>
+                <h2 className="text-base font-bold text-slate-900">Mã ưu đãi & Giảm giá</h2>
+                <p className="text-xs text-slate-500">Nhập mã voucher hoặc khuyến mãi nếu có.</p>
               </div>
             </div>
-            <div className="coupon-row">
+            <div className="coupon-row flex gap-3 max-w-md">
               <input
                 value={coupon}
                 onChange={(event) => setCoupon(event.target.value.toUpperCase())}
-                placeholder="Nhập mã giảm giá"
+                placeholder="Nhập mã (VD: ELANVIP)"
                 disabled={Boolean(orderId)}
+                className="flex-1 uppercase font-semibold tracking-wider text-sm rounded-xl border border-slate-200 px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:border-blue-500 transition-colors"
               />
             </div>
             {order ? (
               summaryDiscount > 0 ? (
-                <div className="inline-alert success">Đã áp dụng mã giảm giá, tiết kiệm {money(summaryDiscount)}.</div>
+                <div className="inline-alert success p-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200 flex items-center gap-2">
+                  <span>✓</span> Đã áp dụng mã giảm giá thành công! Tiết kiệm {money(summaryDiscount)}.
+                </div>
               ) : coupon.trim() ? (
-                <div className="inline-alert">Mã "{coupon.trim()}" không mang lại giảm giá cho đơn này.</div>
+                <div className="inline-alert p-3 rounded-xl bg-amber-50 text-amber-700 text-xs font-medium border border-amber-200">
+                  Mã "{coupon.trim()}" không áp dụng được cho đơn này.
+                </div>
               ) : null
             ) : (
-              <p className="coupon-hint">Mã sẽ được kiểm tra và áp dụng khi bạn xác nhận đơn hàng.</p>
+              <p className="coupon-hint text-xs text-slate-400">
+                Mã sẽ được kiểm tra và tính vào tổng tiền khi bạn xác nhận tạo đơn.
+              </p>
             )}
           </section>
-          <section className="checkout-card payment-note">
-            <LockKeyhole size={20} />
+
+          <section className="checkout-card payment-note rounded-2xl border border-blue-100 bg-blue-50/50 p-5 flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <LockKeyhole size={20} />
+            </div>
             <div>
-              <strong>Thanh toán an toàn qua PayOS</strong>
-              <p>Bạn sẽ được chuyển tới cổng thanh toán bảo mật sau khi xác nhận đơn.</p>
+              <strong className="text-sm font-bold text-slate-900 block">Thanh toán an toàn qua cổng PayOS</strong>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                Sau khi xác nhận đơn hàng, bạn sẽ được chuyển hướng tới cổng thanh toán bảo mật với chuẩn mã hóa SSL
+                256-bit.
+              </p>
             </div>
           </section>
+
           {orderMutation.isError ? (
-            <div className="inline-alert error">
+            <div className="inline-alert error p-4 rounded-xl bg-rose-50 text-rose-700 text-xs font-semibold border border-rose-200">
               {orderMutation.error instanceof ApiError
                 ? orderMutation.error.message
-                : 'Không thể tạo đơn. Vui lòng kiểm tra lại.'}
+                : 'Không thể tạo đơn hàng. Vui lòng kiểm tra lại thông tin.'}
             </div>
           ) : null}
+
           {orderId ? (
-            <div className="inline-alert success">
-              Đơn #{orderId} đang chờ thanh toán. Bạn có thể tiếp tục thanh toán kể cả sau khi tải lại trang.
+            <div className="inline-alert success p-4 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200 flex items-center gap-2">
+              <span>✓</span> Đơn #{orderId} đang chờ thanh toán. Bạn có thể bấm "Thanh toán ngay" để hoàn tất.
             </div>
           ) : null}
         </div>
-        <aside className="checkout-side">
+
+        <aside className="checkout-side sticky top-24">
           <OrderSummary
             subtotal={summarySubtotal}
             discount={summaryDiscount}
@@ -207,7 +258,7 @@ function CheckoutContent() {
             action={
               orderId ? (
                 <Button
-                  className="full-button"
+                  className="full-button min-h-[48px] text-base font-bold shadow-md hover:shadow-lg"
                   loading={paymentMutation.isPending}
                   onClick={() => void paymentMutation.mutateAsync(orderId)}
                 >
@@ -215,7 +266,7 @@ function CheckoutContent() {
                 </Button>
               ) : (
                 <Button
-                  className="full-button"
+                  className="full-button min-h-[48px] text-base font-bold shadow-md hover:shadow-lg"
                   loading={orderMutation.isPending}
                   disabled={!addressId || !cart?.items.length}
                   onClick={() => void orderMutation.mutateAsync()}

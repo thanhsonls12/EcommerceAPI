@@ -29,77 +29,95 @@ export function HomePage() {
   const categories = useQuery({ queryKey: ['categories'], queryFn: () => api<Category[]>('/categories', false) })
   return (
     <>
-      <section className="hero">
-        <div className="hero-copy">
-          <span className="eyebrow hero-eyebrow">THE EVERYDAY UPGRADE</span>
-          <h1>
-            Công nghệ tốt hơn cho những ngày <em>đẹp hơn.</em>
+      <section className="hero relative overflow-hidden py-12 md:py-20">
+        <div className="hero-copy z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-blue-700 text-xs font-bold tracking-wide uppercase mb-6 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+            THE EVERYDAY UPGRADE
+          </div>
+          <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.1] mb-6">
+            Công nghệ tốt hơn cho những ngày{' '}
+            <em className="text-blue-600 not-italic bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              đẹp hơn.
+            </em>
           </h1>
-          <p>Chọn những thiết bị được tuyển kỹ, giá minh bạch và giao tới bạn thật gọn gàng.</p>
-          <div className="hero-actions">
-            <Link to="/products" className="button button-primary">
+          <p className="text-base md:text-lg text-slate-600 max-w-lg mb-8 leading-relaxed">
+            Chọn những thiết bị được tuyển kỹ, giá minh bạch, cam kết chính hãng và giao tới bạn thật trọn vẹn.
+          </p>
+          <div className="hero-actions flex flex-wrap items-center gap-4">
+            <Link to="/products" className="button button-primary shadow-md hover:shadow-lg">
               Khám phá sản phẩm <ArrowRight size={17} />
             </Link>
-            <a href="#benefits" className="text-link">
-              Vì sao Élan? <ChevronRight size={16} />
+            <a href="#benefits" className="text-link text-slate-600 hover:text-blue-600 font-semibold px-2 py-1">
+              Vì sao chọn Élan? <ChevronRight size={16} />
             </a>
           </div>
         </div>
-        <div className="hero-art">
+        <div className="hero-art relative flex items-center justify-center">
           <div className="hero-orbit orbit-one" />
           <div className="hero-orbit orbit-two" />
-          <div className="hero-device">
-            <img src="https://placehold.co/720x720/1d2433/f4f1eb?text=E" alt="Thiết bị điện tử nổi bật" />
+          <div className="hero-device relative z-10 shadow-2xl">
+            <img src="https://placehold.co/720x720/0f172a/eff6ff?text=Élan+Tech" alt="Thiết bị điện tử nổi bật" />
           </div>
-          <span className="floating-note note-top">
+          <span className="floating-note note-top backdrop-blur-md bg-white/90 shadow-lg border border-slate-100">
             01 / 04
             <br />
-            <strong>curated tech</strong>
+            <strong className="text-blue-600">Curated Tech</strong>
           </span>
-          <span className="floating-note note-bottom">
+          <span className="floating-note note-bottom backdrop-blur-md bg-white/90 shadow-lg border border-slate-100">
             Thiết kế để
             <br />
-            <strong>dùng mỗi ngày</strong>
+            <strong className="text-slate-900">Dùng mỗi ngày</strong>
           </span>
         </div>
       </section>
+
       <section className="section category-section">
-        <div className="section-head">
+        <div className="section-head flex items-end justify-between mb-8">
           <div>
-            <span className="eyebrow">SHOP BY MOOD</span>
-            <h2>Tìm đúng thứ bạn cần</h2>
+            <span className="eyebrow text-blue-600 font-bold tracking-wider">SHOP BY CATEGORY</span>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mt-1">Khám phá theo danh mục</h2>
           </div>
-          <Link to="/products" className="text-link">
-            Xem tất cả <ArrowRight size={16} />
+          <Link
+            to="/products"
+            className="text-link group flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700"
+          >
+            Xem tất cả <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
         <div className="category-grid">
           {(categories.data || []).slice(0, 5).map((category, index) => (
             <Link
               to={`/products?categoryId=${category.id}`}
-              className={`category-card category-${index % 5}`}
+              className={`category-card category-${index % 5} group`}
               key={category.id}
             >
-              <span>0{index + 1}</span>
-              <strong>{category.name}</strong>
-              <small>
-                Khám phá ngay <ArrowRight size={13} />
+              <span className="font-mono text-xs font-bold text-white/70">0{index + 1}</span>
+              <strong className="text-lg font-bold text-white group-hover:translate-x-0.5 transition-transform">
+                {category.name}
+              </strong>
+              <small className="text-white/80 flex items-center gap-1 mt-2 text-xs font-medium">
+                Khám phá ngay <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" />
               </small>
             </Link>
           ))}
           {categories.isLoading
-            ? [1, 2, 3, 4].map((item) => <div className="category-card skeleton" key={item} />)
+            ? [1, 2, 3, 4, 5].map((item) => <div className="category-card skeleton animate-pulse" key={item} />)
             : null}
         </div>
       </section>
+
       <section className="section featured-section">
-        <div className="section-head">
+        <div className="section-head flex items-end justify-between mb-8">
           <div>
-            <span className="eyebrow">JUST IN</span>
-            <h2>Mới trong cửa hàng</h2>
+            <span className="eyebrow text-blue-600 font-bold tracking-wider">JUST IN</span>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mt-1">Sản phẩm mới nổi bật</h2>
           </div>
-          <Link to="/products?sortBy=createdAt" className="text-link">
-            Xem tất cả <ArrowRight size={16} />
+          <Link
+            to="/products?sortBy=createdAt"
+            className="text-link group flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700"
+          >
+            Xem tất cả <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
         {products.isError ? (
@@ -107,27 +125,46 @@ export function HomePage() {
         ) : (
           <div className="product-grid">
             {products.isLoading
-              ? [1, 2, 3, 4].map((item) => <ProductSkeleton key={item} />)
+              ? [1, 2, 3, 4, 5, 6, 7, 8].map((item) => <ProductSkeleton key={item} />)
               : (products.data?.data || []).map((product) => <ProductCard key={product.id} product={product} />)}
           </div>
         )}
       </section>
-      <section className="benefits" id="benefits">
-        <div className="benefits-inner">
-          <div>
-            <ShieldCheck size={22} />
-            <strong>Chọn kỹ, dùng lâu</strong>
-            <p>Thông tin rõ ràng, không phức tạp hóa quyết định.</p>
+
+      <section className="benefits rounded-3xl bg-slate-900 text-white my-16 shadow-xl" id="benefits">
+        <div className="benefits-inner p-8 md:p-12">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20">
+              <ShieldCheck size={24} />
+            </div>
+            <div>
+              <strong className="text-base text-white font-bold block mb-1">Chọn kỹ, dùng lâu</strong>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Thông tin rõ ràng, minh bạch nguồn gốc, không phức tạp hóa quyết định của bạn.
+              </p>
+            </div>
           </div>
-          <div>
-            <Truck size={22} />
-            <strong>Giao hàng minh bạch</strong>
-            <p>Theo dõi từng bước từ lúc đặt tới lúc nhận.</p>
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
+              <Truck size={24} />
+            </div>
+            <div>
+              <strong className="text-base text-white font-bold block mb-1">Giao hàng minh bạch</strong>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Theo dõi từng bước trạng thái từ lúc xác nhận đơn hàng tới khi tận tay bạn nhận.
+              </p>
+            </div>
           </div>
-          <div>
-            <Heart size={22} />
-            <strong>Hỗ trợ thật lòng</strong>
-            <p>Cần giúp chọn đúng? Chúng mình luôn ở đây.</p>
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/20">
+              <Heart size={24} />
+            </div>
+            <div>
+              <strong className="text-base text-white font-bold block mb-1">Hỗ trợ tận tâm</strong>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Đổi trả trong 7 ngày nếu không hài lòng. Chúng mình luôn sẵn sàng đồng hành cùng bạn.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -445,33 +482,64 @@ export function ProductDetailPage() {
         <span>{product.name}</span>
       </div>
       <div className="detail-layout">
-        <div className="gallery">
-          <div className="gallery-main">
-            <img src={images[imageIndex]} alt={product.name} />
+        <div className="gallery sticky top-24">
+          <div className="gallery-main rounded-3xl overflow-hidden bg-white border border-slate-200 shadow-sm p-8 flex items-center justify-center aspect-square">
+            <img
+              src={images[imageIndex]}
+              alt={product.name}
+              className="w-full h-full object-contain hover:scale-105 transition-transform duration-300"
+            />
           </div>
-          <div className="gallery-thumbs">
+          <div className="gallery-thumbs flex gap-3 mt-4 overflow-x-auto pb-2">
             {images.map((image, index) => (
-              <button className={index === imageIndex ? 'active' : ''} onClick={() => setImageIndex(index)} key={image}>
-                <img src={image} alt="" />
+              <button
+                className={`w-16 h-16 rounded-xl border-2 overflow-hidden bg-white p-1 transition-all shrink-0 ${
+                  index === imageIndex ? 'border-blue-600 shadow-sm' : 'border-slate-200 opacity-70 hover:opacity-100'
+                }`}
+                onClick={() => setImageIndex(index)}
+                key={image}
+              >
+                <img src={image} alt="" className="w-full h-full object-contain" />
               </button>
             ))}
           </div>
         </div>
-        <div className="detail-copy">
-          <div className="eyebrow">{product.brand?.name || 'ÉLAN COLLECTION'}</div>
-          <h1>{product.name}</h1>
-          <div className="detail-rating">
-            <Stars value={reviews.data?.rating.average || 0} count={reviews.data?.rating.count || 0} />
-            <a href="#reviews">Đọc đánh giá</a>
+        <div className="detail-copy space-y-6">
+          <div>
+            <div className="eyebrow text-blue-600 font-bold tracking-wider mb-2">
+              {product.brand?.name || 'ÉLAN COLLECTION'}
+            </div>
+            <h1 className="text-2xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+              {product.name}
+            </h1>
+            <div className="detail-rating flex items-center gap-3 mt-3">
+              <Stars value={reviews.data?.rating.average || 0} count={reviews.data?.rating.count || 0} />
+              <span className="text-slate-300">·</span>
+              <a href="#reviews" className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline">
+                Xem đánh giá của khách hàng
+              </a>
+            </div>
           </div>
-          <div className="detail-price">
-            <strong>{money(selectedSku?.price ?? product.basePrice)}</strong>
-            {discountPercent(product) > 0 ? <del>{money(product.virtualPrice)}</del> : null}
+
+          <div className="detail-price p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-wrap items-baseline gap-3">
+            <strong className="text-3xl font-extrabold text-blue-600">
+              {money(selectedSku?.price ?? product.basePrice)}
+            </strong>
+            {discountPercent(product) > 0 ? (
+              <>
+                <del className="text-slate-400 text-sm">{money(product.virtualPrice)}</del>
+                <span className="px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold">
+                  Tiết kiệm {discountPercent(product)}%
+                </span>
+              </>
+            ) : null}
           </div>
-          <p className="detail-intro">
+
+          <p className="detail-intro text-slate-600 text-sm leading-relaxed">
             {product.productTranslations?.[0]?.description ||
               'Thiết kế tinh gọn, hiệu năng đáng tin cậy cho nhịp sống hàng ngày của bạn.'}
           </p>
+
           {variants.map((variant) => (
             <VariantPicker
               key={variant.name}
@@ -481,28 +549,38 @@ export function ProductDetailPage() {
               skus={skus}
             />
           ))}
-          <div className="stock-line">
+
+          <div className="stock-line min-h-[30px] flex items-center">
             {selectedSku ? (
               selectedSku.stock > 0 ? (
-                <>
-                  <span className="stock-dot" /> Còn {selectedSku.stock} sản phẩm
-                </>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200/60">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Còn {selectedSku.stock} sản
+                  phẩm trong kho
+                </span>
               ) : (
-                <span className="danger-text">Tạm hết hàng</span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-semibold border border-rose-200/60">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" /> Tạm hết hàng
+                </span>
               )
             ) : variants.length ? (
-              'Chọn đủ phiên bản để xem tồn kho'
+              <span className="text-xs text-slate-500 font-medium">Vui lòng chọn đầy đủ phiên bản để xem tồn kho</span>
             ) : (
-              'Đang kiểm tra tồn kho'
+              <span className="text-xs text-slate-400">Đang kiểm tra tồn kho...</span>
             )}
           </div>
-          <div className="buy-row">
-            <div className="quantity">
-              <button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Giảm số lượng">
+
+          <div className="buy-row flex items-center gap-3 pt-2">
+            <div className="quantity flex items-center border border-slate-300 rounded-xl overflow-hidden bg-white shadow-2xs">
+              <button
+                className="w-10 h-11 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition-colors"
+                onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+                aria-label="Giảm số lượng"
+              >
                 <Minus size={16} />
               </button>
-              <span>{quantity}</span>
+              <span className="w-10 text-center font-bold text-slate-800 text-sm">{quantity}</span>
               <button
+                className="w-10 h-11 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition-colors"
                 onClick={() => setQuantity((value) => Math.min(selectedSku?.stock || 99, value + 1))}
                 aria-label="Tăng số lượng"
               >
@@ -510,7 +588,7 @@ export function ProductDetailPage() {
               </button>
             </div>
             <Button
-              className="add-detail"
+              className="add-detail flex-1 min-h-[46px] text-sm font-bold shadow-md hover:shadow-lg"
               disabled={
                 !selectedSku ||
                 selectedSku.stock < 1 ||
@@ -518,24 +596,29 @@ export function ProductDetailPage() {
               }
               onClick={() => selectedSku && void addToCart(selectedSku, product, quantity)}
             >
-              <ShoppingBag size={17} /> Thêm vào giỏ
+              <ShoppingBag size={18} /> Thêm vào giỏ hàng
             </Button>
           </div>
-          <div className="detail-policies">
-            <span>
-              <Truck size={17} />
-              <span>
-                <strong>Giao hàng nhanh</strong>
-                <small>Toàn quốc từ 2–5 ngày</small>
-              </span>
-            </span>
-            <span>
-              <ShieldCheck size={17} />
-              <span>
-                <strong>An tâm mua sắm</strong>
-                <small>Đổi trả trong 7 ngày</small>
-              </span>
-            </span>
+
+          <div className="detail-policies grid grid-cols-2 gap-3 pt-4 border-t border-slate-200">
+            <div className="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center gap-3 shadow-2xs">
+              <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <Truck size={18} />
+              </div>
+              <div>
+                <strong className="text-xs font-bold text-slate-900 block">Giao hàng nhanh</strong>
+                <small className="text-[11px] text-slate-500">Toàn quốc từ 2–4 ngày</small>
+              </div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center gap-3 shadow-2xs">
+              <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <ShieldCheck size={18} />
+              </div>
+              <div>
+                <strong className="text-xs font-bold text-slate-900 block">An tâm đổi trả</strong>
+                <small className="text-[11px] text-slate-500">Bảo hành 7 ngày miễn phí</small>
+              </div>
+            </div>
           </div>
         </div>
       </div>

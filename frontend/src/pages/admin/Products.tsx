@@ -77,13 +77,15 @@ export function AdminProducts() {
               {list.map((product) => (
                 <tr key={product.id}>
                   <td>
-                    <div className="admin-product-cell">
+                    <div className="admin-product-cell flex items-center gap-3">
                       <img
                         src={product.images?.[0] || 'https://placehold.co/80x80/f4f1eb/1d2433?text=E'}
                         alt={product.name}
+                        className="w-11 h-11 rounded-lg object-cover shrink-0 border border-slate-200"
                       />
-                      <span>{product.name}</span>
+                      <span className="font-medium text-slate-900">{product.name}</span>
                     </div>
+
                   </td>
                   <td>{product.brand?.name || '—'}</td>
                   <td>{money(product.basePrice)}</td>
