@@ -82,7 +82,7 @@ export class ProductService {
 
   private buildProductListCacheKey(version: string, query: GetProductsQueryDTO) {
     return [
-      `product:list:v${version}`,
+      `product:list:search-v2:v${version}`,
       `page=${query.page}`,
       `limit=${query.limit}`,
       `brand=${query.brandId ?? 'all'}`,
