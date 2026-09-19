@@ -64,11 +64,15 @@ services:
         sync: false
       - key: PAYOS_CHECKSUM_KEY
         sync: false
+      # Browser redirects after PayOS. Configure these with the deployed
+      # storefront URL, e.g. https://shop.example.com/payment/success.
       - key: PAYOS_RETURN_URL
         sync: false
       - key: PAYOS_CANCEL_URL
         sync: false
 
+      # Comma-separated exact frontend origins are supported, e.g.
+      # https://shop.example.com,http://localhost:5173
       - key: CORS_ORIGIN
         sync: false
       - key: SENTRY_ENABLED

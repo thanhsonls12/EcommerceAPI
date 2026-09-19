@@ -3,6 +3,16 @@ import { config } from 'dotenv'
 import { MESSAGE } from './constants/message.constant'
 config()
 const booleanEnv = z.enum(['true', 'false']).transform((value) => value === 'true')
+const corsOriginsEnv = z
+  .string()
+  .min(1)
+  .transform((value) =>
+    value
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  )
+  .pipe(z.array(z.url()).min(1))
 const configSchema = z.object({
   DATABASE_URL: z.string().min(1),
   ACCESS_TOKEN_SECRET: z.string().min(32),
@@ -26,7 +36,7 @@ const configSchema = z.object({
   PAYOS_CANCEL_URL: z.url(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
-  CORS_ORIGIN: z.string().min(1),
+  CORS_ORIGIN: corsOriginsEnv,
   SWAGGER_ENABLED: booleanEnv.default(true),
   TRUST_PROXY: booleanEnv.default(false),
   VERIFICATION_CODE_SECRET: z.string().min(32),
