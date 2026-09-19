@@ -12,9 +12,9 @@ The project covers the complete commerce flow from authentication and product di
 
 | Service          | URL                                              |
 | ---------------- | ------------------------------------------------ |
-| Storefront       | https://ecommerce-api-wine-delta.vercel.app      |
-| REST API         | https://ecommerce-api-obp1.onrender.com/api      |
-| Swagger API Docs | https://ecommerce-api-obp1.onrender.com/api/docs |
+| Storefront       | https://shop.sonkma.id.vn                        |
+| REST API         | https://ecommerce-api.sonkma.id.vn/api           |
+| Swagger API Docs | https://ecommerce-api.sonkma.id.vn/api/docs      |
 
 > The API is hosted on Render's free tier, so the first request after a period of inactivity may take longer while the service wakes up.
 
@@ -204,7 +204,7 @@ The backend:
 Production webhook endpoint:
 
 ```text
-POST https://ecommerce-api-obp1.onrender.com/api/payments/webhook
+POST https://ecommerce-api.sonkma.id.vn/api/payments/webhook
 ```
 
 ## Product Media
@@ -533,28 +533,28 @@ Output:         dist
 Required frontend environment variable:
 
 ```env
-VITE_API_URL=https://ecommerce-api-obp1.onrender.com/api
+VITE_API_URL=https://ecommerce-api.sonkma.id.vn/api
 ```
 
 Production storefront:
 
 ```text
-https://ecommerce-api-wine-delta.vercel.app
+https://shop.sonkma.id.vn
 ```
 
 The backend must allow the deployed storefront origin and use the storefront for PayOS browser redirects:
 
 ```text
-CORS_ORIGIN=https://ecommerce-api-wine-delta.vercel.app
-PAYOS_RETURN_URL=https://ecommerce-api-wine-delta.vercel.app/payment/success
-PAYOS_CANCEL_URL=https://ecommerce-api-wine-delta.vercel.app/payment/cancel
+CORS_ORIGIN=https://shop.sonkma.id.vn
+PAYOS_RETURN_URL=https://shop.sonkma.id.vn/payment/success
+PAYOS_CANCEL_URL=https://shop.sonkma.id.vn/payment/cancel
 ```
 
 ## API Documentation
 
 Interactive Swagger documentation is available at:
 
-https://ecommerce-api-obp1.onrender.com/api/docs
+https://ecommerce-api.sonkma.id.vn/api/docs
 
 The API uses the `/api` global prefix. Protected endpoints accept Bearer access tokens through the `Authorization` header.
 
