@@ -1,25 +1,41 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Route, Routes, useLocation } from 'react-router-dom'
+import { Toaster, toast } from 'sonner'
 import { api, clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT, setTokens } from './api'
 import { AuthContext, CommerceContext, readGuestCart, saveGuestCart } from './app-context'
-import type { CommerceContextValue, Notice } from './app-context'
+import type { CommerceContextValue } from './app-context'
 import { StoreLayout } from './components/layout'
+import { RequireAuth } from './components/RequireAuth'
 import { PageLoader } from './components/ui'
-import { AuthPage } from './features/auth/AuthPage'
-import { CheckoutPage } from './pages/checkout'
-import { AccountPage, AddressesPage, OrderDetailPage, OrdersPage } from './pages/account'
 import { HomePage, ProductDetailPage, ProductsPage, CartPage } from './pages/storefront'
-import { NotFoundPage, PaymentPage } from './pages/misc'
-import { SecurityPage } from './pages/security'
-import { AdminLayout } from './pages/admin/AdminLayout'
-import { AdminDashboard } from './pages/admin/Dashboard'
-import { AdminProducts } from './pages/admin/Products'
-import { AdminCategories, AdminBrands } from './pages/admin/Taxonomy'
-import { AdminPromotions } from './pages/admin/Promotions'
-import { AdminInventory } from './pages/admin/Inventory'
-import { AdminUsers } from './pages/admin/Users'
 import type { Cart, CartMergeResult, GuestCartItem, Product, Sku, User } from './types'
+
+const AuthPage = lazy(() => import('./features/auth/AuthPage').then((module) => ({ default: module.AuthPage })))
+const CheckoutPage = lazy(() => import('./pages/checkout').then((module) => ({ default: module.CheckoutPage })))
+const AccountPage = lazy(() => import('./pages/account').then((module) => ({ default: module.AccountPage })))
+const OrdersPage = lazy(() => import('./pages/account').then((module) => ({ default: module.OrdersPage })))
+const OrderDetailPage = lazy(() => import('./pages/account').then((module) => ({ default: module.OrderDetailPage })))
+const AddressesPage = lazy(() => import('./pages/account').then((module) => ({ default: module.AddressesPage })))
+const PaymentPage = lazy(() => import('./pages/misc').then((module) => ({ default: module.PaymentPage })))
+const NotFoundPage = lazy(() => import('./pages/misc').then((module) => ({ default: module.NotFoundPage })))
+const SecurityPage = lazy(() => import('./pages/security').then((module) => ({ default: module.SecurityPage })))
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout').then((module) => ({ default: module.AdminLayout })))
+const AdminDashboard = lazy(() =>
+  import('./pages/admin/Dashboard').then((module) => ({ default: module.AdminDashboard })),
+)
+const AdminProducts = lazy(() => import('./pages/admin/Products').then((module) => ({ default: module.AdminProducts })))
+const AdminCategories = lazy(() =>
+  import('./pages/admin/Taxonomy').then((module) => ({ default: module.AdminCategories })),
+)
+const AdminBrands = lazy(() => import('./pages/admin/Taxonomy').then((module) => ({ default: module.AdminBrands })))
+const AdminPromotions = lazy(() =>
+  import('./pages/admin/Promotions').then((module) => ({ default: module.AdminPromotions })),
+)
+const AdminInventory = lazy(() =>
+  import('./pages/admin/Inventory').then((module) => ({ default: module.AdminInventory })),
+)
+const AdminUsers = lazy(() => import('./pages/admin/Users').then((module) => ({ default: module.AdminUsers })))
 
 function App() {
   const queryClient = useQueryClient()
@@ -33,7 +49,6 @@ function App() {
     }
   })
   const [guestCart, setGuestCart] = useState<GuestCartItem[]>(readGuestCart)
-  const [notice, setNotice] = useState<Notice | null>(null)
   const cartQuery = useQuery({ queryKey: ['cart'], queryFn: () => api<Cart>('/cart'), enabled: Boolean(user) })
   const meQuery = useQuery({
     queryKey: ['me'],
@@ -61,12 +76,6 @@ function App() {
   useEffect(() => {
     saveGuestCart(guestCart)
   }, [guestCart])
-  useEffect(() => {
-    if (notice) {
-      const timer = window.setTimeout(() => setNotice(null), 4200)
-      return () => window.clearTimeout(timer)
-    }
-  }, [notice])
   const login = useCallback(
     (nextUser: User, accessToken: string, refreshToken: string) => {
       setTokens(accessToken, refreshToken)
@@ -83,14 +92,13 @@ function App() {
             const unavailable = result.adjustments.filter((item) => item.reason === 'UNAVAILABLE').length
             const limited = result.adjustments.filter((item) => item.reason === 'STOCK_LIMIT').length
             if (unavailable || limited) {
-              setNotice({
-                kind: 'info',
-                text: `Giỏ hàng đã được đồng bộ${unavailable ? `; ${unavailable} sản phẩm không còn khả dụng` : ''}${limited ? `; ${limited} sản phẩm được điều chỉnh theo tồn kho` : ''}.`,
-              })
+              toast.info(
+                `Giỏ hàng đã được đồng bộ${unavailable ? `; ${unavailable} sản phẩm không còn khả dụng` : ''}${limited ? `; ${limited} sản phẩm được điều chỉnh theo tồn kho` : ''}.`,
+              )
             }
           })
           .catch(() => {
-            setNotice({ kind: 'error', text: 'Chưa thể đồng bộ giỏ hàng khách. Giỏ cũ vẫn được giữ để thử lại.' })
+            toast.error('Chưa thể đồng bộ giỏ hàng khách. Giỏ cũ vẫn được giữ để thử lại.')
           })
       }
     },
@@ -110,21 +118,27 @@ function App() {
       if (user) {
         await api('/cart/items', { method: 'POST', body: JSON.stringify({ skuId: sku.id, quantity }) })
         await queryClient.invalidateQueries({ queryKey: ['cart'] })
-        setNotice({ kind: 'success', text: 'Đã thêm sản phẩm vào giỏ hàng.' })
+        toast.success('Đã thêm sản phẩm vào giỏ hàng.')
         return
       }
       setGuestCart((current) => {
+        const available = Math.max(1, Math.min(sku.stock, 99))
         const existing = current.find((item) => item.skuId === sku.id)
         if (existing)
           return current.map((item) =>
-            item.skuId === sku.id ? { ...item, quantity: Math.min(item.quantity + quantity, 99) } : item,
+            item.skuId === sku.id ? { ...item, quantity: Math.min(item.quantity + quantity, available) } : item,
           )
         return [
           ...current,
-          { skuId: sku.id, quantity, sku, product: { id: product.id, name: product.name, images: product.images } },
+          {
+            skuId: sku.id,
+            quantity: Math.min(quantity, available),
+            sku,
+            product: { id: product.id, name: product.name, images: product.images },
+          },
         ]
       })
-      setNotice({ kind: 'success', text: 'Đã thêm sản phẩm vào giỏ hàng.' })
+      toast.success('Đã thêm sản phẩm vào giỏ hàng.')
     },
     [queryClient, user],
   )
@@ -134,7 +148,14 @@ function App() {
       if (user) {
         await api(`/cart/items/${skuId}`, { method: 'PATCH', body: JSON.stringify({ quantity }) })
         await queryClient.invalidateQueries({ queryKey: ['cart'] })
-      } else setGuestCart((current) => current.map((item) => (item.skuId === skuId ? { ...item, quantity } : item)))
+      } else
+        setGuestCart((current) =>
+          current.map((item) =>
+            item.skuId === skuId
+              ? { ...item, quantity: Math.min(quantity, Math.max(1, Math.min(item.sku.stock, 99))) }
+              : item,
+          ),
+        )
     },
     [queryClient, user],
   )
@@ -165,17 +186,24 @@ function App() {
     }),
     [addToCart, cartCount, cartQuery.data, guestCart, refreshCart, removeFromCart, updateCart, user],
   )
-  const routes = meQuery.isLoading ? <PageLoader /> : <AppRoutes />
+  const sessionRestoring = Boolean(getAccessToken()) && !user && meQuery.isLoading
+  const routes = sessionRestoring ? <PageLoader /> : <AppRoutes />
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
       <CommerceContext.Provider value={commerce}>
-        {isAdminArea ? (
-          routes
-        ) : (
-          <StoreLayout notice={notice} clearNotice={() => setNotice(null)}>
-            {routes}
-          </StoreLayout>
-        )}
+        {isAdminArea ? routes : <StoreLayout>{routes}</StoreLayout>}
+        <Toaster
+          position="top-right"
+          closeButton
+          toastOptions={{
+            classNames: {
+              toast: 'rounded-sm! border! border-line! bg-surface! font-sans! text-ink! shadow-lift!',
+              title: 'text-[12px]! font-medium!',
+              description: 'text-[11px]! text-muted!',
+              closeButton: 'border-line! bg-surface! text-muted!',
+            },
+          }}
+        />
       </CommerceContext.Provider>
     </AuthContext.Provider>
   )
@@ -183,34 +211,71 @@ function App() {
 
 function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/products" element={<ProductsPage />} />
-      <Route path="/products/:id" element={<ProductDetailPage />} />
-      <Route path="/cart" element={<CartPage />} />
-      <Route path="/checkout" element={<CheckoutPage />} />
-      <Route path="/payment/:state" element={<PaymentPage />} />
-      <Route path="/login" element={<AuthPage key="login" mode="login" />} />
-      <Route path="/register" element={<AuthPage key="register" mode="register" />} />
-      <Route path="/verify-email" element={<AuthPage key="verify" mode="verify" />} />
-      <Route path="/forgot-password" element={<AuthPage key="forgot" mode="forgot" />} />
-      <Route path="/reset-password" element={<AuthPage key="reset" mode="reset" />} />
-      <Route path="/account" element={<AccountPage />} />
-      <Route path="/account/orders" element={<OrdersPage />} />
-      <Route path="/account/orders/:id" element={<OrderDetailPage />} />
-      <Route path="/account/addresses" element={<AddressesPage />} />
-      <Route path="/account/security" element={<SecurityPage />} />
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminDashboard />} />
-        <Route path="products" element={<AdminProducts />} />
-        <Route path="categories" element={<AdminCategories />} />
-        <Route path="brands" element={<AdminBrands />} />
-        <Route path="promotions" element={<AdminPromotions />} />
-        <Route path="inventory" element={<AdminInventory />} />
-        <Route path="users" element={<AdminUsers />} />
-      </Route>
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/products" element={<ProductsPage />} />
+        <Route path="/products/:id" element={<ProductDetailPage />} />
+        <Route path="/cart" element={<CartPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/payment/:state" element={<PaymentPage />} />
+        <Route path="/login" element={<AuthPage key="login" mode="login" />} />
+        <Route path="/register" element={<AuthPage key="register" mode="register" />} />
+        <Route path="/verify-email" element={<AuthPage key="verify" mode="verify" />} />
+        <Route path="/forgot-password" element={<AuthPage key="forgot" mode="forgot" />} />
+        <Route path="/reset-password" element={<AuthPage key="reset" mode="reset" />} />
+        <Route
+          path="/account"
+          element={
+            <RequireAuth>
+              <AccountPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/account/orders"
+          element={
+            <RequireAuth>
+              <OrdersPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/account/orders/:id"
+          element={
+            <RequireAuth>
+              <OrderDetailPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/account/addresses"
+          element={
+            <RequireAuth>
+              <AddressesPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/account/security"
+          element={
+            <RequireAuth>
+              <SecurityPage />
+            </RequireAuth>
+          }
+        />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="products" element={<AdminProducts />} />
+          <Route path="categories" element={<AdminCategories />} />
+          <Route path="brands" element={<AdminBrands />} />
+          <Route path="promotions" element={<AdminPromotions />} />
+          <Route path="inventory" element={<AdminInventory />} />
+          <Route path="users" element={<AdminUsers />} />
+        </Route>
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </Suspense>
   )
 }
 

@@ -1,19 +1,21 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { ArrowRight } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError, api } from '../../api'
 import { useAuth } from '../../app-context'
-import { Button, Field } from '../../components/ui'
+import { Alert, Button, Field, Input } from '../../components/ui'
 import { BrandLogo } from '../../components/BrandLogo'
 import type { User } from '../../types'
 
 type AuthMode = 'login' | 'register' | 'verify' | 'forgot' | 'reset' | 'twoFactor'
+
 export function AuthPage({ mode }: { mode: AuthMode }) {
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const redirect = params.get('redirect') || '/'
+  const requestedRedirect = params.get('redirect') || '/'
+  const redirect = requestedRedirect.startsWith('/') && !requestedRedirect.startsWith('//') ? requestedRedirect : '/'
   const [currentMode, setCurrentMode] = useState(mode)
   const [values, setValues] = useState({
     name: '',
@@ -116,7 +118,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
     onError: (reason: unknown) =>
       setError(reason instanceof ApiError ? reason.message : 'Có lỗi xảy ra. Vui lòng thử lại.'),
   })
-  if (user) return <Navigate to="/" replace />
+  if (user) return <Navigate to={redirect} replace />
   const title =
     currentMode === 'login'
       ? 'Chào mừng bạn trở lại'
@@ -129,121 +131,134 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
             : currentMode === 'reset'
               ? 'Đặt lại mật khẩu'
               : 'Lấy lại mật khẩu'
+  const subtitle =
+    currentMode === 'login'
+      ? 'Đăng nhập để theo dõi đơn hàng và checkout nhanh hơn.'
+      : currentMode === 'register'
+        ? 'Tạo tài khoản miễn phí để bắt đầu mua sắm.'
+        : currentMode === 'verify'
+          ? `Mã xác thực đã được gửi tới ${values.email || 'email của bạn'}.`
+          : currentMode === 'twoFactor'
+            ? 'Nhập mã OTP từ ứng dụng xác thực để tiếp tục.'
+            : currentMode === 'reset'
+              ? 'Nhập mã trong email và mật khẩu mới của bạn.'
+              : 'Nhập email để nhận hướng dẫn khôi phục.'
   const submit = (event: FormEvent) => {
     event.preventDefault()
     setError('')
     void mutation.mutateAsync()
   }
   return (
-    <section className="auth-page">
-      <div className="auth-panel">
-        <div className="auth-art">
-          <Link to="/" className="logo logo-light flex items-center gap-3">
-            <BrandLogo size={36} />
-            <span>
-              <strong>Ecommerce</strong>
-              <small>electronics, simply</small>
-            </span>
-          </Link>
-          <div>
-            <span className="eyebrow">A SMALLER WAY TO SHOP</span>
-            <h1>
-              Chọn ít hơn.
-              <br />
-              <em>Chọn đúng hơn.</em>
-            </h1>
-            <p>Một cửa hàng điện tử được tuyển chọn cho những điều bạn thực sự muốn dùng mỗi ngày.</p>
-          </div>
-          <span className="auth-art-note">Made for everyday rituals.</span>
+    <section className="grid lg:min-h-[calc(100vh-6.25rem)] lg:grid-cols-2">
+      <div className="hidden flex-col justify-between bg-ink p-10 text-paper lg:flex">
+        <Link to="/" className="flex items-center gap-2.5">
+          <BrandLogo size={30} variant="light" />
+          <span className="text-[15px] font-semibold tracking-[-0.045em]">Ecommerce</span>
+        </Link>
+        <div>
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-paper/45">A smaller way to shop</span>
+          <h1 className="mt-5 max-w-md text-5xl font-semibold leading-[0.98] tracking-[-0.055em]">
+            Chọn ít hơn.
+            <br />
+            <span className="text-accent">Chọn đúng hơn.</span>
+          </h1>
+          <p className="mt-5 max-w-sm text-[13px] leading-relaxed text-paper/60">
+            Một cửa hàng điện tử được tuyển chọn cho những điều bạn thực sự muốn dùng mỗi ngày.
+          </p>
         </div>
-        <div className="auth-form-panel">
-          <div className="auth-form-head">
-            <span className="eyebrow">YOUR ACCOUNT</span>
-            <h1>{title}</h1>
-            <p>
-              {currentMode === 'login'
-                ? 'Đăng nhập để theo dõi đơn hàng và checkout nhanh hơn.'
-                : currentMode === 'register'
-                  ? 'Tạo tài khoản miễn phí để bắt đầu mua sắm.'
-                  : currentMode === 'verify'
-                    ? `Mã xác thực đã được gửi tới ${values.email || 'email của bạn'}.`
-                    : currentMode === 'twoFactor'
-                      ? 'Nhập mã OTP từ ứng dụng xác thực để tiếp tục.'
-                      : currentMode === 'reset'
-                        ? 'Nhập mã trong email và mật khẩu mới của bạn.'
-                        : 'Nhập email để nhận hướng dẫn khôi phục.'}
-            </p>
-          </div>
-          {message ? <div className="inline-alert success">{message}</div> : null}
-          {error ? <div className="inline-alert error">{error}</div> : null}
-          <form onSubmit={submit} className="auth-form">
-            <div className="auth-fields">
-              {currentMode === 'register' ? (
-                <>
-                  <Field label="Họ và tên">
-                    <input
-                      value={values.name}
-                      onChange={(event) => setValues({ ...values, name: event.target.value })}
-                      required
-                      autoComplete="name"
-                    />
-                  </Field>
-                  <Field label="Số điện thoại">
-                    <input
-                      value={values.phoneNumber}
-                      onChange={(event) => setValues({ ...values, phoneNumber: event.target.value })}
-                      required
-                      inputMode="tel"
-                    />
-                  </Field>
-                </>
-              ) : null}
-              <Field label="Email">
-                <input
-                  type="email"
-                  value={values.email}
-                  onChange={(event) => setValues({ ...values, email: event.target.value })}
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-paper/35">
+          Made for everyday rituals
+        </span>
+      </div>
+
+      <div className="flex items-start justify-center px-5 py-10 sm:px-8 lg:items-center lg:py-12">
+        <div className="w-full max-w-md">
+          <Link to="/" className="mb-8 flex items-center gap-2.5 lg:hidden">
+            <BrandLogo size={30} />
+            <span className="text-[15px] font-semibold tracking-[-0.045em]">Ecommerce</span>
+          </Link>
+          <span className="label-mono">Your account</span>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em]">{title}</h1>
+          <p className="mt-2 text-[13px] leading-relaxed text-muted">{subtitle}</p>
+
+          {message ? (
+            <Alert variant="success" className="mt-5">
+              {message}
+            </Alert>
+          ) : null}
+          {error ? (
+            <Alert variant="error" className="mt-5">
+              {error}
+            </Alert>
+          ) : null}
+
+          <form onSubmit={submit} className="mt-6 grid gap-4">
+            {currentMode === 'register' ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Họ và tên">
+                  <Input
+                    value={values.name}
+                    onChange={(event) => setValues({ ...values, name: event.target.value })}
+                    required
+                    autoComplete="name"
+                  />
+                </Field>
+                <Field label="Số điện thoại">
+                  <Input
+                    value={values.phoneNumber}
+                    onChange={(event) => setValues({ ...values, phoneNumber: event.target.value })}
+                    required
+                    inputMode="tel"
+                  />
+                </Field>
+              </div>
+            ) : null}
+            <Field label="Email">
+              <Input
+                type="email"
+                value={values.email}
+                onChange={(event) => setValues({ ...values, email: event.target.value })}
+                required
+                autoComplete="email"
+              />
+            </Field>
+            {currentMode === 'verify' || currentMode === 'twoFactor' || currentMode === 'reset' ? (
+              <Field label={currentMode === 'twoFactor' ? 'Mã OTP 6 số' : 'Mã xác thực 6 số'}>
+                <Input
+                  value={values.code}
+                  onChange={(event) => setValues({ ...values, code: event.target.value })}
                   required
-                  autoComplete="email"
+                  inputMode="numeric"
+                  maxLength={6}
+                  className="font-mono tracking-[0.2em]"
                 />
               </Field>
-              {currentMode === 'verify' || currentMode === 'twoFactor' || currentMode === 'reset' ? (
-                <Field label={currentMode === 'twoFactor' ? 'Mã OTP 6 số' : 'Mã xác thực 6 số'}>
-                  <input
-                    value={values.code}
-                    onChange={(event) => setValues({ ...values, code: event.target.value })}
-                    required
-                    inputMode="numeric"
-                    maxLength={6}
-                  />
-                </Field>
-              ) : null}
-              {currentMode === 'login' || currentMode === 'register' || currentMode === 'reset' ? (
-                <Field label="Mật khẩu">
-                  <input
-                    type="password"
-                    value={values.password}
-                    onChange={(event) => setValues({ ...values, password: event.target.value })}
-                    required
-                    minLength={6}
-                    autoComplete={currentMode === 'login' ? 'current-password' : 'new-password'}
-                  />
-                </Field>
-              ) : null}
-              {currentMode === 'register' || currentMode === 'reset' ? (
-                <Field label="Nhập lại mật khẩu">
-                  <input
-                    type="password"
-                    value={values.confirmPassword}
-                    onChange={(event) => setValues({ ...values, confirmPassword: event.target.value })}
-                    required
-                    minLength={6}
-                    autoComplete="new-password"
-                  />
-                </Field>
-              ) : null}
-            </div>
-            <Button type="submit" className="full-button" loading={mutation.isPending}>
+            ) : null}
+            {currentMode === 'login' || currentMode === 'register' || currentMode === 'reset' ? (
+              <Field label="Mật khẩu">
+                <Input
+                  type="password"
+                  value={values.password}
+                  onChange={(event) => setValues({ ...values, password: event.target.value })}
+                  required
+                  minLength={6}
+                  autoComplete={currentMode === 'login' ? 'current-password' : 'new-password'}
+                />
+              </Field>
+            ) : null}
+            {currentMode === 'register' || currentMode === 'reset' ? (
+              <Field label="Nhập lại mật khẩu">
+                <Input
+                  type="password"
+                  value={values.confirmPassword}
+                  onChange={(event) => setValues({ ...values, confirmPassword: event.target.value })}
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                />
+              </Field>
+            ) : null}
+            <Button type="submit" size="lg" className="mt-1 w-full" loading={mutation.isPending}>
               {currentMode === 'login'
                 ? 'Đăng nhập'
                 : currentMode === 'register'
@@ -254,24 +269,30 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
                       ? 'Xác nhận OTP'
                       : currentMode === 'reset'
                         ? 'Đặt lại mật khẩu'
-                        : 'Gửi mã khôi phục'}{' '}
-              <ArrowRight size={17} />
+                        : 'Gửi mã khôi phục'}
+              <ArrowUpRight size={16} />
             </Button>
           </form>
-          <div className="auth-links">
+
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.1em]">
             {currentMode === 'login' ? (
               <>
-                <Link to="/register">Tạo tài khoản mới</Link>
-                <Link to="/forgot-password">Quên mật khẩu?</Link>
+                <Link to="/register" className="text-accent hover:text-ink">
+                  Tạo tài khoản mới
+                </Link>
+                <Link to="/forgot-password" className="text-muted hover:text-ink">
+                  Quên mật khẩu?
+                </Link>
               </>
             ) : (
-              <Link to="/login" className="text-link">
+              <Link to="/login" className="text-accent hover:text-ink">
                 Quay lại đăng nhập
               </Link>
             )}
             {currentMode === 'verify' ? (
               <button
-                className="text-link"
+                type="button"
+                className="text-muted hover:text-ink"
                 onClick={() => {
                   setError('')
                   void api(

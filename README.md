@@ -68,10 +68,10 @@ The project covers the complete commerce flow from authentication and product di
 
 | Area         | Technology                   |
 | ------------ | ---------------------------- |
-| UI           | React 19                     |
+| UI           | React 19 + shadcn/ui         |
 | Build tool   | Vite 8                       |
 | Language     | TypeScript                   |
-| Styling      | Tailwind CSS 4 + project CSS |
+| Styling      | Tailwind CSS 4               |
 | Routing      | React Router                 |
 | Server state | TanStack Query               |
 | Forms        | React Hook Form + Zod        |

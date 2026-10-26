@@ -4,6 +4,8 @@ Ngày lập: 2026-09-18
 Trạng thái: sẵn sàng triển khai  
 Tham chiếu sản phẩm: [Định hướng storefront](../biz/storefront.md)
 
+> Cập nhật 2026-10-26: giao diện đã được chuyển sang Tailwind CSS 4 + shadcn/ui (Radix primitives). Các mục nhắc tới `style.css`, `review.css` và "chưa cần thêm Tailwind" dưới đây là kế hoạch lịch sử, không còn phản ánh mã nguồn hiện tại.
+
 ## 1. Kết luận thiết kế
 
 Thay giao diện test API một trang hiện tại bằng storefront React nhiều route, sáng, gọn và ưu tiên hình ảnh sản phẩm. Luồng chính là:

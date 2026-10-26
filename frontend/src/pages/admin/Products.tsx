@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Boxes, ImagePlus, Pencil, Plus, Trash2 } from 'lucide-react'
 import { api } from '../../api'
-import { money } from '../../lib'
+import { money, productImage } from '../../lib'
 import { Button, EmptyState, ErrorState, Field, PageLoader } from '../../components/ui'
 import { AdminCard, AdminHeader, Modal } from './admin-ui'
 import { errorMessage } from './admin-lib'
@@ -79,11 +79,11 @@ export function AdminProducts() {
                   <td>
                     <div className="admin-product-cell flex items-center gap-3">
                       <img
-                        src={product.images?.[0] || 'https://placehold.co/80x80/f4f1eb/1d2433?text=E'}
+                        src={productImage(product)}
                         alt={product.name}
-                        className="w-11 h-11 rounded-lg object-cover shrink-0 border border-slate-200"
+                        className="h-11 w-11 shrink-0 border border-line bg-surface object-cover"
                       />
-                      <span className="font-medium text-slate-900">{product.name}</span>
+                      <span className="font-medium text-ink">{product.name}</span>
                     </div>
                   </td>
                   <td>{product.brand?.name || '—'}</td>

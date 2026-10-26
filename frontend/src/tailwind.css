@@ -1,44 +1,481 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
 @theme {
-  --color-canvas: #f8fafc;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f1f5f9;
-  --color-surface-dark: #0f172a;
-  --color-brand: #2563eb;
-  --color-brand-hover: #1d4ed8;
-  --color-brand-soft: #eff6ff;
-  --color-accent: #f97316;
-  --color-accent-soft: #fff7ed;
-  --color-success: #16a34a;
-  --color-success-soft: #f0fdf4;
-  --color-danger: #dc2626;
-  --color-danger-soft: #fef2f2;
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
-  --font-sans:
-    'Be Vietnam Pro', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --shadow-card: 0 4px 20px -4px rgba(15, 23, 42, 0.06);
-  --shadow-hover: 0 20px 35px -8px rgba(15, 23, 42, 0.12);
-  --shadow-floating: 0 25px 50px -12px rgba(15, 23, 42, 0.18);
+  --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-paper: #f3f0e9;
+  --color-paper-deep: #e8e3d9;
+  --color-surface: #fbfaf7;
+  --color-ink: #17191c;
+  --color-ink-soft: #3a3d42;
+  --color-muted: #6d675e;
+  --color-line: #ddd7cb;
+  --color-line-strong: #c3bcae;
+  --color-accent: #d8491f;
+  --color-accent-soft: #fbe8e1;
+  --color-success: #1f6b49;
+  --color-success-soft: #e7f1ea;
+  --color-danger: #ad3a34;
+  --color-danger-soft: #f7e7e5;
+  --color-focus: #d8491f;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  --shadow-card: 0 1px 0 rgb(23 25 28 / 0.04);
+  --shadow-lift: 0 24px 48px -32px rgb(23 25 28 / 0.35);
+
+  --animate-rise: rise 180ms ease-out both;
+  --animate-fade: fade-in 160ms ease-out both;
 }
 
-@layer utilities {
-  .glass {
-    background: rgba(255, 255, 255, 0.82);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
   }
-  .glass-dark {
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sheet-in-bottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes sheet-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes sheet-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }
 
-@import './style.css';
-@import './admin.css';
-@import './review.css';
-@import './catalog.css';
-@import './security.css';
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    margin: 0;
+    min-width: 320px;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    line-height: 1.1;
+  }
+  p {
+    margin: 0;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  img {
+    display: block;
+    max-width: 100%;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+  ::selection {
+    background: var(--color-accent);
+    color: #fff;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}
+
+@utility page-shell {
+  width: min(calc(100% - 2rem), 80rem);
+  margin-inline: auto;
+}
+
+@utility label-mono {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+@utility hairline {
+  border-top: 1px solid var(--color-line);
+}
+
+@layer components {
+  .skip-link {
+    @apply fixed left-3 top-3 z-[100] -translate-y-[180%] bg-surface px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink shadow-lift transition-transform focus-visible:translate-y-0;
+  }
+
+  .button {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-sm border px-5 font-sans text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors duration-150 disabled:pointer-events-none disabled:opacity-45;
+  }
+  .button-primary {
+    @apply border-ink bg-ink text-paper hover:border-ink-soft hover:bg-ink-soft;
+  }
+  .button-secondary {
+    @apply border-line-strong bg-transparent text-ink hover:border-ink hover:bg-surface;
+  }
+  .button-ghost {
+    @apply border-transparent bg-transparent text-ink-soft hover:bg-paper-deep hover:text-ink;
+  }
+  .button-danger {
+    @apply border-danger bg-danger-soft text-danger hover:bg-danger hover:text-white;
+  }
+  .full-button {
+    @apply w-full;
+  }
+  .text-link {
+    @apply inline-flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-accent hover:text-ink;
+  }
+  .eyebrow {
+    @apply label-mono;
+  }
+  .page-section {
+    @apply page-shell py-10 pb-24 sm:py-14;
+  }
+  .section {
+    @apply page-shell py-14 sm:py-20;
+  }
+  .breadcrumbs {
+    @apply mb-7 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted;
+  }
+  .breadcrumbs a:hover {
+    @apply text-ink;
+  }
+  .section-head {
+    @apply mb-8 flex flex-wrap items-end justify-between gap-4;
+  }
+  .section-head h2 {
+    @apply mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl;
+  }
+  .section-head p {
+    @apply mt-2 text-[13px] text-muted;
+  }
+  .page-title-row {
+    @apply mb-10 flex flex-wrap items-end justify-between gap-4;
+  }
+  .page-title-row h1 {
+    @apply mt-2 text-4xl font-semibold tracking-[-0.045em] sm:text-5xl;
+  }
+  .page-title-row p {
+    @apply mt-2 text-[13px] text-muted;
+  }
+
+  .field {
+    @apply grid gap-2;
+  }
+  .field > span {
+    @apply label-mono;
+  }
+  .field > input,
+  .field > select,
+  .field > textarea {
+    @apply h-11 w-full rounded-sm border border-line-strong bg-surface px-3 font-sans text-[13px] normal-case tracking-normal text-ink outline-none transition-colors placeholder:text-muted/70 focus:border-ink focus:ring-2 focus:ring-ink/10 disabled:opacity-50;
+  }
+  .field > textarea {
+    @apply h-auto min-h-24 py-2.5;
+  }
+  .field small {
+    @apply font-sans text-[11px] normal-case tracking-normal text-muted;
+  }
+  .field.has-error > input,
+  .field.has-error > select,
+  .field.has-error > textarea {
+    @apply border-danger;
+  }
+  .field-error {
+    @apply text-danger;
+  }
+  .form-grid {
+    @apply grid gap-4 sm:grid-cols-2;
+  }
+  .inline-alert {
+    @apply rounded-sm border border-line bg-paper-deep px-3 py-2 text-[12px] text-ink;
+  }
+  .inline-alert.error {
+    @apply border-danger/30 bg-danger-soft text-danger;
+  }
+  .inline-alert.success {
+    @apply border-success/30 bg-success-soft text-success;
+  }
+  .empty-state {
+    @apply grid justify-items-center gap-3 border border-dashed border-line-strong bg-surface px-6 py-16 text-center;
+  }
+  .empty-state h3 {
+    @apply text-lg font-semibold text-ink;
+  }
+  .empty-state p {
+    @apply max-w-sm text-[13px] text-muted;
+  }
+  .page-loader {
+    @apply grid min-h-[320px] place-items-center gap-3 text-muted;
+  }
+  .spin {
+    @apply animate-spin;
+  }
+  .skeleton {
+    @apply animate-pulse rounded-sm bg-paper-deep;
+  }
+  .skeleton-card {
+    @apply border border-line bg-surface;
+  }
+  .skeleton-image {
+    @apply aspect-square w-full;
+  }
+  .skeleton-line {
+    @apply mx-3 mt-4 h-3 w-3/4;
+  }
+  .skeleton-short {
+    @apply mx-3 mb-4 mt-2 h-2.5 w-2/5;
+  }
+  .ta-right {
+    @apply text-right;
+  }
+
+  .status {
+    @apply inline-flex items-center rounded-sm border border-line bg-paper-deep px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-ink-soft;
+  }
+  .status-pending_payment {
+    @apply border-accent/30 bg-accent-soft text-accent;
+  }
+  .status-delivered {
+    @apply border-success/30 bg-success-soft text-success;
+  }
+  .status-cancelled,
+  .status-returned {
+    @apply border-danger/30 bg-danger-soft text-danger;
+  }
+
+  /* Admin surface — semantic classes kept so page logic stays untouched. */
+  .admin-shell {
+    @apply grid min-h-screen bg-paper lg:grid-cols-[240px_1fr];
+  }
+  .admin-sidebar {
+    @apply flex flex-col gap-6 border-b border-ink/20 bg-ink px-5 py-6 text-paper lg:sticky lg:top-0 lg:h-screen lg:border-b-0;
+  }
+  .admin-brand {
+    @apply flex items-center gap-3;
+  }
+  .admin-brand strong {
+    @apply block text-[15px] font-semibold tracking-[-0.03em];
+  }
+  .admin-brand small {
+    @apply font-mono text-[9px] uppercase tracking-[0.16em] text-paper/50;
+  }
+  .admin-nav {
+    @apply flex flex-1 flex-wrap gap-1 lg:flex-col;
+  }
+  .admin-nav-link {
+    @apply flex items-center gap-2.5 rounded-sm px-3 py-2.5 text-[12px] text-paper/70 transition-colors hover:bg-paper/10 hover:text-paper;
+  }
+  .admin-nav-link.active {
+    @apply bg-paper/15 text-paper;
+  }
+  .admin-back {
+    @apply px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-paper/50 hover:text-paper;
+  }
+  .admin-content {
+    @apply w-full max-w-[1180px] px-4 py-8 sm:px-8;
+  }
+  .admin-header {
+    @apply mb-6 flex flex-wrap items-end justify-between gap-4;
+  }
+  .admin-header h1 {
+    @apply text-3xl font-semibold tracking-[-0.04em];
+  }
+  .admin-header p {
+    @apply mt-1.5 text-[13px] text-muted;
+  }
+  .admin-stat-grid {
+    @apply mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4;
+  }
+  .admin-stat {
+    @apply flex items-center gap-3 border border-line bg-surface p-4 transition-colors hover:border-ink;
+  }
+  .admin-stat-icon {
+    @apply grid h-9 w-9 shrink-0 place-items-center border border-line bg-paper text-accent;
+  }
+  .admin-stat strong {
+    @apply block font-mono text-xl font-medium text-ink;
+  }
+  .admin-stat small {
+    @apply label-mono;
+  }
+  .admin-card {
+    @apply overflow-x-auto border border-line bg-surface;
+  }
+  .admin-card-head {
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3;
+  }
+  .admin-card-head h2 {
+    @apply text-sm font-semibold;
+  }
+  .admin-table {
+    @apply w-full border-collapse text-[13px];
+  }
+  .admin-table th {
+    @apply border-b border-line px-3 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted;
+  }
+  .admin-table td {
+    @apply border-b border-line px-3 py-3 align-middle text-ink-soft;
+  }
+  .admin-table tbody tr:hover td {
+    @apply bg-paper/60;
+  }
+  .admin-table-empty {
+    @apply px-3 py-10 text-center text-[13px] text-muted;
+  }
+  .admin-pill {
+    @apply inline-flex items-center rounded-sm border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em];
+  }
+  .admin-pill.on {
+    @apply border-success/30 bg-success-soft text-success;
+  }
+  .admin-pill.off {
+    @apply border-line bg-paper-deep text-muted;
+  }
+  .admin-status {
+    @apply inline-flex items-center rounded-sm border border-line bg-paper-deep px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-ink-soft;
+  }
+  .admin-status-active {
+    @apply border-success/30 bg-success-soft text-success;
+  }
+  .admin-status-inactive,
+  .admin-status-banned {
+    @apply border-danger/30 bg-danger-soft text-danger;
+  }
+  .admin-pagination {
+    @apply flex items-center justify-end gap-3 border-t border-line px-3 py-3 font-mono text-[10px] uppercase tracking-[0.1em] text-muted;
+  }
+  .admin-form {
+    @apply grid gap-4;
+  }
+  .admin-form-actions {
+    @apply flex justify-end gap-2 border-t border-line pt-4;
+  }
+  .admin-chip-group {
+    @apply flex flex-wrap gap-2;
+  }
+  .admin-chip {
+    @apply rounded-sm border border-line-strong px-3 py-1.5 text-[11px] text-ink-soft transition-colors hover:border-ink;
+  }
+  .admin-chip.on {
+    @apply border-accent bg-accent-soft text-accent;
+  }
+  .admin-icon-btn {
+    @apply grid h-9 w-9 place-items-center rounded-sm border border-transparent text-muted transition-colors hover:border-line hover:bg-paper hover:text-ink;
+  }
+  .admin-icon-btn.danger:hover {
+    @apply border-danger/30 bg-danger-soft text-danger;
+  }
+  .admin-row-actions {
+    @apply flex justify-end gap-1;
+  }
+  .admin-muted {
+    @apply text-[12px] text-muted;
+  }
+  .admin-image-grid {
+    @apply grid grid-cols-3 gap-2 sm:grid-cols-4;
+  }
+  .admin-image-item {
+    @apply relative aspect-square overflow-hidden border border-line bg-paper;
+  }
+  .admin-image-item img {
+    @apply h-full w-full object-cover;
+  }
+  .admin-image-del {
+    @apply absolute right-1 top-1 grid h-7 w-7 place-items-center bg-ink/80 text-paper hover:bg-danger;
+  }
+  .admin-image-add {
+    @apply grid aspect-square place-items-center gap-1 border border-dashed border-line-strong text-muted transition-colors hover:border-ink hover:text-ink;
+  }
+  .admin-sku-list {
+    @apply mb-4 border border-line;
+  }
+  .admin-sku-form {
+    @apply border-t border-line pt-4;
+  }
+  .admin-user-cell {
+    @apply flex items-center gap-2.5;
+  }
+  .admin-avatar {
+    @apply grid h-8 w-8 place-items-center rounded-sm border border-line bg-paper font-mono text-[10px] text-ink-soft;
+  }
+  .admin-product-cell {
+    @apply flex items-center gap-3;
+  }
+  .admin-logo {
+    @apply h-10 w-10 shrink-0 border border-line bg-surface object-contain p-1;
+  }
+  .admin-logo-preview {
+    @apply mx-auto my-2 max-h-20 max-w-xs border border-line bg-surface object-contain p-2;
+  }
+  .admin-threshold {
+    @apply flex items-center gap-2;
+  }
+  .admin-threshold label {
+    @apply label-mono;
+  }
+  .admin-threshold input {
+    @apply h-10 w-20 rounded-sm border border-line-strong bg-surface px-2 font-mono text-[12px] text-ink outline-none focus:border-ink;
+  }
+  .admin-check {
+    @apply flex items-center gap-2 text-[12px] text-ink-soft;
+  }
+  .admin-check input {
+    @apply accent-accent;
+  }
+  .admin-stock {
+    @apply inline-flex min-w-8 justify-center rounded-sm border px-1.5 py-0.5 font-mono text-[11px];
+  }
+  .admin-stock.low {
+    @apply border-accent/30 bg-accent-soft text-accent;
+  }
+  .admin-stock.zero {
+    @apply border-danger/30 bg-danger-soft text-danger;
+  }
+}

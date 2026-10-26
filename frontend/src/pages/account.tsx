@@ -1,70 +1,79 @@
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { ArrowRight, ChevronRight, Package, Star, Trash2, Truck, UserRound } from 'lucide-react'
+import { ArrowUpRight, ChevronRight, Package, Star, Trash2, Truck, UserRound } from 'lucide-react'
 import { Link, NavLink, useParams } from 'react-router-dom'
 import { ApiError, api, getAccessToken, getRefreshToken } from '../api'
-import { date, initials, money, skuLabel } from '../lib'
+import { date, initials, money, productImage, skuLabel } from '../lib'
 import { useAuth } from '../app-context'
-import { RequireAuth, AddressForm } from './checkout'
-import { Button, EmptyState, ErrorState, Field, PageLoader } from '../components/ui'
+import { AddressForm } from './checkout'
+import { Alert, Badge, Button, EmptyState, ErrorState, Field, Input, PageLoader, Textarea } from '../components/ui'
 import type { Address, Order, User } from '../types'
 
 export function AccountPage() {
-  return (
-    <RequireAuth>
-      <AccountContent />
-    </RequireAuth>
-  )
-}
-function AccountContent() {
   const { user } = useAuth()
   if (!user) return null
   return (
-    <section className="page-section account-page">
-      <div className="account-welcome">
-        <div className="profile-avatar">{initials(user.name)}</div>
-        <div>
-          <span className="eyebrow">YOUR SPACE</span>
-          <h1>Chào {user.name.split(' ').slice(-1)[0]}.</h1>
-          <p>Quản lý đơn hàng, địa chỉ và thông tin tài khoản.</p>
+    <section className="page-shell py-8 pb-24 sm:py-10">
+      <div className="flex flex-wrap items-end justify-between gap-6 border-b border-line pb-8">
+        <div className="flex items-center gap-4">
+          <div className="grid h-14 w-14 place-items-center border border-line bg-surface font-mono text-lg text-ink">
+            {initials(user.name)}
+          </div>
+          <div>
+            <span className="label-mono">Your space</span>
+            <h1 className="mt-1 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">
+              Chào {user.name.split(' ').slice(-1)[0]}.
+            </h1>
+            <p className="mt-1 text-[13px] text-muted">Quản lý đơn hàng, địa chỉ và thông tin tài khoản.</p>
+          </div>
         </div>
+        <AccountNav />
       </div>
-      <div className="account-grid">
+
+      <div className="mt-8 grid gap-3 md:grid-cols-3">
         <AccountCard
           to="/account/orders"
-          icon={<Package size={22} />}
+          icon={<Package size={20} />}
           title="Đơn hàng của tôi"
           text="Theo dõi trạng thái và lịch sử mua sắm."
         />
         <AccountCard
           to="/account/addresses"
-          icon={<Truck size={22} />}
+          icon={<Truck size={20} />}
           title="Địa chỉ giao hàng"
           text="Lưu nơi nhận hàng yêu thích của bạn."
         />
         <AccountCard
-          to="/account"
-          icon={<UserRound size={22} />}
-          title="Thông tin cá nhân"
-          text="Cập nhật tên và số điện thoại."
+          to="/account/security"
+          icon={<UserRound size={20} />}
+          title="Bảo mật"
+          text="Đổi mật khẩu và bật xác thực hai bước."
         />
       </div>
+
       <ProfileForm />
     </section>
   )
 }
+
 function AccountCard({ to, icon, title, text }: { to: string; icon: ReactNode; title: string; text: string }) {
   return (
-    <Link to={to} className="account-card">
-      {icon}
-      <div>
-        <strong>{title}</strong>
-        <p>{text}</p>
+    <Link
+      to={to}
+      className="group flex items-start justify-between gap-4 border border-line bg-surface p-5 transition-colors hover:border-ink"
+    >
+      <div className="flex items-start gap-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center border border-line bg-paper text-accent">{icon}</span>
+        <div>
+          <strong className="block text-[13px] font-semibold text-ink">{title}</strong>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted">{text}</p>
+        </div>
       </div>
-      <ArrowRight size={17} />
+      <ArrowUpRight size={15} className="mt-1 shrink-0 text-muted transition-colors group-hover:text-ink" />
     </Link>
   )
 }
+
 function ProfileForm() {
   const { user, login } = useAuth()
   const [name, setName] = useState(user?.name || '')
@@ -84,26 +93,24 @@ function ProfileForm() {
     },
   })
   return (
-    <div className="account-form-card profile-form-card">
-      <div className="section-head">
-        <div>
-          <span className="eyebrow">PROFILE</span>
-          <h2>Thông tin cá nhân</h2>
-        </div>
+    <div className="mt-10 max-w-2xl border border-line bg-surface">
+      <div className="border-b border-line px-5 py-4">
+        <span className="label-mono">Profile</span>
+        <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em]">Thông tin cá nhân</h2>
       </div>
       <form
-        className="profile-form"
+        className="grid gap-4 p-5"
         onSubmit={(event) => {
           event.preventDefault()
           void mutation.mutateAsync()
         }}
       >
-        <div className="form-grid">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Họ và tên">
-            <input value={name} onChange={(event) => setName(event.target.value)} required />
+            <Input value={name} onChange={(event) => setName(event.target.value)} required />
           </Field>
           <Field label="Số điện thoại">
-            <input
+            <Input
               value={phoneNumber}
               onChange={(event) => setPhoneNumber(event.target.value)}
               required
@@ -111,15 +118,16 @@ function ProfileForm() {
             />
           </Field>
         </div>
-        {message ? <div className="inline-alert success">{message}</div> : null}
-        {error ? <div className="inline-alert error">{error}</div> : null}
-        <Button type="submit" loading={mutation.isPending}>
+        {message ? <Alert variant="success">{message}</Alert> : null}
+        {error ? <Alert variant="error">{error}</Alert> : null}
+        <Button type="submit" loading={mutation.isPending} className="justify-self-start">
           Lưu thay đổi
         </Button>
       </form>
     </div>
   )
 }
+
 export function OrdersPage() {
   const { user } = useAuth()
   const orders = useQuery({
@@ -127,69 +135,82 @@ export function OrdersPage() {
     queryFn: () => api<{ data: Order[] }>('/orders?page=1&limit=20'),
     enabled: Boolean(user),
   })
-  if (!user)
-    return (
-      <RequireAuth>
-        <OrdersPage />
-      </RequireAuth>
-    )
   return (
-    <section className="page-section account-section">
+    <section className="page-shell py-8 pb-24 sm:py-10">
       <AccountNav />
-      <div className="section-head">
+      <div className="mt-8 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
         <div>
-          <span className="eyebrow">ORDER HISTORY</span>
-          <h1>Đơn hàng của tôi</h1>
+          <span className="label-mono">Order history</span>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Đơn hàng của tôi</h1>
         </div>
       </div>
-      {orders.isError ? (
-        <ErrorState onRetry={() => void orders.refetch()} />
-      ) : orders.isLoading ? (
-        <PageLoader />
-      ) : orders.data?.data.length ? (
-        <div className="order-list">
-          {orders.data.data.map((order) => (
-            <Link to={`/account/orders/${order.id}`} className="order-card" key={order.id}>
-              <div>
-                <span className="order-id">Đơn hàng #{order.id}</span>
-                <small>
-                  {date(order.createdAt)} · {order.items.length} sản phẩm
-                </small>
-              </div>
-              <div className="order-card-right">
-                <span className={`status status-${order.status.toLowerCase()}`}>{statusLabel(order.status)}</span>
-                <strong>{money(order.total)}</strong>
-                <ChevronRight size={17} />
-              </div>
-            </Link>
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          title="Bạn chưa có đơn hàng"
-          text="Những món đồ đầu tiên đang chờ bạn."
-          action={
-            <Link to="/products" className="button button-primary">
-              Khám phá sản phẩm
-            </Link>
-          }
-        />
-      )}
+      <div className="mt-6">
+        {orders.isError ? (
+          <ErrorState onRetry={() => void orders.refetch()} />
+        ) : orders.isLoading ? (
+          <PageLoader />
+        ) : orders.data?.data.length ? (
+          <div className="border-t border-line">
+            {orders.data.data.map((order) => (
+              <Link
+                key={order.id}
+                to={`/account/orders/${order.id}`}
+                className="grid gap-3 border-b border-line py-5 transition-colors hover:bg-surface sm:grid-cols-[1fr_auto] sm:items-center"
+              >
+                <div>
+                  <span className="font-mono text-[12px] text-ink">Đơn hàng #{order.id}</span>
+                  <small className="mt-1 block font-mono text-[10px] text-muted">
+                    {date(order.createdAt)} · {order.items.length} sản phẩm
+                  </small>
+                </div>
+                <div className="flex items-center gap-4">
+                  <StatusBadge status={order.status} />
+                  <strong className="font-mono text-[13px] font-medium text-ink">{money(order.total)}</strong>
+                  <ChevronRight size={16} className="text-muted" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            title="Bạn chưa có đơn hàng"
+            text="Những món đồ đầu tiên đang chờ bạn."
+            action={
+              <Link to="/products" className="button button-primary">
+                Khám phá sản phẩm
+              </Link>
+            }
+          />
+        )}
+      </div>
     </section>
   )
 }
+
 export function AccountNav() {
   return (
-    <nav className="account-nav">
-      <NavLink to="/account/orders">Đơn hàng</NavLink>
-      <NavLink to="/account/addresses">Địa chỉ</NavLink>
-      <NavLink to="/account" end>
-        Tài khoản
-      </NavLink>
-      <NavLink to="/account/security">Bảo mật</NavLink>
+    <nav className="flex flex-wrap items-center gap-5 font-mono text-[10px] uppercase tracking-[0.12em]">
+      {[
+        { to: '/account/orders', label: 'Đơn hàng', end: false },
+        { to: '/account/addresses', label: 'Địa chỉ', end: false },
+        { to: '/account', label: 'Tài khoản', end: true },
+        { to: '/account/security', label: 'Bảo mật', end: false },
+      ].map((link) => (
+        <NavLink
+          key={link.to}
+          to={link.to}
+          end={link.end}
+          className={({ isActive }) =>
+            `border-b pb-1 transition-colors ${isActive ? 'border-ink text-ink' : 'border-transparent text-muted hover:text-ink'}`
+          }
+        >
+          {link.label}
+        </NavLink>
+      ))}
     </nav>
   )
 }
+
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
     PENDING_PAYMENT: 'Chờ thanh toán',
@@ -201,6 +222,19 @@ function statusLabel(status: string) {
   }
   return labels[status] || status
 }
+
+function StatusBadge({ status }: { status: string }) {
+  const variant =
+    status === 'DELIVERED'
+      ? 'success'
+      : status === 'CANCELLED' || status === 'RETURNED'
+        ? 'danger'
+        : status === 'PENDING_PAYMENT'
+          ? 'accent'
+          : 'default'
+  return <Badge variant={variant}>{statusLabel(status)}</Badge>
+}
+
 export function OrderDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
@@ -221,60 +255,62 @@ export function OrderDetailPage() {
       if (result.checkoutUrl) window.location.href = result.checkoutUrl
     },
   })
-  if (!user)
-    return (
-      <RequireAuth>
-        <OrderDetailPage />
-      </RequireAuth>
-    )
   if (query.isLoading) return <PageLoader />
   if (query.isError || !query.data) return <ErrorState onRetry={() => void query.refetch()} />
   const order = query.data
   return (
-    <section className="page-section account-section">
+    <section className="page-shell py-8 pb-24 sm:py-10">
       <div className="breadcrumbs">
         <Link to="/account/orders">Đơn hàng</Link>
-        <ChevronRight size={14} />
+        <ChevronRight size={12} />
         <span>#{order.id}</span>
       </div>
-      <div className="order-detail-head">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
         <div>
-          <span className="eyebrow">ORDER DETAIL</span>
-          <h1>Đơn hàng #{order.id}</h1>
-          <p>Đặt ngày {date(order.createdAt)}</p>
+          <span className="label-mono">Order detail</span>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Đơn hàng #{order.id}</h1>
+          <p className="mt-1 text-[12px] text-muted">Đặt ngày {date(order.createdAt)}</p>
         </div>
-        <span className={`status status-${order.status.toLowerCase()}`}>{statusLabel(order.status)}</span>
+        <StatusBadge status={order.status} />
       </div>
-      <div className="order-detail-layout">
+
+      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px] lg:items-start">
         <div>
-          <div className="order-timeline">
-            <span className="timeline-active" />
+          <div className="flex items-start gap-3 border border-line bg-surface p-4">
+            <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" />
             <div>
-              <strong>Đơn hàng đã được ghi nhận</strong>
-              <p>Chúng mình sẽ cập nhật bạn ở mỗi bước tiếp theo.</p>
+              <strong className="block text-[13px] font-semibold text-ink">Đơn hàng đã được ghi nhận</strong>
+              <p className="mt-1 text-[12px] text-muted">Chúng mình sẽ cập nhật bạn ở mỗi bước tiếp theo.</p>
             </div>
           </div>
-          <div className="order-items">
+
+          <div className="mt-6 border-t border-line">
             {order.items.map((item) => (
-              <div className="order-item" key={item.id}>
+              <div
+                key={item.id}
+                className="grid grid-cols-[64px_1fr_auto] items-center gap-4 border-b border-line py-4"
+              >
                 <img
-                  src={item.image || 'https://placehold.co/120x120/f4f1eb/1d2433?text=E'}
+                  src={item.image || productImage(null)}
                   alt={item.productName}
-                  className="w-16 h-16 rounded-xl object-contain bg-slate-50 border border-slate-100 p-1.5 shrink-0"
+                  className="h-16 w-16 border border-line bg-paper-deep object-contain p-1.5"
                 />
-                <div>
-                  <strong>{item.productName}</strong>
-                  <small>
+                <div className="min-w-0">
+                  <strong className="block text-[13px] font-medium text-ink">{item.productName}</strong>
+                  <small className="mt-1 block font-mono text-[10px] text-muted">
                     {skuLabel({ value: item.skuValue || undefined })} · SL {item.quantity}
                   </small>
                 </div>
-                <b>{money(Number(item.skuPrice) * item.quantity)}</b>
+                <b className="font-mono text-[12px] font-medium text-ink">
+                  {money(Number(item.skuPrice) * item.quantity)}
+                </b>
               </div>
             ))}
           </div>
+
           {order.status === 'DELIVERED' ? (
-            <div className="review-forms">
-              <h3>Chia sẻ trải nghiệm</h3>
+            <div className="mt-6 grid gap-4 border border-line bg-surface p-5">
+              <h3 className="text-[13px] font-semibold uppercase tracking-[0.1em] text-ink">Chia sẻ trải nghiệm</h3>
               {order.items
                 .filter((item) => item.productId)
                 .map((item) => (
@@ -287,8 +323,9 @@ export function OrderDetailPage() {
                 ))}
             </div>
           ) : null}
+
           {order.status === 'PENDING_PAYMENT' ? (
-            <div className="checkout-actions">
+            <div className="mt-6 flex flex-wrap gap-3">
               <Button loading={payment.isPending} onClick={() => void payment.mutateAsync()}>
                 Thanh toán ngay
               </Button>
@@ -298,27 +335,31 @@ export function OrderDetailPage() {
             </div>
           ) : null}
         </div>
-        <aside className="order-summary">
-          <h2>Tóm tắt</h2>
-          <div>
-            <span>Tạm tính</span>
-            <strong>{money(order.subtotal)}</strong>
+
+        <aside className="border border-line bg-surface p-5 lg:sticky lg:top-24">
+          <h2 className="border-b border-line pb-3 text-[12px] font-semibold uppercase tracking-[0.1em] text-ink">
+            Tóm tắt
+          </h2>
+          <div className="mt-4 grid gap-3 text-[12px]">
+            <div className="flex justify-between gap-4 text-muted">
+              <span>Tạm tính</span>
+              <strong className="font-mono font-medium text-ink">{money(order.subtotal)}</strong>
+            </div>
+            <div className="flex justify-between gap-4 text-muted">
+              <span>Giảm giá</span>
+              <strong className="font-mono font-medium text-success">-{money(order.discount)}</strong>
+            </div>
           </div>
-          <div>
-            <span>Giảm giá</span>
-            <strong className="success-text">-{money(order.discount)}</strong>
-          </div>
-          <hr />
-          <div className="summary-total">
-            <span>Tổng cộng</span>
-            <strong>{money(order.total)}</strong>
+          <div className="mt-4 flex items-baseline justify-between border-t border-line pt-4">
+            <span className="text-[12px] font-semibold text-ink">Tổng cộng</span>
+            <strong className="font-mono text-lg font-medium text-accent">{money(order.total)}</strong>
           </div>
           {order.receiver ? (
-            <div className="receiver">
-              <small>Giao tới</small>
-              <strong>{order.receiver.name}</strong>
-              <span>{order.receiver.phoneNumber}</span>
-              <span>{order.receiver.address}</span>
+            <div className="mt-4 grid gap-1 border-t border-line pt-4">
+              <span className="label-mono">Giao tới</span>
+              <strong className="text-[12px] font-semibold text-ink">{order.receiver.name}</strong>
+              <span className="text-[11px] text-muted">{order.receiver.phoneNumber}</span>
+              <span className="text-[11px] text-muted">{order.receiver.address}</span>
             </div>
           ) : null}
         </aside>
@@ -326,6 +367,7 @@ export function OrderDetailPage() {
     </section>
   )
 }
+
 function ReviewForm({ orderId, productId, productName }: { orderId: number; productId: number; productName: string }) {
   const [rating, setRating] = useState(5)
   const [content, setContent] = useState('')
@@ -348,30 +390,31 @@ function ReviewForm({ orderId, productId, productName }: { orderId: number; prod
     },
     onSuccess: () => setSubmitted(true),
   })
-  if (submitted) return <div className="inline-alert success">Cảm ơn bạn đã đánh giá {productName}.</div>
+  if (submitted) return <Alert variant="success">Cảm ơn bạn đã đánh giá {productName}.</Alert>
   return (
     <form
-      className="review-form"
+      className="grid gap-3 border-t border-line pt-4"
       onSubmit={(event) => {
         event.preventDefault()
         if (content.trim()) void mutation.mutateAsync()
       }}
     >
-      <strong>{productName}</strong>
-      <div className="review-rating-input" aria-label="Chọn số sao">
+      <strong className="text-[13px] font-medium text-ink">{productName}</strong>
+      <div className="flex gap-1" aria-label="Chọn số sao">
         {[1, 2, 3, 4, 5].map((value) => (
           <button
             key={value}
             type="button"
-            className={value <= rating ? 'active' : ''}
+            className={value <= rating ? 'text-accent' : 'text-line-strong'}
             onClick={() => setRating(value)}
             aria-label={`${value} sao`}
+            aria-pressed={value === rating}
           >
-            <Star size={18} fill="currentColor" />
+            <Star size={17} fill="currentColor" />
           </button>
         ))}
       </div>
-      <textarea
+      <Textarea
         value={content}
         onChange={(event) => setContent(event.target.value)}
         minLength={1}
@@ -385,18 +428,20 @@ function ReviewForm({ orderId, productId, productName }: { orderId: number; prod
         multiple
         onChange={(event) => setFiles(Array.from(event.target.files || []).slice(0, 5))}
         aria-label="Ảnh đánh giá (không bắt buộc)"
+        className="font-mono text-[10px] text-muted"
       />
       {mutation.isError ? (
-        <div className="inline-alert error">
+        <Alert variant="error">
           {mutation.error instanceof ApiError ? mutation.error.message : 'Không thể gửi đánh giá.'}
-        </div>
+        </Alert>
       ) : null}
-      <Button type="submit" loading={mutation.isPending}>
+      <Button type="submit" loading={mutation.isPending} className="justify-self-start">
         Gửi đánh giá
       </Button>
     </form>
   )
 }
+
 export function AddressesPage() {
   const { user } = useAuth()
   const query = useQuery({
@@ -405,28 +450,25 @@ export function AddressesPage() {
     enabled: Boolean(user),
   })
   const [adding, setAdding] = useState(false)
-  if (!user)
-    return (
-      <RequireAuth>
-        <AddressesPage />
-      </RequireAuth>
-    )
   const remove = async (id: number) => {
+    if (!window.confirm('Xóa địa chỉ này?')) return
     await api(`/addresses/${id}`, { method: 'DELETE' })
     await query.refetch()
   }
   return (
-    <section className="page-section account-section">
+    <section className="page-shell py-8 pb-24 sm:py-10">
       <AccountNav />
-      <div className="section-head">
+      <div className="mt-8 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
         <div>
-          <span className="eyebrow">DELIVERY</span>
-          <h1>Địa chỉ giao hàng</h1>
+          <span className="label-mono">Delivery</span>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Địa chỉ giao hàng</h1>
         </div>
-        <Button onClick={() => setAdding((value) => !value)}>{adding ? 'Đóng' : '+ Thêm địa chỉ'}</Button>
+        <Button variant="secondary" onClick={() => setAdding((value) => !value)}>
+          {adding ? 'Đóng' : '+ Thêm địa chỉ'}
+        </Button>
       </div>
       {adding ? (
-        <div className="account-form-card">
+        <div className="mt-6 border border-line bg-surface p-5">
           <AddressForm
             onCreated={() => {
               setAdding(false)
@@ -438,19 +480,23 @@ export function AddressesPage() {
       {query.isLoading ? (
         <PageLoader />
       ) : (
-        <div className="saved-addresses">
+        <div className="mt-6 border-t border-line">
           {query.data?.map((address) => (
-            <article className="saved-address" key={address.id}>
+            <article key={address.id} className="flex items-start justify-between gap-4 border-b border-line py-5">
               <div>
-                <div className="address-title">
-                  <strong>{address.name}</strong>
-                  {address.isDefault ? <span>Mặc định</span> : null}
+                <div className="flex flex-wrap items-center gap-2">
+                  <strong className="text-[13px] font-semibold text-ink">{address.name}</strong>
+                  {address.isDefault ? <Badge variant="outline">Mặc định</Badge> : null}
                 </div>
-                <p>{address.phoneNumber}</p>
-                <p>{address.address}</p>
+                <p className="mt-1 font-mono text-[10px] text-muted">{address.phoneNumber}</p>
+                <p className="mt-1 text-[12px] text-ink-soft">{address.address}</p>
               </div>
-              <button className="remove-button" onClick={() => void remove(address.id)}>
-                <Trash2 size={16} /> Xóa
+              <button
+                className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.1em] text-muted transition-colors hover:text-danger"
+                onClick={() => void remove(address.id)}
+                aria-label={`Xóa địa chỉ của ${address.name}`}
+              >
+                <Trash2 size={14} /> Xóa
               </button>
             </article>
           ))}

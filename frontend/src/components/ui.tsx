@@ -1,5 +1,16 @@
 import type { ReactNode } from 'react'
 import { LoaderCircle, ShoppingBag, Star } from 'lucide-react'
+import { Button } from './ui/button'
+import { EmptyState } from './ui/empty-state'
+import { Skeleton } from './ui/skeleton'
+
+export { Button } from './ui/button'
+export { EmptyState } from './ui/empty-state'
+export { Alert } from './ui/alert'
+export { Badge } from './ui/badge'
+export { Input } from './ui/input'
+export { Textarea } from './ui/textarea'
+export { Skeleton } from './ui/skeleton'
 
 export function Field({
   label,
@@ -13,114 +24,59 @@ export function Field({
   children: ReactNode
 }) {
   return (
-    <label className={`field ${error ? 'has-error' : ''}`}>
-      <span>{label}</span>
+    <label className={`field grid gap-2 ${error ? 'has-error' : ''}`}>
+      <span className="label-mono">{label}</span>
       {children}
-      {hint && !error ? <small>{hint}</small> : null}
-      {error ? <small className="field-error">{error}</small> : null}
+      {hint && !error ? <small className="text-[11px] text-muted">{hint}</small> : null}
+      {error ? <small className="text-[11px] text-danger">{error}</small> : null}
     </label>
-  )
-}
-
-export function Button({
-  children,
-  variant = 'primary',
-  type = 'button',
-  loading = false,
-  disabled = false,
-  className = '',
-  onClick,
-}: {
-  children: ReactNode
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
-  type?: 'button' | 'submit'
-  loading?: boolean
-  disabled?: boolean
-  className?: string
-  onClick?: () => void
-}) {
-  return (
-    <button
-      type={type}
-      className={`button button-${variant} ${className}`}
-      disabled={disabled || loading}
-      onClick={onClick}
-    >
-      {loading ? <LoaderCircle size={16} className="spin" /> : null}
-      {children}
-    </button>
   )
 }
 
 export function Stars({ value, count }: { value: number; count?: number }) {
   return (
-    <span
-      className="rating inline-flex items-center gap-1 text-amber-400"
-      aria-label={`${value.toFixed(1)} trên 5 sao`}
-    >
+    <span className="inline-flex items-center gap-0.5 text-accent" aria-label={`${value.toFixed(1)} trên 5 sao`}>
       {[1, 2, 3, 4, 5].map((star) => (
         <Star
           key={star}
-          size={14}
-          className={star <= Math.round(value) ? 'fill-amber-400 text-amber-400' : 'fill-slate-100 text-slate-200'}
+          size={13}
+          aria-hidden="true"
+          className={star <= Math.round(value) ? 'fill-accent text-accent' : 'fill-paper-deep text-line-strong'}
         />
       ))}
-      {count !== undefined ? <small className="text-slate-500 font-medium ml-1">({count})</small> : null}
+      {count !== undefined ? <small className="ml-1.5 font-mono text-[10px] text-muted">({count})</small> : null}
     </span>
-  )
-}
-
-export function EmptyState({
-  icon,
-  title,
-  text,
-  action,
-}: {
-  icon?: ReactNode
-  title: string
-  text: string
-  action?: ReactNode
-}) {
-  return (
-    <div className="empty-state flex flex-col items-center justify-center p-12 text-center rounded-2xl border border-dashed border-slate-200 bg-white/60 backdrop-blur-sm shadow-sm">
-      <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 shadow-sm">
-        {icon || <ShoppingBag size={30} />}
-      </div>
-      <h3 className="text-lg font-bold text-slate-900 mb-1.5">{title}</h3>
-      <p className="text-sm text-slate-500 max-w-sm mb-5 leading-relaxed">{text}</p>
-      {action}
-    </div>
   )
 }
 
 export function ProductSkeleton() {
   return (
-    <div className="product-card skeleton-card animate-pulse">
-      <div className="skeleton skeleton-image bg-slate-100 aspect-square w-full rounded-t-xl" />
-      <div className="p-4 space-y-3">
-        <div className="h-3 w-16 bg-slate-200 rounded" />
-        <div className="h-4 w-4/5 bg-slate-200 rounded" />
-        <div className="h-4 w-1/2 bg-slate-200 rounded" />
-        <div className="h-5 w-24 bg-slate-200 rounded pt-2" />
+    <div>
+      <Skeleton className="aspect-square w-full" />
+      <div className="mt-3 grid gap-2 border-t border-line pt-3">
+        <Skeleton className="h-2.5 w-16" />
+        <Skeleton className="h-3.5 w-4/5" />
+        <Skeleton className="h-3.5 w-1/2" />
       </div>
     </div>
   )
 }
+
 export function PageLoader() {
   return (
-    <div className="page-loader min-h-[400px] flex flex-col items-center justify-center gap-4 text-slate-600">
-      <div className="relative flex items-center justify-center">
-        <div className="w-12 h-12 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin" />
-      </div>
-      <span className="text-sm font-medium text-slate-500 tracking-wide">Đang tải cửa hàng…</span>
+    <div className="grid min-h-[320px] place-items-center gap-3" role="status" aria-live="polite">
+      <LoaderCircle size={22} className="animate-spin text-accent" aria-hidden="true" />
+      <span className="label-mono">Đang tải…</span>
     </div>
   )
 }
+
 export function ErrorState({ onRetry }: { onRetry?: () => void }) {
   return (
     <EmptyState
       title="Không tải được dữ liệu"
       text="Có lỗi kết nối với máy chủ. Vui lòng kiểm tra đường truyền và thử lại."
+      icon={<ShoppingBag size={22} />}
       action={
         onRetry ? (
           <Button variant="secondary" onClick={onRetry}>

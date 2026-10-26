@@ -5,9 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { api, ApiError } from '../api'
-import { RequireAuth } from './checkout'
 import { AccountNav } from './account'
-import { Button, Field } from '../components/ui'
+import { Alert, Button, Field, Input } from '../components/ui'
 
 const passwordSchema = z
   .object({
@@ -23,24 +22,14 @@ type PasswordValues = z.infer<typeof passwordSchema>
 
 export function SecurityPage() {
   return (
-    <RequireAuth>
-      <SecurityContent />
-    </RequireAuth>
-  )
-}
-
-function SecurityContent() {
-  return (
-    <section className="page-section account-section">
+    <section className="page-shell py-8 pb-24 sm:py-10">
       <AccountNav />
-      <div className="section-head">
-        <div>
-          <span className="eyebrow">SECURITY</span>
-          <h1>Bảo mật tài khoản</h1>
-          <p>Quản lý mật khẩu và xác thực hai bước.</p>
-        </div>
+      <div className="mt-8 border-b border-line pb-6">
+        <span className="label-mono">Security</span>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Bảo mật tài khoản</h1>
+        <p className="mt-1 text-[13px] text-muted">Quản lý mật khẩu và xác thực hai bước.</p>
       </div>
-      <div className="security-grid">
+      <div className="mt-8 grid gap-4 lg:grid-cols-2">
         <PasswordForm />
         <TwoFactorPanel />
       </div>
@@ -66,27 +55,27 @@ function PasswordForm() {
     },
   })
   return (
-    <div className="account-form-card">
-      <div className="security-card-heading">
-        <KeyRound size={20} />
+    <div className="border border-line bg-surface">
+      <div className="flex items-start gap-3 border-b border-line px-5 py-4">
+        <KeyRound size={18} className="mt-0.5 text-accent" />
         <div>
-          <h2>Đổi mật khẩu</h2>
-          <p>Dùng mật khẩu dài và riêng cho tài khoản này.</p>
+          <h2 className="text-[13px] font-semibold text-ink">Đổi mật khẩu</h2>
+          <p className="mt-0.5 text-[11px] text-muted">Dùng mật khẩu dài và riêng cho tài khoản này.</p>
         </div>
       </div>
-      <form className="address-form" onSubmit={form.handleSubmit((values) => void mutation.mutateAsync(values))}>
+      <form className="grid gap-4 p-5" onSubmit={form.handleSubmit((values) => void mutation.mutateAsync(values))}>
         <Field label="Mật khẩu hiện tại" error={form.formState.errors.currentPassword?.message}>
-          <input type="password" {...form.register('currentPassword')} />
+          <Input type="password" {...form.register('currentPassword')} />
         </Field>
         <Field label="Mật khẩu mới" error={form.formState.errors.newPassword?.message}>
-          <input type="password" {...form.register('newPassword')} />
+          <Input type="password" {...form.register('newPassword')} />
         </Field>
         <Field label="Nhập lại mật khẩu mới" error={form.formState.errors.confirmNewPassword?.message}>
-          <input type="password" {...form.register('confirmNewPassword')} />
+          <Input type="password" {...form.register('confirmNewPassword')} />
         </Field>
-        {message ? <div className="inline-alert success">{message}</div> : null}
-        {error ? <div className="inline-alert error">{error}</div> : null}
-        <Button type="submit" loading={mutation.isPending}>
+        {message ? <Alert variant="success">{message}</Alert> : null}
+        {error ? <Alert variant="error">{error}</Alert> : null}
+        <Button type="submit" loading={mutation.isPending} className="justify-self-start">
           Cập nhật mật khẩu
         </Button>
       </form>
@@ -130,57 +119,69 @@ function TwoFactorPanel() {
     onError: (reason: unknown) => setError(reason instanceof ApiError ? reason.message : 'Không thể tắt 2FA.'),
   })
   return (
-    <div className="account-form-card">
-      <div className="security-card-heading">
-        <ShieldCheck size={20} />
+    <div className="border border-line bg-surface">
+      <div className="flex items-start gap-3 border-b border-line px-5 py-4">
+        <ShieldCheck size={18} className="mt-0.5 text-accent" />
         <div>
-          <h2>Xác thực hai bước</h2>
-          <p>Thêm một lớp bảo vệ khi đăng nhập.</p>
+          <h2 className="text-[13px] font-semibold text-ink">Xác thực hai bước</h2>
+          <p className="mt-0.5 text-[11px] text-muted">Thêm một lớp bảo vệ khi đăng nhập.</p>
         </div>
       </div>
-      {message ? <div className="inline-alert success">{message}</div> : null}
-      {error ? <div className="inline-alert error">{error}</div> : null}
-      {!setup && !recoveryCodes.length ? (
-        <Button loading={setupMutation.isPending} onClick={() => void setupMutation.mutateAsync()}>
-          Thiết lập 2FA
-        </Button>
-      ) : null}
-      {setup ? (
-        <div className="two-factor-setup">
-          <label>URI thiết lập</label>
-          <code>{setup.otpauthUri}</code>
-          <Field label="Mã OTP 6 số">
-            <input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" maxLength={6} />
-          </Field>
+      <div className="grid gap-4 p-5">
+        {message ? <Alert variant="success">{message}</Alert> : null}
+        {error ? <Alert variant="error">{error}</Alert> : null}
+        {!setup && !recoveryCodes.length ? (
           <Button
-            loading={enableMutation.isPending}
-            disabled={code.length !== 6}
-            onClick={() => void enableMutation.mutateAsync()}
+            loading={setupMutation.isPending}
+            onClick={() => void setupMutation.mutateAsync()}
+            className="justify-self-start"
           >
-            Bật 2FA
+            Thiết lập 2FA
           </Button>
-        </div>
-      ) : null}
-      {recoveryCodes.length ? (
-        <div className="recovery-codes">
-          <strong>Recovery codes</strong>
-          <div>
-            {recoveryCodes.map((value) => (
-              <code key={value}>{value}</code>
-            ))}
+        ) : null}
+        {setup ? (
+          <div className="grid gap-3">
+            <span className="label-mono">URI thiết lập</span>
+            <code className="break-all border border-line bg-paper p-3 font-mono text-[10px] leading-relaxed text-ink-soft">
+              {setup.otpauthUri}
+            </code>
+            <Field label="Mã OTP 6 số">
+              <Input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" maxLength={6} />
+            </Field>
+            <Button
+              loading={enableMutation.isPending}
+              disabled={code.length !== 6}
+              onClick={() => void enableMutation.mutateAsync()}
+              className="justify-self-start"
+            >
+              Bật 2FA
+            </Button>
           </div>
-          <Field label="Mật khẩu để tắt 2FA">
-            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-          </Field>
-          <Button
-            variant="danger"
-            loading={disableMutation.isPending}
-            onClick={() => void disableMutation.mutateAsync()}
-          >
-            Tắt 2FA
-          </Button>
-        </div>
-      ) : null}
+        ) : null}
+        {recoveryCodes.length ? (
+          <div className="grid gap-3">
+            <span className="label-mono">Recovery codes</span>
+            <div className="grid grid-cols-2 gap-1.5">
+              {recoveryCodes.map((value) => (
+                <code key={value} className="border border-line bg-paper px-2 py-1.5 text-center font-mono text-[11px]">
+                  {value}
+                </code>
+              ))}
+            </div>
+            <Field label="Mật khẩu để tắt 2FA">
+              <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+            </Field>
+            <Button
+              variant="danger"
+              loading={disableMutation.isPending}
+              onClick={() => void disableMutation.mutateAsync()}
+              className="justify-self-start"
+            >
+              Tắt 2FA
+            </Button>
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }
